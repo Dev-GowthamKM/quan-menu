@@ -5,9 +5,10 @@ import { saveMenu } from "@/app/dashboard/actions";
 import { DEMO_KEY, slugify } from "@/lib/config";
 import { EXAMPLE_MENU } from "@/lib/demo";
 import { DEFAULT_TOPPINGS, defaultOpts, toppingName } from "@/lib/drinks";
-import { ALLERGEN_KEYS, SHOP_KINDS, SIZE_KEYS, isTranslated, type Dish, type DrinkOpts, type MenuData, type ShopKind, type SizeKey, type Topping } from "@/lib/types";
+import { ALLERGEN_KEYS, SHOP_KINDS, SIZE_KEYS, isTranslated, type Dish, type DrinkOpts, type ML, type MenuData, type ShopKind, type SizeKey, type Topping } from "@/lib/types";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { MEDIA_BUCKET, MEDIA_PREFIX, type Media } from "@/lib/types";
+import type { Rates } from "@/lib/rates";
 import AccountMenu from "./AccountMenu";
 import DishMedia from "./DishMedia";
 import MenuView from "./MenuView";
@@ -21,6 +22,10 @@ interface Props {
   ai: boolean;
   siteUrl: string;
   email?: string;
+  /** Live exchange rates for the phone preview. */
+  rates?: Rates;
+  /** Menu views today and in the last 7 days (missing until the schema with menu_views is run). */
+  views?: { today: number; week: number };
 }
 
 /** The built-in dish list is ~100 KB, so it loads on first use instead of with the page. */
@@ -53,7 +58,7 @@ type Status = { msg: string; kind?: "err" | "good" };
 const BATCH = 15;
 const key = (vi: string) => vi.trim().toLowerCase();
 
-export default function Editor({ initial, demo, ai, siteUrl, email }: Props) {
+export default function Editor({ initial, demo, ai, siteUrl, email, rates, views }: Props) {
   const router = useRouter();
   const { t } = useUi();
   const start = initial ?? { name: "", area: "", slug: "", published: false, dishes: [] };
@@ -271,8 +276,28 @@ export default function Editor({ initial, demo, ai, siteUrl, email }: Props) {
       return setBusy("");
     }
     if (!ai) {
-      setS2({ msg: listNote + t.notOnList(idx.length), kind: fromList ? "good" : undefined });
-      return setBusy("");
+      // No AI key: free machine translation (MyMemory) for names; the vendor checks them.
+      let got = 0;
+      try {
+        for (let start = 0; start < idx.length; start += 10) {
+          const names = idx.slice(start, start + 10).map((i) => rest[i].vi);
+          setS2({ msg: listNote + t.freeTranslating(Math.min(start + 10, idx.length), idx.length) });
+          const out = await post<{ names: (ML | null)[] }>("/api/free-translate", { names }, t.ai.unknown);
+          const byName = new Map(names.map((n, k) => [n, out.names[k]]));
+          got += out.names.filter(Boolean).length;
+          setDishes((ds) => ds.map((d) => {
+            const ml = byName.get(d.vi);
+            return ml && !isTranslated(d) ? { ...d, name: ml } : d;
+          }));
+          touch();
+        }
+        setS2({ msg: listNote + t.machineDone(got, idx.length - got), kind: got ? "good" : undefined });
+      } catch (e) {
+        setS2({ msg: listNote + (e as Error).message, kind: "err" });
+      } finally {
+        setBusy("");
+      }
+      return;
     }
     let done = 0;
     try {
@@ -479,7 +504,7 @@ export default function Editor({ initial, demo, ai, siteUrl, email }: Props) {
               </div>
               <div className="row">
                 <button className="btn" onClick={() => { setDishes((ds) => [...ds, blank()]); touch(); setTimeout(() => document.getElementById("vi" + dishes.length)?.focus(), 0); }}>{t.addDish}</button>
-                {needTranslate > 0 && <button className={"btn" + (ai ? " primary" : "")} disabled={!!busy} onClick={translate}>{busy === "translate" ? t.translating : ai ? t.translateN(needTranslate) : t.checkN(needTranslate)}</button>}
+                {needTranslate > 0 && <button className={"btn" + (ai ? " primary" : "")} disabled={!!busy} onClick={translate}>{busy === "translate" ? t.translating : ai ? t.translateN(needTranslate) : t.translateFreeN(needTranslate)}</button>}
               </div>
               {kind !== "food" && bareDrinks > 0 && (
                 <div className="row"><button className="btn" onClick={applyDefaults}>☕ {t.applyDefaults(bareDrinks)}</button></div>
@@ -524,6 +549,7 @@ export default function Editor({ initial, demo, ai, siteUrl, email }: Props) {
 
             <section className="step" aria-labelledby="s4">
               <div className="step-h"><div className="num">4</div><div><h2 id="s4">{t.s4Title}</h2><small>{t.s4Hint}</small></div></div>
+              {views && savedSlug && <p className="views">👀 {t.viewsLine(views.today, views.week)}</p>}
               {savedSlug ? (
                 <Sticker name={name} url={publicUrl} slug={savedSlug} />
               ) : (
@@ -536,7 +562,7 @@ export default function Editor({ initial, demo, ai, siteUrl, email }: Props) {
           <aside className="phone-col" aria-label={t.previewLabel}>
             <div className="phone-cap"><span>{t.customersSee}</span><span>{t.dishCount(dishes.length)}</span></div>
             <div className="phone">
-              <MenuView name={name} area={area} dishes={dishes.filter((d) => d.vi)} toppings={toppings.filter((tp) => tp.vi.trim())} />
+              <MenuView name={name} area={area} dishes={dishes.filter((d) => d.vi)} toppings={toppings.filter((tp) => tp.vi.trim())} rates={rates} />
             </div>
           </aside>
         </div>

@@ -38,9 +38,10 @@ export const LANGS: Record<Lang, LangInfo> = {
 
 export const vnd = (n: number) => (Number(n) || 0).toLocaleString("vi-VN") + " ₫";
 
-export function foreign(n: number, lang: Lang) {
+/** Approximate price in the customer's currency. `rate` (VND per unit) overrides the fixed rate when a live one is known. */
+export function foreign(n: number, lang: Lang, rate?: number) {
   const L = LANGS[lang];
-  const v = (Number(n) || 0) / L.rate;
+  const v = (Number(n) || 0) / (rate && rate > 0 ? rate : L.rate);
   return "≈ " + L.sym + v.toLocaleString("en-US", { minimumFractionDigits: L.dec, maximumFractionDigits: L.dec });
 }
 

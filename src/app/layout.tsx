@@ -3,10 +3,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Quán · Thực đơn QR 4 thứ tiếng",
+  appleWebApp: { capable: true, title: "Quán", statusBarStyle: "default" },
   description: "Thực đơn QR cho quán ăn, quán cà phê, nhà hàng: khách nước ngoài xem món bằng tiếng Anh, Hàn, Trung, Nhật. Menus in English, Korean, Chinese and Japanese.",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#14211c" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

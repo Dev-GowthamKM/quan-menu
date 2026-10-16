@@ -6,6 +6,7 @@ import DemoMenu from "@/components/DemoMenu";
 import { DEMO } from "@/lib/config";
 import { EXAMPLE_MENU } from "@/lib/demo";
 import { EXAMPLE_CAFE } from "@/lib/demo-cafe";
+import { liveRates } from "@/lib/rates";
 import { supabasePublic } from "@/lib/supabase/public";
 import { cleanDish, cleanKind, cleanToppings, type Dish, type MenuData } from "@/lib/types";
 
@@ -56,5 +57,7 @@ export default async function PublicMenu({ params }: Params) {
     if (DEMO) return <DemoMenu slug={slug} />;
     notFound();
   }
-  return <MenuView full name={menu.name} area={menu.area} dishes={menu.dishes} toppings={menu.toppings} />;
+  const rates = await liveRates();
+  const demoSlug = slug === "demo" || slug === "demo-cafe";
+  return <MenuView full name={menu.name} area={menu.area} dishes={menu.dishes} toppings={menu.toppings} rates={rates} countSlug={demoSlug ? undefined : menu.slug} />;
 }

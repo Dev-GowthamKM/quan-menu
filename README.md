@@ -73,6 +73,18 @@ Set `NEXT_PUBLIC_SITE_URL` **before** printing stickers. The QR code contains th
 
 **Time limit:** each AI call must finish within 60 seconds (the route's `maxDuration`). Calls use `low` effort to stay fast; set `ANTHROPIC_EFFORT=medium` if menus are misread.
 
+## Free services it uses
+
+Everything below works with no API key and no bill:
+
+- **Menu photo reading without Claude:** Tesseract (open source) runs in the vendor's browser. `scripts/copy-ocr.mjs` copies the engine and Vietnamese data from npm into `public/ocr` before each build, so nothing loads from outside sites and photos never leave the phone. `src/lib/menu-parse.ts` turns the text into dishes and prices and re-splits words the reader runs together.
+- **Translating dishes that aren't on the built-in list:** MyMemory's free API (`src/lib/free-translate.ts`), about 5,000 characters a day per server. Set `MYMEMORY_EMAIL` in Vercel to raise that to 50,000. Uses the same login and daily allowance as the AI routes.
+- **Exchange rates:** ExchangeRate-API's open endpoint (`src/lib/rates.ts`), refreshed twice a day, credited under each menu. Falls back to the fixed rates in `src/lib/i18n.ts`.
+- **Menu view counter:** a `menu_views` table and `count_view()` function in Supabase (free plan). Each visit to a published menu counts once; the editor shows today and the last 7 days.
+- **Install as an app:** `src/app/manifest.ts` and icons, so vendors can add Quán to their home screen.
+
+With a Claude key, photo reading and translation switch to Claude automatically, and the built-in list is still used first.
+
 ## Known limits / next steps
 
 - **Pronunciation** uses the phone's built-in voice. Some phones have no Vietnamese voice, and then customers fall back to reading the spelling guide. A cloud text-to-speech service (for example Google TTS) would fix this.

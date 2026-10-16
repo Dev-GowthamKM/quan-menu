@@ -134,3 +134,29 @@ create policy dish_media_owner_insert on storage.objects for insert to authentic
 drop policy if exists dish_media_owner_delete on storage.objects;
 create policy dish_media_owner_delete on storage.objects for delete to authenticated
   using (bucket_id = 'dish-media' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Menu views per day, for the vendor's "how many customers looked" counter. Anyone opening a
+-- published menu adds one view through count_view(); only the stall's owner can read the counts.
+create table if not exists public.menu_views (
+  stall_id  uuid not null references public.stalls(id) on delete cascade,
+  day       date not null,
+  views     int  not null default 0,
+  primary key (stall_id, day)
+);
+alter table public.menu_views enable row level security;
+drop policy if exists menu_views_owner on public.menu_views;
+create policy menu_views_owner on public.menu_views for select
+  using (exists (select 1 from public.stalls s where s.id = stall_id and s.owner_id = auth.uid()));
+
+create or replace function public.count_view(p_slug text) returns void
+language plpgsql security definer set search_path = public as $$
+declare sid uuid;
+begin
+  select id into sid from public.stalls where slug = p_slug and published;
+  if sid is null then return; end if;
+  insert into public.menu_views (stall_id, day, views)
+  values (sid, (now() at time zone 'Asia/Ho_Chi_Minh')::date, 1)
+  on conflict (stall_id, day) do update set views = public.menu_views.views + 1;
+end $$;
+revoke all on function public.count_view(text) from public;
+grant execute on function public.count_view(text) to anon, authenticated;

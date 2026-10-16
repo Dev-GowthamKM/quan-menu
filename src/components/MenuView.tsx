@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ALLERGENS, LANGS, foreign, guessLang, vnd } from "@/lib/i18n";
 import { ICE, OPT_UI, SUGAR, hasOpts, lineVi, sameLine, unitPrice, type Line } from "@/lib/drinks";
+import type { Rates } from "@/lib/rates";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/config";
 import { LANG_KEYS, isTranslated, type Dish, type Lang, type Media, type Topping } from "@/lib/types";
 
 interface Props {
@@ -12,6 +14,10 @@ interface Props {
   full?: boolean;
   /** The shop's topping list, for drinks that allow toppings. */
   toppings?: Topping[];
+  /** Live exchange rates (VND per unit); fixed rates are used for any missing. */
+  rates?: Rates;
+  /** Public menus count a view once per visit, for the vendor's scan counter. */
+  countSlug?: string;
 }
 
 function useViVoice() {
@@ -26,7 +32,7 @@ function useViVoice() {
   return voice;
 }
 
-export default function MenuView({ name, area, dishes, full, toppings = [] }: Props) {
+export default function MenuView({ name, area, dishes, full, toppings = [], rates = {}, countSlug }: Props) {
   const [lang, setLang] = useState<Lang>("en");
   const [cart, setCart] = useState<Line[]>([]);
   // The drink whose options are being chosen, with the choices so far.
@@ -40,6 +46,22 @@ export default function MenuView({ name, area, dishes, full, toppings = [] }: Pr
   useEffect(() => {
     if (full) setLang(guessLang());
   }, [full]);
+
+  // One view per visit for the vendor's counter. Best effort: a failure never affects the menu.
+  useEffect(() => {
+    if (!countSlug || !SUPABASE_URL) return;
+    const key = "quan-viewed-" + countSlug;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {}
+    fetch(`${SUPABASE_URL}/rest/v1/rpc/count_view`, {
+      method: "POST",
+      headers: { "content-type": "application/json", apikey: SUPABASE_ANON_KEY, authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ p_slug: countSlug }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [countSlug]);
 
   // Drop cart lines for dishes that no longer exist (the vendor edited the preview).
   useEffect(() => {
@@ -134,7 +156,7 @@ export default function MenuView({ name, area, dishes, full, toppings = [] }: Pr
                   ) : (
                     <b>{vnd(d.price)}</b>
                   )}
-                  <small>{foreign(d.opts?.sizes?.[0]?.price || d.price, lang)}</small>
+                  <small>{foreign(d.opts?.sizes?.[0]?.price || d.price, lang, rates[lang])}</small>
                 </div>
               </div>
               <div className="vn" lang="vi">
@@ -202,7 +224,7 @@ export default function MenuView({ name, area, dishes, full, toppings = [] }: Pr
         <button className="btn primary" disabled={!count} onClick={() => setShowOrder(true)}>
           {count ? L.show(count) : L.show0}
         </button>
-        <small>{L.note}</small>
+        <small>{L.note}{rates[lang] ? <> · <a href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer">Rates by Exchange Rate API</a></> : null}</small>
       </div>
 
       {viewer && (
