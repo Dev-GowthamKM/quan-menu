@@ -266,6 +266,39 @@ export function lookupDish(vi: string): DishInfo | null {
   return INDEX.get(normalize(vi)) ?? null;
 }
 
+function editDistance(a: string, b: string): number {
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+/**
+ * Like lookupDish, but forgives what a photo reader gets wrong: missing spaces and a letter or two
+ * ("Phở bò tá", "Bunbo Hue"). Used for photographed menus only; returns a match only when it is the
+ * single closest one.
+ */
+export function lookupDishLoose(vi: string): DishInfo | null {
+  const exact = lookupDish(vi);
+  if (exact) return exact;
+  const key = normalize(vi).replace(/ /g, "");
+  if (key.length < 4) return null;
+  const allowed = key.length >= 10 ? 2 : 1;
+  let best: DishInfo | null = null;
+  let bestD = allowed + 1;
+  let tie = false;
+  for (const [k, info] of INDEX) {
+    const d = editDistance(key, k.replace(/ /g, ""));
+    if (d < bestD) { best = info; bestD = d; tie = false; }
+    else if (d === bestD && info !== best) tie = true;
+  }
+  return bestD <= allowed && !tie ? best : null;
+}
+
 /**
  * Fills in a dish's translations from the built-in list, keeping the vendor's own name and price.
  * In a café or milk-tea shop, a drink without options also gets the shop's default options.

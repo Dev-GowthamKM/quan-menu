@@ -100,6 +100,14 @@ const en = {
   photoOpenFail: "Couldn't open that photo. Try a JPG or PNG, or take a screenshot of it.",
   found: (n: number, skipped: number) => `Found ${n} ${plural(n, "dish", "dishes")}${skipped ? ` (${skipped} already on your list)` : ""}. Check them in step 2.`,
 
+  // Free photo reading (in the browser)
+  readFree: "Read menu (free)",
+  ocrLoading: (pct: number) => `Loading the free menu reader… ${pct}% (first time only, about 4 MB)`,
+  ocrReading: (pct: number) => `Reading the photo… ${pct}%`,
+  ocrFound: (n: number, known: number, skipped: number) => `Found ${n} ${plural(n, "dish", "dishes")}${known ? `, ${known} translated from the built-in list` : ""}${skipped ? ` (${skipped} already on your list)` : ""}. Check names and prices in step 2.`,
+  ocrNone: "No dishes with prices found. Try a straight, well-lit photo of a printed menu, or type the dishes in step 2.",
+  ocrFailed: "The free reader couldn't open on this device. Type the dishes in step 2 instead.",
+  freeHint: "The free reader works best on printed menus in good light. Handwriting may come out wrong, so check each name and price.",
   // Editor: step 2
   s2Title: "Check dishes and prices",
   s2HintAi: "Fix anything the photo got wrong. Open a dish to correct allergens.",
@@ -333,6 +341,13 @@ const vi: Strings = {
   photoOpenFail: "Không mở được hình này. Hãy thử hình JPG hoặc PNG, hoặc chụp màn hình lại.",
   found: (n: number, skipped: number) => `Tìm thấy ${n} món${skipped ? ` (${skipped} món đã có trong danh sách)` : ""}. Kiểm tra lại ở bước 2.`,
 
+  readFree: "Đọc thực đơn (miễn phí)",
+  ocrLoading: (pct: number) => `Đang tải bộ đọc chữ miễn phí… ${pct}% (chỉ lần đầu, khoảng 4 MB)`,
+  ocrReading: (pct: number) => `Đang đọc hình… ${pct}%`,
+  ocrFound: (n: number, known: number, skipped: number) => `Tìm thấy ${n} món${known ? `, ${known} món đã tự dịch từ danh sách có sẵn` : ""}${skipped ? ` (${skipped} món đã có trong danh sách)` : ""}. Kiểm tra tên và giá ở bước 2.`,
+  ocrNone: "Không tìm thấy món nào có giá. Hãy chụp thẳng, đủ sáng một thực đơn in, hoặc gõ món ở bước 2.",
+  ocrFailed: "Bộ đọc miễn phí không chạy được trên máy này. Hãy gõ món ở bước 2.",
+  freeHint: "Bộ đọc miễn phí đọc tốt nhất thực đơn in rõ, đủ sáng. Chữ viết tay có thể sai, hãy kiểm tra từng tên và giá.",
   s2Title: "Kiểm tra món và giá",
   s2HintAi: "Sửa chỗ hình đọc sai. Mở từng món để chỉnh thành phần.",
   s2Hint: "Gõ tên tiếng Việt và giá của từng món. Mở từng món để chỉnh thành phần.",

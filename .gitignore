@@ -4,3 +4,6 @@ node_modules
 !.env.example
 *.tsbuildinfo
 next-env.d.ts
+
+# OCR engine files, copied from node_modules at build time (scripts/copy-ocr.mjs)
+/public/ocr

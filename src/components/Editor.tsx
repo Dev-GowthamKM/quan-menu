@@ -188,9 +188,43 @@ export default function Editor({ initial, demo, ai, siteUrl, email }: Props) {
   const publicUrl = `${base}/m/${demo ? liveSlug : savedSlug || liveSlug}`;
   const needTranslate = dishes.filter((d) => d.vi && !isTranslated(d)).length;
 
+  /** No Claude key: read the photo for free in this browser, then match dishes to the built-in list. */
+  async function readPhotoFree(file: File) {
+    let text: string;
+    try {
+      const { readMenuPhoto } = await import("@/lib/ocr");
+      text = await readMenuPhoto(file, (stage, pct) => setS1({ msg: stage === "load" ? t.ocrLoading(pct) : t.ocrReading(pct) }));
+    } catch (e) {
+      console.error("[ocr]", e);
+      throw new Error(t.ocrFailed);
+    }
+    const [{ parseMenuText }, lib] = await Promise.all([import("@/lib/menu-parse"), loadList()]);
+    const parsed = parseMenuText(text);
+    if (!parsed.length) throw new Error(t.ocrNone);
+    let known = 0;
+    const found: Dish[] = parsed.map((p) => {
+      const hit = lib.lookupDishLoose(p.vi);
+      // The reader can drop tone marks ("Pho bo tai"): use the list's spelling when it matches.
+      const base: Dish = { ...blank(), vi: hit?.vi ?? p.vi, price: p.price };
+      const filled = lib.fillFromList(base, kind);
+      if (filled) known++;
+      const d = filled ?? base;
+      return p.sizes ? { ...d, price: p.sizes[0].price, opts: { ...(d.opts ?? {}), sizes: p.sizes } } : d;
+    });
+    const have = new Set(dishes.map((d) => key(d.vi)));
+    const fresh = found.filter((d) => !have.has(key(d.vi)));
+    setDishes((ds) => [...ds.filter((d) => d.vi.trim()), ...fresh]);
+    touch();
+    setS1({ msg: t.ocrFound(found.length, known, found.length - fresh.length), kind: "good" });
+  }
+
   async function readPhoto() {
     if (!photo) return;
     setBusy("read");
+    if (!ai) {
+      try { await readPhotoFree(photo); } catch (e) { setS1({ msg: (e as Error).message, kind: "err" }); } finally { setBusy(""); }
+      return;
+    }
     setS1({ msg: t.readingWait });
     try {
       let img: Awaited<ReturnType<typeof shrink>>;
@@ -354,11 +388,11 @@ export default function Editor({ initial, demo, ai, siteUrl, email }: Props) {
               <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) { setPhoto(f); setThumb(URL.createObjectURL(f)); } }} />
               <div className="row">
-                <button className="btn primary" disabled={!ai || !photo || !!busy} onClick={readPhoto}>{busy === "read" ? t.reading : t.readAi}</button>
-                {ai && dishes.length > 0 && photo && <small className="status">{t.readAdds}</small>}
+                <button className="btn primary" disabled={!photo || !!busy} onClick={readPhoto}>{busy === "read" ? t.reading : ai ? t.readAi : t.readFree}</button>
+                {dishes.length > 0 && photo && <small className="status">{t.readAdds}</small>}
               </div>
               {!ai && (
-                <p className="status">{t.aiOff(listSize)}</p>
+                <p className="status">{t.freeHint}</p>
               )}
               <p className={"status " + (s1.kind ?? "")} aria-live="polite">{s1.msg}</p>
             </section>
