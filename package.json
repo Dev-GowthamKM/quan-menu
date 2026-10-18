@@ -1,32 +1,40 @@
 {
-  "name": "quan-menu",
-  "version": "0.1.0",
+  "name": "taana-commerce",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/copy-ocr.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/copy-ocr.mjs",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run src",
+    "test:e2e": "playwright test",
+    "db:start": "supabase start -x studio,realtime,edge-runtime,logflare,vector,imgproxy,supavisor,postgres-meta",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local --schema public > src/lib/database.types.ts",
+    "make-owner": "node scripts/make-owner.mjs",
+    "test:integration": "vitest run tests/integration"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.131.0",
     "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.117.2",
-    "@tesseract.js-data/vie": "^1.0.0",
-    "next": "15.5.27",
-    "qrcode": "^1.5.4",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "tesseract.js": "^7.0.0"
+    "@supabase/supabase-js": "^2.118.0",
+    "next": "15.5.28",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22",
-    "@types/qrcode": "^1.5.5",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "typescript": "^5"
+    "pg": "^8.23.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5",
+    "vitest": "^5.0.5"
   },
   "overrides": {
     "postcss": "^8.5.23"
