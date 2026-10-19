@@ -840,6 +840,9 @@ isOneToOne: false
 "begin_refund_internal":
 { Args: { "p_actor": string,"p_amount": number,"p_order_id": string,"p_payment_id": string,"p_reason": string,"p_reference": string,"p_return_request_id": string }; Returns: Json
                            },
+"best_seller_ids":
+{ Args: { "p_limit"?: number }; Returns: string[]
+                           },
 "bootstrap_owner":
 { Args: { "p_email": string }; Returns: string
                            },

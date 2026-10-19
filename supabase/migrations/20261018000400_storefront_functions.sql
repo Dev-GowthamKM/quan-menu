@@ -473,3 +473,13 @@ begin
 end $$;
 revoke execute on function public.submit_review(uuid, int, text, text) from public, anon;
 grant execute on function public.submit_review(uuid, int, text, text) to authenticated;
+
+-- Best sellers by units sold (counts stay private; only the order is exposed).
+create function public.best_seller_ids(p_limit int default 8) returns setof uuid
+language sql stable security definer set search_path = '' as $$
+  select id from public.products
+  where status = 'active' and published_at <= now() and sales_count > 0
+  order by sales_count desc, published_at desc
+  limit least(greatest(coalesce(p_limit, 8), 1), 48)
+$$;
+grant execute on function public.best_seller_ids(int) to anon, authenticated;

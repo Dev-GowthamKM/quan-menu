@@ -477,12 +477,11 @@ create index customer_notes_customer_idx on public.customer_notes (customer_id, 
 
 create table public.newsletter_subscribers (
   id uuid primary key default gen_random_uuid(),
-  email text not null check (public.is_email(email)),
+  email text not null unique check (public.is_email(email) and email = lower(email)),
   source text not null default 'footer' check (char_length(source) <= 40),
   created_at timestamptz not null default now(),
   unsubscribed_at timestamptz
 );
-create unique index newsletter_subscribers_email_key on public.newsletter_subscribers (lower(email));
 
 create table public.contact_messages (
   id uuid primary key default gen_random_uuid(),
