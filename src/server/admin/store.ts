@@ -124,6 +124,9 @@ export async function saveProvider(input: { id?: string | null; name: string; tr
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Colours are hex codes like #1a1a1a.");
 const url = z.string().trim().max(1000).nullable().transform((v) => v || null);
 const text = (max: number) => z.string().max(max);
+/** Button links: a page on this site or an http(s) address, never javascript: or data:. */
+const link = z.string().trim().max(300).refine((v) => v === "" || /^\/(?!\/)/.test(v) || /^https?:\/\/\S+$/i.test(v), "Links must be a page on this site (starting with /) or start with https://");
+const webUrl = z.string().trim().max(300).refine((v) => v === "" || /^https?:\/\/\S+$/i.test(v), "Use a full address starting with https://");
 
 const SECTIONS = {
   general: z.object({
@@ -131,7 +134,7 @@ const SECTIONS = {
     tagline: text(160),
     logo_url: url,
     contact: z.object({ email: text(200), phone: text(40), whatsapp: text(40), address: text(500), hours: text(200) }).partial(),
-    social: z.object({ instagram: text(300), facebook: text(300), x: text(300), pinterest: text(300), youtube: text(300) }).partial(),
+    social: z.object({ instagram: webUrl, facebook: webUrl, x: webUrl, pinterest: webUrl, youtube: webUrl }).partial(),
   }),
   appearance: z.object({
     primary_color: hex,
@@ -145,12 +148,12 @@ const SECTIONS = {
       announcement: text(200).optional(),
       hero: z.array(z.object({
         image_url: z.string().max(1000), image_alt: text(200).optional(), eyebrow: text(80).optional(), heading: z.string().trim().min(1).max(120),
-        subheading: text(300).optional(), cta_label: text(40).optional(), cta_href: text(300).optional(), secondary_label: text(40).optional(),
-        secondary_href: text(300).optional(), sample: z.boolean().optional(),
+        subheading: text(300).optional(), cta_label: text(40).optional(), cta_href: link.optional(), secondary_label: text(40).optional(),
+        secondary_href: link.optional(), sample: z.boolean().optional(),
       })).max(6),
       promos: z.array(z.object({
         image_url: z.string().max(1000), image_alt: text(200).optional(), eyebrow: text(80).optional(), heading: z.string().trim().min(1).max(120),
-        cta_label: text(40).optional(), cta_href: text(300).optional(), sample: z.boolean().optional(),
+        cta_label: text(40).optional(), cta_href: link.optional(), sample: z.boolean().optional(),
       })).max(6),
     }),
   }),

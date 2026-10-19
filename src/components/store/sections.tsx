@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { safeHref } from "@/lib/urls";
 import type { Brand, Collection, Department } from "@/lib/catalog";
 import type { HeroSlide, ProductCard as Card, Promo } from "@/lib/types";
 import CatalogImage from "../ui/CatalogImage";
@@ -47,8 +48,8 @@ export function Hero({ slide, storeName, tagline }: { slide?: HeroSlide; storeNa
             <h1 className="mt-5 animate-fade-in font-serif text-5xl leading-[1.02] [animation-delay:80ms] md:text-6xl xl:text-[5.5rem]">{slide.heading}</h1>
             {slide.subheading && <p className="mt-6 max-w-md animate-fade-in leading-relaxed text-taupe [animation-delay:160ms]">{slide.subheading}</p>}
             <div className="mt-10 flex animate-fade-in flex-wrap gap-3 [animation-delay:240ms]">
-              {slide.cta_href && <Link href={slide.cta_href} className={buttonClass("primary", "lg")}>{slide.cta_label || "Shop now"}</Link>}
-              {slide.secondary_href && <Link href={slide.secondary_href} className={buttonClass("secondary", "lg")}>{slide.secondary_label || "Explore"}</Link>}
+              {safeHref(slide.cta_href) && <Link href={safeHref(slide.cta_href)!} className={buttonClass("primary", "lg")}>{slide.cta_label || "Shop now"}</Link>}
+              {safeHref(slide.secondary_href) && <Link href={safeHref(slide.secondary_href)!} className={buttonClass("secondary", "lg")}>{slide.secondary_label || "Explore"}</Link>}
             </div>
           </div>
         </div>
@@ -110,7 +111,7 @@ export function PromoGrid({ promos }: { promos?: Promo[] }) {
     <section className="container-page mt-20 md:mt-28">
       <div className={cx("grid gap-3 md:gap-5", promos.length >= 3 ? "md:grid-cols-3" : promos.length === 2 ? "md:grid-cols-2" : "")}>
         {promos.slice(0, 3).map((p) => (
-          <Link key={p.heading} href={p.cta_href || "/shop"} className="group relative block aspect-[4/5] overflow-hidden bg-bone">
+          <Link key={p.heading} href={safeHref(p.cta_href) ?? "/shop"} className="group relative block aspect-[4/5] overflow-hidden bg-bone">
             <CatalogImage src={p.image_url} alt={p.image_alt || p.heading} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover transition duration-700 ease-out group-hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-6 text-white md:p-8">
@@ -201,7 +202,7 @@ export function CampaignBand({ slide }: { slide: HeroSlide }) {
           {slide.eyebrow && <p className="label-caps text-stone">{slide.eyebrow}</p>}
           <h2 className="mt-4 font-serif text-4xl leading-tight md:text-6xl">{slide.heading}</h2>
           {slide.subheading && <p className="mt-5 max-w-md leading-relaxed text-taupe">{slide.subheading}</p>}
-          {slide.cta_href && <Link href={slide.cta_href} className={buttonClass("secondary", "lg", "mt-8")}>{slide.cta_label || "Discover"}</Link>}
+          {safeHref(slide.cta_href) && <Link href={safeHref(slide.cta_href)!} className={buttonClass("secondary", "lg", "mt-8")}>{slide.cta_label || "Discover"}</Link>}
         </div>
       </div>
     </section>

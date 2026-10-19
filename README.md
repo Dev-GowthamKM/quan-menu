@@ -145,7 +145,8 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
 - **Other:** rate limits on checkout, coupons, PIN checks, reviews and forms (stored in Postgres,
   shared across instances); storage policies that let only staff upload or delete; a CSP that
   forbids framing, HSTS and other security headers; `noindex` and `no-store` on the admin;
-  CSV exports guarded against formula injection; exports and imports written to the audit log;
+  CSV exports guarded against formula injection; links typed into settings limited to site paths
+  and http(s) addresses (checked when saved and again when shown); exports and imports written to the audit log;
   audit triggers on products, variants, prices, orders, payments, refunds, coupons, settings,
   shipping and roles.
 
@@ -362,7 +363,7 @@ expired, late, duplicate and mismatched payments; returns and restocking; refund
 checkout) and 14 admin pages for WCAG 2.1 A/AA problems and fail on anything serious or critical.
 Automated checks don't replace testing with a keyboard and a screen reader.
 
-Latest local run: typecheck clean, unit 2/2, integration 33/33, Playwright 9/9 (acceptance 7/7,
+Latest local run: typecheck clean, unit 4/4, integration 33/33, Playwright 9/9 (acceptance 7/7,
 accessibility 2/2), every page checked at 390 px wide without horizontal scrolling, and the
 production build (`next build`) succeeds.
 
