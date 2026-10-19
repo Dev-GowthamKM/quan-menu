@@ -1,94 +1,413 @@
-# Quán
+# Taana — fashion e-commerce on Next.js and Supabase
 
-**Live demo:** https://quan-menu-indol.vercel.app · example menu: https://quan-menu-indol.vercel.app/m/demo
+A complete online clothing store for India: a customer storefront at `/` and a separate admin
+dashboard at `/admin`, sharing one Supabase backend (Postgres, Auth, Storage). Payments go through
+Razorpay (UPI, cards, netbanking, wallets) with optional Stripe for international cards, plus cash
+on delivery. Everything the store sells, every order and every stock count lives in the database,
+and every price, tax and discount is worked out on the server.
 
-Photo-to-QR menus for Ho Chi Minh City street-food stalls. A vendor photographs their menu, AI reads the dishes and prices, the vendor checks them, and Quán prints a QR sticker. Customers scan it and see every dish in English, Korean, Chinese or Japanese, with allergens, an approximate price in their own currency, a "say it" button, and an order screen they can show the vendor.
+"Taana" (the warp threads on a loom) is a placeholder name with its own simple mark. The store
+name, logo, colours, fonts, homepage, policies and emails are all set in **Admin › Settings**.
 
-![Vendor editor with live preview](docs/04-dishes.webp)
+## Contents
 
-| Customer menu (Korean) | Order screen |
+- [What's included](#whats-included)
+- [Architecture](#architecture)
+- [Security model](#security-model)
+- [Database](#database)
+- [Run it locally](#run-it-locally)
+- [Set up the first owner](#set-up-the-first-owner)
+- [Environment variables](#environment-variables)
+- [Deploy](#deploy)
+- [Payment providers](#payment-providers)
+- [Email](#email)
+- [Testing](#testing)
+- [Running the store](#running-the-store)
+- [Known limitations](#known-limitations)
+- [Project layout](#project-layout)
+
+## What's included
+
+**Storefront** (`/`)
+
+- Homepage from the database: hero campaign, departments, new arrivals, best sellers, featured
+  brands, seasonal and featured collections, promotional banners, recently viewed, newsletter.
+- Shop, category, brand and collection pages with filters (brand, size, colour, price, in stock,
+  on sale), sorting, pagination, canonical URLs and empty states. Search across title, brand,
+  category, tags and SKU.
+- Product pages: gallery with zoom and full-screen view, colour and size pickers with sold-out
+  states, size guide, quantity, add to bag, buy now, PIN code delivery check with dates, details,
+  fabric and care, shipping and returns, reviews (verified purchase badges), related products,
+  structured data.
+- Bag with server-side pricing, discount codes, free-delivery progress. Guest bags are merged into
+  the account on sign-in.
+- Checkout: contact → address (Indian states, PIN validation) → delivery options → payment
+  (Razorpay: UPI, cards, netbanking, wallets; cash on delivery where allowed; Stripe optional) →
+  review → confirmation. Orders can't be placed twice by double-clicking or refreshing.
+- Accounts: sign up with email verification, sign in, password reset, optional Google, profile,
+  address book, order history and tracking, wishlist, cancellation and return requests. Guests
+  get a private link to their order, and can look it up by number and email.
+- Policy pages, FAQ, contact form, maintenance page, sitemap and robots.
+
+**Admin** (`/admin`)
+
+- Dashboard: revenue actually received (net of refunds), orders by state, customers, low stock,
+  best sellers and a 30-day revenue chart, all from live data.
+- Products: list with search, filters, status tabs, bulk actions (publish, draft, archive,
+  feature, category, brand, prices, end sale, tags, collections, delete) and quick edit. Full editor
+  with drafts, publishing and scheduled launches, image upload (drag and drop, resized in the
+  browser, reorder, main image, alt text, per-colour images), pricing and sale prices, tax
+  override, sizes × colours variant generator with unique SKUs and per-variant prices and stock,
+  fabric/fit/care, weight and dimensions, returns, SEO with a search preview, preview on the store.
+- CSV import and export: downloadable template, drag and drop the CSV with its images, a full
+  check (dry run) with a row-by-row report before anything is saved, duplicate SKU detection,
+  images matched by file name from the media library, batched saves with progress, and statuses
+  applied only if every product imported — a partial import never publishes anything.
+- Inventory with inline edits (set a count, or +/− units), low and out-of-stock views, units held
+  by unpaid orders, and a full history of every stock movement.
+- Brands, categories (tree), collections (hand-picked with drag ordering, or automated by rules
+  with a live preview; seasonal and scheduled), size guides, media library with bulk uploads.
+- Orders: views for awaiting payment / to fulfil / shipped / needs attention, search and filters,
+  fulfilment steps with courier and tracking (customers are emailed), cancellations that return
+  stock and refund, partial refunds through the payment provider, cash-on-delivery collection,
+  internal notes, printable GST invoice and packing slip, CSV export, full timeline.
+- Returns and cancellation requests, payments with reconciliation and the webhook log, discount
+  codes, customers with lifetime spend and notes (CSV export), review moderation, contact inbox.
+- Shipping zones and rates (by state or PIN prefix), blocked PIN codes, couriers with tracking
+  links. Settings for store details, appearance, homepage, tax (GST slabs, GSTIN), payment methods
+  and COD limits, returns, reviews, policies, FAQ, SEO, email templates, maintenance mode and sample
+  data removal. Staff and roles. Audit log.
+
+## Architecture
+
+```
+ Browser ──► Next.js 15 (App Router) on Vercel
+              ├─ Storefront pages   ─ cached reads with a cookie-free client (RLS: published only)
+              ├─ Admin pages        ─ the staff member's own session (RLS + role checks)
+              ├─ Server Actions     ─ validate with zod, check the role, call SQL functions
+              ├─ /api/webhooks/*    ─ signature-checked, each event processed once
+              └─ /api/cron/…        ─ bearer secret; holds, reconciliation, email queue
+                     │
+                     ▼
+              Supabase
+              ├─ Postgres  ─ tables, row-level security, 114 SQL functions (pricing, checkout,
+              │              stock, payments, refunds, imports, reports), triggers, audit log
+              ├─ Auth      ─ email + password with verification, optional Google
+              ├─ Storage   ─ public "catalog" bucket; only staff can write
+              └─ pg_cron   ─ releases stock held by expired unpaid orders every 5 minutes
+                     │
+   Razorpay / Stripe ◄┘ (server-to-server: create order, fetch, capture, refund)
+   Resend           ◄── transactional emails from a database outbox
+```
+
+- **Rendering.** Catalog pages are rendered on the server and cached (tags `catalog`,
+  `settings`, `reviews`), then refreshed the moment an admin saves. Account, cart, checkout and
+  admin pages are dynamic.
+- **Business logic lives in Postgres functions** so it is atomic and can't be bypassed:
+  `quote_cart` (prices, coupons, shipping, GST), `place_order` (idempotent, reserves stock),
+  `confirm_order_payment` (idempotent; handles duplicate, late and mismatched payments),
+  `admin_save_product`, `admin_import_products`, `admin_set_stock`, `admin_set_fulfillment`,
+  `begin_refund_internal`/`complete_refund`, `admin_dashboard`, and more.
+- **Payments.** Checkout creates a Razorpay order for the amount the server calculated. After
+  payment, the server checks Razorpay's signature, fetches the payment from Razorpay's API,
+  captures it if needed and only then marks the order paid. Webhooks (signed, de-duplicated by
+  event id) and a reconciliation job catch anything the browser didn't report. A payment that
+  arrives for an expired, already paid or mismatched order is refunded automatically.
+- **Stock.** Each variant has `stock_quantity` and `reserved_quantity`. An online order reserves
+  stock with a conditional update (it can never go below zero, checked by constraints), payment
+  turns the reservation into a sale, and expiry or cancellation releases it. Every change is
+  written to `inventory_movements` by a trigger.
+- **Emails** are queued in `email_outbox` inside the same transaction as the event, then sent by
+  the server (`processOutbox`) through Resend, so a slow email service never breaks checkout.
+
+## Security model
+
+- **Roles live in `user_roles`, which no client can write.** Customers can only edit `full_name`,
+  `phone` and `marketing_opt_in` on their profile (column-level grants); there is no role field to
+  tamper with. Owners grant roles through `grant_role`, which checks the caller and protects the
+  last owner. The first owner is created with `bootstrap_owner`, callable only by the service role
+  and only while no owner exists.
+- **Row-level security on every table.** Visitors see only active, published products; customers
+  see only their own orders, addresses and wishlist; staff manage the catalog and orders; payments,
+  refunds, settings, staff and the audit log are admin-only. Sensitive columns (reserved stock,
+  derived prices, idempotency keys) are excluded by column grants.
+- **Checks on the server, then again in the database.** Admin pages and actions call
+  `requireRole`, and every SQL function starts with `require_staff()` or `require_admin()`.
+  The middleware redirect is only a convenience.
+- **Prices are never taken from the browser.** The cart stores variant ids and quantities; totals,
+  discounts, shipping and tax are computed by `quote_cart` at every step and again inside
+  `place_order`. Past orders keep snapshots of what was paid.
+- **Payments:** signature verification, provider API confirmation, idempotent processing,
+  duplicate-payment refunds, webhook replay protection, reconciliation. Secrets are only read in
+  `src/lib/server-env.ts`, which can't be imported into browser code.
+- **Guest access** to an order uses an HMAC-signed link; guest carts use a random token stored
+  hashed in the database.
+- **Other:** rate limits on checkout, coupons, PIN checks, reviews and forms (stored in Postgres,
+  shared across instances); storage policies that let only staff upload or delete; a CSP that
+  forbids framing, HSTS and other security headers; `noindex` and `no-store` on the admin;
+  CSV exports guarded against formula injection; exports and imports written to the audit log;
+  audit triggers on products, variants, prices, orders, payments, refunds, coupons, settings,
+  shipping and roles.
+
+## Database
+
+All schema changes are SQL migrations in `supabase/migrations/` (run in order):
+
+| Migration | Contents |
 |---|---|
-| <img src="docs/08-menu-ko.webp" width="260"> | <img src="docs/11-order.webp" width="260"> |
+| `…0100_foundation` | Types (`money_minor` = paise), enums, profiles, `user_roles` and role checks, `store_settings`, audit log and triggers, role management, rate limits |
+| `…0200_catalog` | Size guides, brands, categories (tree), products, images, variants (unique SKUs), inventory movements, derived product fields, collections, policies |
+| `…0300_commerce` | Addresses, carts, wishlists, coupons, shipping zones/rates/PIN rules/couriers, orders and items (snapshots), events, payments and webhook events, shipments, reviews, returns, refunds, customer notes, newsletter, contact messages, email outbox |
+| `…0400_storefront_functions` | Search, facets, product page, related products, collection rules, PIN check, wishlist, reviews |
+| `…0500_checkout` | Cart pricing (`quote_cart`), cart actions and merge, `place_order`, payment confirmation and failure, order expiry, cancellations, returns, order detail |
+| `…0600_admin` | Product save/duplicate/delete, bulk edits, stock adjustments, fulfilment, cancellations, refunds, returns, dashboard, customers, staff, sample data removal |
+| `…0700_storage_audit_cron` | Storage bucket and policies, audit triggers, the pg_cron schedule |
+| `…0800_defaults` | Default "All India" shipping zone and Indian couriers |
+| `…0900_notifications` | Email outbox claiming |
+| `20261019000100_admin_catalog` | Admin product and inventory lists, media library, SKU checks, CSV import, collection previews |
 
-**Stack:** Next.js 15 (App Router, TypeScript) · Supabase (Postgres, auth, row-level security) · Claude API (vision) · `qrcode` · deploys to Vercel.
+Money is stored as integer paise everywhere (`bigint` with a non-negative check). Generated
+TypeScript types are in `src/lib/database.types.ts` (`npm run db:types`).
 
-## Run it in 1 minute (demo mode)
+`supabase/seed.sql` adds **sample data**: 45 fictional products from six made-up labels with
+240 variants, categories, size guides, collections, discount codes (`WELCOME10`, `FLAT500`,
+`FREESHIP`, `CRAFT15`), a metro shipping zone and homepage banners. Product photos are loaded from
+Unsplash. Every sample row is flagged `is_sample` and labelled "Sample" in the admin; remove it
+all from **Settings › Maintenance and data** before launch (sample products that appear in orders
+are archived instead of deleted). `scripts/generate-seed.mjs` regenerates the file.
+
+## Run it locally
+
+Requires Node 20+ and Docker (for the local Supabase stack).
 
 ```bash
 npm install
 cp .env.example .env.local
-npm run dev
+npm run db:start          # starts Postgres, Auth, Storage locally (Docker)
+npx supabase status       # copy API URL, anon key and service_role key into .env.local
+npm run db:reset          # applies every migration and loads the sample data
+npm run dev               # http://localhost:3000 and http://localhost:3000/admin
 ```
 
-Open http://localhost:3000. With no Supabase keys the app runs in **demo mode**: no login, and the vendor's menu is saved in the browser. Everything works except photo reading and AI translation, which need `ANTHROPIC_API_KEY`. Common dishes still translate from the built-in list.
+Fill in `.env.local` with the values from `supabase status`, plus `NEXT_PUBLIC_SITE_URL=http://localhost:3000`
+and any long random `ORDER_LINK_SECRET` and `CRON_SECRET`. Sign-up confirmation emails appear in
+the local inbox at http://localhost:54324.
 
-## Full setup
+To try payments without a Razorpay account, run the bundled mock and point the app at it:
 
-1. **Supabase.** Create a free project at supabase.com. Open **SQL Editor**, paste in `supabase/schema.sql` and run it. It also creates the `dish-media` storage bucket for dish photos and videos. The file is safe to re-run: do that after pulling changes to it. Under **Project Settings → API**, copy the Project URL and the `anon` public key.
-2. **Login emails.** Under **Authentication → URL Configuration**, set Site URL to your site's address and add `https://YOUR-SITE/auth/callback` to Redirect URLs. (Add `http://localhost:3000/auth/callback` too for local development.)
-   The login tab that's waiting notices when the email link signs the vendor in (in another tab) and opens the editor by itself.
-   Optional: to let vendors type a code instead (useful when a phone opens the link in a different browser), set up custom SMTP in Supabase (required to edit email templates), add `Your code: {{ .Token }}` to the **Magic link or OTP** and **Confirm signup** templates, and set `NEXT_PUBLIC_LOGIN_CODE=1` in Vercel.
-3. **Claude API (optional).** Create a key at console.anthropic.com. Without one, the app hides photo reading, and vendors type their dishes; the 184 dishes and drinks on the built-in list (`src/lib/dishes.ts`) fill in their translations by themselves.
-4. **Fill `.env.local`:**
+```bash
+node tests/e2e/support/mock-razorpay.mjs     # listens on :4010
+# .env.local
+NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_mock
+RAZORPAY_KEY_SECRET=mock_secret
+RAZORPAY_WEBHOOK_SECRET=mock_webhook_secret
+RAZORPAY_API_BASE=http://localhost:4010
+```
 
+(The real Razorpay Checkout window can't pay a mock order; the end-to-end tests replace it with a
+stub. For hands-on testing use your Razorpay test keys, see below.)
+
+## Set up the first owner
+
+There is no default admin account. Make the first owner from the command line:
+
+1. Sign up on the store with the owner's email address and confirm the email.
+2. With `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for that project in
+   `.env.local` (or the environment), run:
+
+   ```bash
+   npm run make-owner -- owner@yourstore.in
    ```
-   NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-   NEXT_PUBLIC_SITE_URL=http://localhost:3000
-   ANTHROPIC_API_KEY=sk-ant-...
-   ```
 
-5. `npm run dev`, go to `/login`, enter your email, click the link, and build your menu.
+   (Locally you can create and promote in one go:
+   `npm run make-owner -- owner@example.com --create --password 'a long password'`.)
 
-## Deploy to Vercel
+   Alternatively run `select public.bootstrap_owner('owner@yourstore.in');` in the Supabase SQL
+   editor.
+3. Sign in at `/admin/login`.
 
-Push the repo to GitHub, import it at vercel.com/new, add the four variables above (with `NEXT_PUBLIC_SITE_URL` set to your Vercel address), and deploy. Then update the Supabase redirect URL from step 2 to the Vercel address.
+This works only while the store has no owner. After that, owners add people in **Admin › Staff
+and roles** (they must have an account first). Roles: **owner** (everything, including staff),
+**admin** (everything except staff: settings, payments and refunds, discounts, exports, audit
+log), **staff** (catalog, stock, orders and fulfilment, returns without refunds, customers,
+reviews, messages).
 
-Open `https://YOUR-SITE/api/health` after deploying. It lists any missing setting (yes/no only, never the values) and shows `"ok": true` when the required ones are in place. `ANTHROPIC_API_KEY` is listed under `optional`.
+## Environment variables
 
-Set `NEXT_PUBLIC_SITE_URL` **before** printing stickers. The QR code contains this address.
+See `.env.example` for comments. Check a deployment at `https://YOUR-SITE/api/health`: it reports
+which settings are present (yes/no only) and whether the database answers.
 
-## How it's built
+| Variable | Required | Where it's used |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Browser and server; RLS limits the anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server only: checkout, payments, webhooks, cron |
+| `NEXT_PUBLIC_SITE_URL` | Yes | Canonical URLs, sitemap, emails, auth redirects |
+| `ORDER_LINK_SECRET` | Yes | Signs guest order links and guest cart cookies |
+| `NEXT_PUBLIC_RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | For online payments | Razorpay Checkout and API |
+| `RAZORPAY_WEBHOOK_SECRET` | For online payments | Verifies `/api/webhooks/razorpay` |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Optional | Stripe Checkout and `/api/webhooks/stripe` |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Optional | Order emails (otherwise queued, not sent) |
+| `CRON_SECRET` | Recommended | Authorises `/api/cron/housekeeping` |
+| `NEXT_PUBLIC_GOOGLE_SIGN_IN` | Optional | Shows "Continue with Google" (`1`) |
+| `RAZORPAY_API_BASE`, `STRIPE_API_BASE`, `RESEND_API_BASE` | Tests only | Point at local mocks (ignored with live payment keys) |
 
-| Path | What it does |
-|---|---|
-| `src/app/page.tsx` | Landing page |
-| `src/app/login`, `src/app/auth/callback` | Email magic-link sign-in |
-| `src/app/dashboard` | Vendor editor: photo → AI → edit dishes and allergens → publish → QR sticker. `actions.ts` saves through the `save_menu` database function. |
-| `src/app/m/[slug]` | Public customer menu (what the QR code opens). Cached and served to every scanner, rebuilt at most once a minute, and refreshed immediately when the vendor saves. |
-| `src/app/api/extract` | Photo → dishes, using Claude vision. Signed-in vendors only. |
-| `src/app/api/translate` | Names of new dishes → translations, allergens, pronunciation (the editor sends 15 at a time) |
-| `src/app/api/health` | Deployment check: which settings are missing |
-| `src/components/DishMedia.tsx` | Per-dish photos and videos in the editor: photos are shrunk to 1280 px in the browser, videos must be MP4/MOV/WebM under 25 MB, up to 6 per dish. Files go straight to Supabase Storage. |
-| `src/components/MenuView.tsx` | Customer menu, also used as the live phone preview |
-| `src/lib/dishes.ts` | Built-in translations for 184 common Saigon dishes and drinks, including café and milk-tea drinks. Used before any AI call, so known dishes cost nothing; matching ignores tone marks, portion notes and prices. |
-| `src/lib/drinks.ts` | Coffee and milk-tea shops: shop type, sizes with their own prices, sugar (0–100%), ice, and a shop-wide topping list. Customers choose in their language; the vendor's order screen shows e.g. “Trà sữa trân châu (L) · 50% đường · ít đá · + Trân châu đen”. Example shop at `/m/demo-cafe`. |
-| `src/lib/strings.ts` | Every vendor-facing text in Vietnamese (default) and English, switched with the VI/EN button and kept in the `quan_ui` cookie. Server messages use the same choice. |
-| `src/lib/ai.ts` | Claude API calls: prompts, JSON-schema structured output, time budget, error messages |
-| `supabase/schema.sql` | Tables, row-level security, the atomic `save_menu` function, and the daily AI allowance |
+## Deploy
 
-**Security model:** anyone can read a stall marked live. Only its owner can read a draft or change anything; this is enforced by Postgres row-level security, not just the app. The AI routes refuse anyone who isn't signed in, and each vendor gets 40 AI calls per day (the `take_ai_call` function in `supabase/schema.sql`; change the number there). In demo mode the AI routes only work during local development, so a deploy missing its Supabase settings can't be used to spend your API credit.
+**1. Supabase project.** Create a project at supabase.com (region: Mumbai, `ap-south-1`), then:
 
-**Menu photos** (for AI reading) are shrunk in the browser to 1600 px and sent straight to Claude. They are not stored. **Dish photos and videos** are stored in the public `dish-media` bucket, inside a folder named after the vendor's user id; storage policies only let vendors add or delete files in their own folder, and the app only displays URLs from this bucket. Files a vendor removes are deleted when they next save; files uploaded but never saved stay in storage until cleaned up by hand. Reading a second photo adds its dishes to the list, so a long menu can be read in parts.
+```bash
+npx supabase login
+npx supabase link --project-ref YOUR_PROJECT_REF
+npx supabase db push                     # applies supabase/migrations
+# optional, to start with the sample catalog (or paste seed.sql into the SQL editor):
+psql "postgresql://postgres:YOUR_DB_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres" -f supabase/seed.sql
+```
 
-**Time limit:** each AI call must finish within 60 seconds (the route's `maxDuration`). Calls use `low` effort to stay fast; set `ANTHROPIC_EFFORT=medium` if menus are misread.
+- **Database › Extensions:** enable `pg_cron` before pushing (the migration schedules the stock
+  release job when it's available; otherwise rely on the Vercel cron below).
+- **Authentication › URL configuration:** Site URL = your store URL; redirect URLs =
+  `https://YOUR-SITE/auth/callback` and `https://YOUR-SITE/auth/confirm`.
+- **Authentication › Email templates:** copy the four templates from `supabase/templates/` (they
+  link to `/auth/confirm` so verification and password reset work across devices).
+- **Authentication › SMTP:** set up your own SMTP sender (Supabase's built-in sender is rate
+  limited and meant for testing). Resend works here too.
+- **Google sign-in (optional):** add the provider with your Google OAuth client, then set
+  `NEXT_PUBLIC_GOOGLE_SIGN_IN=1`.
 
-## Free services it uses
+**2. Vercel.** This repository is already connected to the Vercel project `quan-menu`, which
+builds a preview of every push. Add the environment variables above (for Preview first, scoped to
+this branch, to test; then Production), then redeploy. Once this branch is merged into `main`,
+production serves the store. `vercel.json` schedules `/api/cron/housekeeping` daily (Hobby plan
+limit); stock holds are also released every 5 minutes by pg_cron, and emails are sent as events
+happen.
 
-Everything below works with no API key and no bill:
+**3. After the first deploy:** open `/api/health`, create the owner (above), add the Razorpay
+webhook, and work through **Admin › Settings** (store details, tax and GSTIN, shipping, policies,
+emails). Delete the sample data before launch.
 
-- **Menu photo reading without Claude:** Tesseract (open source) runs in the vendor's browser. `scripts/copy-ocr.mjs` copies the engine and Vietnamese data from npm into `public/ocr` before each build, so nothing loads from outside sites and photos never leave the phone. `src/lib/menu-parse.ts` turns the text into dishes and prices and re-splits words the reader runs together.
-- **Translating dishes that aren't on the built-in list:** MyMemory's free API (`src/lib/free-translate.ts`), about 5,000 characters a day per server. Set `MYMEMORY_EMAIL` in Vercel to raise that to 50,000. Uses the same login and daily allowance as the AI routes.
-- **Exchange rates:** ExchangeRate-API's open endpoint (`src/lib/rates.ts`), refreshed twice a day, credited under each menu. Falls back to the fixed rates in `src/lib/i18n.ts`.
-- **Menu view counter:** a `menu_views` table and `count_view()` function in Supabase (free plan). Each visit to a published menu counts once; the editor shows today and the last 7 days.
-- **Install as an app:** `src/app/manifest.ts` and icons, so vendors can add Quán to their home screen.
+**URLs:** storefront `https://YOUR-SITE/`, admin `https://YOUR-SITE/admin` (sign in at
+`/admin/login`).
 
-With a Claude key, photo reading and translation switch to Claude automatically, and the built-in list is still used first.
+## Payment providers
 
-## Known limits / next steps
+**Razorpay (India).**
 
-- **Pronunciation** uses the phone's built-in voice. Some phones have no Vietnamese voice, and then customers fall back to reading the spelling guide. A cloud text-to-speech service (for example Google TTS) would fix this.
-- **Currency rates** are fixed in `src/lib/i18n.ts`. Update them by hand, or fetch daily rates.
-- Each account has **one stall**. Supporting several would need a stall picker.
-- **Payments** (a monthly vendor plan) aren't built yet. Stripe or PayOS/MoMo for Vietnam would be the next step.
-- There is **no admin view and no analytics**. "How many scans did my sticker get?" would be a strong reason for vendors to pay.
+1. Create an account at razorpay.com and complete KYC for live payments. Test keys work at once.
+2. **Account & Settings › API keys:** generate keys → `NEXT_PUBLIC_RAZORPAY_KEY_ID` and
+   `RAZORPAY_KEY_SECRET` (`rzp_test_…` for testing, `rzp_live_…` for real money).
+3. **Webhooks:** add `https://YOUR-SITE/api/webhooks/razorpay` with a strong secret
+   (`RAZORPAY_WEBHOOK_SECRET`) and the events `payment.authorized`, `payment.captured`,
+   `payment.failed`, `order.paid`, `refund.processed`, `refund.failed`.
+4. **Payment methods:** UPI, cards, netbanking and wallets are offered by Razorpay Checkout;
+   enable or disable them in the Razorpay dashboard. Payments are captured by the server after
+   verification, so automatic capture can be on or off.
+5. Test with Razorpay's test cards or UPI id `success@razorpay` / `failure@razorpay`, then check
+   the order in **Admin › Orders** and **Admin › Payments**.
+
+Refunds started in the admin are sent through Razorpay's refund API and confirmed by webhook.
+
+**Cash on delivery** needs no setup: turn it on or off and set the fee and order limits in
+**Settings › Checkout and tax**; zones, rates and PIN codes can exclude it. Record the cash from
+the order page when the courier remits it.
+
+**Stripe (optional, international cards).** Set `STRIPE_SECRET_KEY`, add a webhook at
+`https://YOUR-SITE/api/webhooks/stripe` (events `checkout.session.completed`,
+`checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`,
+`refund.updated`, `charge.refund.updated`) with `STRIPE_WEBHOOK_SECRET`, then enable Stripe in
+Settings.
+
+## Email
+
+Orders, shipping, delivery, cancellations, refunds and return updates send emails from editable
+templates (**Settings › Emails**). Create a Resend account, verify your sending domain, then set
+`RESEND_API_KEY` and `EMAIL_FROM`. Until then, emails are recorded in the database as skipped.
+Account emails (verification, password reset) are sent by Supabase Auth with the templates in
+`supabase/templates/`.
+
+## Testing
+
+```bash
+npm run typecheck          # TypeScript
+npm test                   # unit tests (src/**/*.test.ts)
+npm run test:integration   # database tests against the local Supabase
+npm run test:e2e           # Playwright acceptance tests (local Supabase + Razorpay mock)
+```
+
+The integration and end-to-end tests need the local stack (`npm run db:start`) and `.env.local`
+pointing at it with the mock payment settings shown above. The end-to-end setup creates test
+accounts with an owner role, so it refuses to run against any non-local database.
+
+**Integration tests (33)** cover access control for anonymous users, customers, staff, admins and
+owners; 20 simultaneous checkouts for 5 units of stock (exactly 5 succeed); concurrent cash on
+delivery orders; idempotent order placement; coupon usage limits under concurrency; failed,
+expired, late, duplicate and mismatched payments; returns and restocking; refund limits.
+
+**Acceptance tests (7, Playwright)** follow the brief:
+
+1. An admin creates a product with an uploaded image and size/colour variants and publishes it;
+   it appears on the product page and in search, while a draft copy returns 404.
+2. Editing the price changes the store while the earlier order keeps the price paid.
+3. A customer applies a discount code and pays with a test payment; the order is confirmed,
+   totals are correct, stock drops by the quantity bought and the order shows in the admin.
+4. A failed payment keeps the order unpaid and holds stock; when the hold expires the stock comes
+   back. The same signed webhook sent twice is processed once; a forged one is rejected.
+5. Shipping an order with a tracking number in the admin shows on the customer's order page and
+   queues the shipping email.
+6. A customer is turned away from the admin and, using the database API directly, can't grant
+   themselves a role, call admin functions, change prices or stock, read drafts, payments or other
+   people's orders, or upload files.
+7. Carts, products and orders are stored on the server and survive a fresh browser.
+
+Latest local run: typecheck clean, unit 2/2, integration 33/33, acceptance 7/7, production build
+(`next build`) succeeds.
+
+## Running the store
+
+- **Adding products:** Admin › Products › Add product, or import a CSV (Products › Import; the
+  template and every column are described on that page). Products start as drafts; publish now or
+  schedule a launch.
+- **Daily orders:** Admin › Orders › "To fulfil": start preparing → packed → shipped (courier and
+  tracking; the customer is emailed) → delivered. Print the packing slip and invoice from the order.
+- **Problems:** "Needs attention" lists orders with payment issues (for example a payment that
+  arrived after the order expired, which is refunded automatically). Admin › Payments shows
+  refunds that failed and lets you check for payments a webhook missed.
+- **Returns:** approve the request, mark items received (optionally back into stock), then issue
+  the refund from the request.
+
+## Known limitations
+
+- **Live deployment needs its own Supabase project.** The Vercel previews of this branch build
+  and run, but the project's environment variables still point at the earlier Quán app's database,
+  so they report "database unreachable" until the variables above are set (see Deploy).
+- GST invoices show tax per line at the product's rate; HSN codes, CGST/SGST/IGST splits and
+  invoice numbering separate from order numbers are not implemented. Confirm tax settings with
+  your accountant.
+- Shipping is rate-table based; there is no live courier rate or label integration (couriers are
+  recorded with tracking links). Return pickups are arranged outside the app.
+- Stripe support is basic (Checkout, refunds); prices are charged in INR.
+- Product search uses Postgres trigram matching, which suits catalogs of thousands of products; a
+  dedicated search service would be needed for very large catalogs or typo-tolerant ranking.
+- Emails need Resend; there is no in-app email log beyond the outbox table.
+- Images uploaded in the editor are resized in the browser; HEIC photos must be exported as JPEG
+  first.
+- The Vercel cron runs daily on the Hobby plan; pg_cron handles the 5-minute stock release. If
+  pg_cron isn't available, use a paid Vercel plan or another scheduler calling
+  `/api/cron/housekeeping` every few minutes with the `CRON_SECRET` bearer token.
+
+## Project layout
+
+```
+src/app/(store)/        storefront pages (home, shop, category, brands, collections, products,
+                        cart, checkout, orders, account, auth, content pages)
+src/app/admin/          admin login, dashboard and every admin section; print views
+src/app/api/            webhooks, cron, health, session info
+src/components/store/   storefront components
+src/components/admin/   admin components (editors, tables, uploads, charts)
+src/server/             Server Actions (store and admin)
+src/lib/                Supabase clients, auth, settings, catalog queries, payments, email, CSV
+supabase/migrations/    schema, policies and SQL functions
+supabase/seed.sql       sample data (flagged is_sample)
+tests/integration/      database tests (vitest)
+tests/e2e/              Playwright acceptance tests and the Razorpay mock
+scripts/                seed generator, make-owner
+```

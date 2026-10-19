@@ -11,7 +11,7 @@ async function maintenanceOn() {
   if (maintenance && Date.now() - maintenance.at < 30_000) return maintenance.on;
   let on = false;
   try {
-    const res = await fetch(`${URL_}/rest/v1/store_settings?select=maintenance_mode&id=eq.1`, { headers: { apikey: KEY } });
+    const res = await fetch(`${URL_}/rest/v1/store_settings?select=maintenance_mode&id=eq.1`, { headers: { apikey: KEY }, signal: AbortSignal.timeout(2500) });
     if (res.ok) on = !!(await res.json())?.[0]?.maintenance_mode;
   } catch {
     on = false;
@@ -54,9 +54,11 @@ export async function middleware(request: NextRequest) {
       },
     },
   });
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Never let a slow auth server hang every page: after 4 s, let the request through and
+  // leave the decision to the page, which checks the session and role again itself.
+  const result = await Promise.race([supabase.auth.getUser(), new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000))]);
+  if (!result) return closed ? NextResponse.rewrite(new URL("/maintenance", request.url), { status: 503 }) : response;
+  const user = result.data.user;
 
   if (!user && (isAdmin || isAccount)) {
     const login = request.nextUrl.clone();
