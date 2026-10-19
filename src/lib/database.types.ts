@@ -968,6 +968,26 @@ isOneToOne: false
 "check_postcode":
 { Args: { "p_postal_code": string,"p_state"?: string,"p_subtotal"?: number }; Returns: Json
                            },
+"claim_outbox":
+{ Args: { "p_limit"?: number }; Returns: {
+              "attempts": number,
+"created_at": string,
+"data": NonNullable<Json>,
+"id": string,
+"last_error": string | null,
+"order_id": string | null,
+"provider_message_id": string | null,
+"sent_at": string | null,
+"status": string,
+"template": string,
+"to_email": string
+            }[]
+                          SetofOptions: {
+        from: "*"
+        to: "email_outbox"
+        isOneToOne: false
+        isSetofReturn: true
+      } },
 "clear_stock_context":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },

@@ -22,7 +22,7 @@ export default function WishButton({ productId, title, className, withLabel }: {
       className={cx(
         withLabel
           ? "inline-flex h-12 items-center justify-center gap-2 border border-line px-4 text-sm hover:border-ink"
-          : "grid size-9 place-items-center rounded-full text-ink transition hover:bg-paper/80",
+          : "grid size-9 place-items-center rounded-full bg-paper/85 text-ink shadow-sm backdrop-blur-sm transition hover:bg-paper",
         className,
       )}
     >
