@@ -65,3 +65,9 @@ export async function tagSuggestions(sb: Client): Promise<string[]> {
   for (const row of data ?? []) for (const t of row.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
   return [...counts].sort((a, b) => b[1] - a[1]).slice(0, 200).map(([t]) => t);
 }
+
+/** Brands keyed by slug, for collection rules (rules refer to slugs, which survive re-imports). */
+export async function brandSlugOptions(sb: Client): Promise<Option[]> {
+  const { data } = await sb.from("brands").select("slug, name").order("name");
+  return (data ?? []).map((b) => ({ id: b.slug, label: b.name }));
+}

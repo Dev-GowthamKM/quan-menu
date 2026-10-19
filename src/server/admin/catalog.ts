@@ -321,6 +321,12 @@ export async function deleteCatalogRow(table: keyof typeof deletable, id: string
   const ctx = await staff();
   if (!ctx) return fail("Staff access required.");
   if (!(table in deletable)) return fail("Unknown item.");
+  if (table === "brands" || table === "categories") {
+    // Products would silently lose their brand or category, so ask for a move first.
+    const column = table === "brands" ? "brand_id" : "category_id";
+    const { count } = await ctx.supabase.from("products").select("id", { count: "exact", head: true }).eq(column, id);
+    if (count) return fail(`${count} product${count === 1 ? " is" : "s are"} still in it. Move ${count === 1 ? "it" : "them"} to another ${table === "brands" ? "brand" : "category"} first (bulk actions on the product list can do this).`);
+  }
   const { error } = await ctx.supabase.from(table).delete().eq("id", id);
   if (error) {
     return fail(error.code === "23503" ? "It's still in use (products or subcategories point to it). Move them first." : friendlyError(error));
@@ -508,4 +514,36 @@ export async function lookupMedia(names: string[]): Promise<ActionResult<Record<
   const map: Record<string, string> = {};
   for (const row of (data ?? []) as { name: string; path: string | null }[]) if (row.path) map[row.name] = row.path;
   return ok(map);
+}
+
+// --- Collections editor helpers ----------------------------------------------------------
+
+export interface PickerProduct {
+  id: string;
+  title: string;
+  status: string;
+  image: string | null;
+}
+
+/** Products for the manual collection picker. */
+export async function searchProductsForPicker(q: string): Promise<ActionResult<PickerProduct[]>> {
+  const ctx = await staff();
+  if (!ctx) return fail("Staff access required.");
+  const { data, error } = await ctx.supabase.rpc("admin_product_list", { p: { q: q.slice(0, 100), limit: 20, sort: "title" } as Json });
+  if (error) return fail(friendlyError(error));
+  const rows = ((data as unknown as { rows: { id: string; title: string; state: string; image: string | null }[] })?.rows ?? []);
+  return ok(rows.map((r) => ({ id: r.id, title: r.title, status: r.state, image: r.image })));
+}
+
+/** What an automated collection's rules would include right now. */
+export async function previewCollectionRules(rules: { match: "all" | "any"; conditions: { field: string; op: string; value: string }[] }): Promise<
+  ActionResult<{ count: number; live: number; products: PickerProduct[] }>
+> {
+  const ctx = await staff();
+  if (!ctx) return fail("Staff access required.");
+  const parsed = z.object({ match: z.enum(["all", "any"]), conditions: z.array(conditionSchema).max(20) }).safeParse(rules);
+  if (!parsed.success) return ok({ count: 0, live: 0, products: [] });
+  const { data, error } = await ctx.supabase.rpc("admin_collection_preview", { p_rules: parsed.data as unknown as Json });
+  if (error) return fail(friendlyError(error));
+  return ok(data as unknown as { count: number; live: number; products: PickerProduct[] });
 }
