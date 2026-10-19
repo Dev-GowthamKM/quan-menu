@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import ReconcileButton from "@/components/admin/orders/ReconcileButton";
 import { adminInput, Card, Empty, FilterBar, PageHeader, Pager, pageOf, sp, Stat, Table, Td, Th, withParams } from "@/components/admin/ui";
 import { Badge, cx, Notice } from "@/components/ui/controls";
-import { requireRole } from "@/lib/auth";
+import { requireRole, requireStaffPage } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
 import { razorpayConfigured } from "@/lib/payments/razorpay";
@@ -16,6 +16,7 @@ type Params = Record<string, string | string[] | undefined>;
 const TONE: Record<string, "green" | "amber" | "red" | "violet" | "neutral"> = { captured: "green", authorized: "amber", created: "neutral", failed: "red", refunded: "violet", partially_refunded: "violet" };
 
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<Params> }) {
+  await requireStaffPage("admin");
   const { supabase } = await requireRole("admin");
   const params = await searchParams;
   const page = pageOf(params);
