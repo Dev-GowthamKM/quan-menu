@@ -62,7 +62,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         </div>
       )}
 
-      <nav aria-label="Stock filter" className="mb-3 flex gap-1 overflow-x-auto border-b border-black/10">
+      <nav aria-label="Stock filter" className="relative mb-3 flex gap-1 overflow-x-auto border-b border-black/10">
         {TABS.map((t) => {
           const active = filters.stock === t.key;
           return (

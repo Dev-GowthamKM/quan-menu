@@ -13,7 +13,7 @@ export default function Rail({ label, children }: { label: string; children: Rea
         role="region"
         aria-label={label}
         tabIndex={0}
-        className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-2 sm:-mx-6 sm:scroll-px-6 sm:px-6 md:gap-5 lg:mx-0 lg:scroll-px-0 lg:px-0"
+        className="scrollbar-none relative -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-2 sm:-mx-6 sm:scroll-px-6 sm:px-6 md:gap-5 lg:mx-0 lg:scroll-px-0 lg:px-0"
       >
         {children}
       </div>

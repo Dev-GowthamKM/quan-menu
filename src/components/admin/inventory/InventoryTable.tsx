@@ -96,7 +96,7 @@ export default function InventoryTable({ rows }: { rows: InventoryRow[] }) {
           {invalid.length > 0 && <p className="w-full text-xs text-red-700">Enter a whole number, or +/− a number, for {invalid.map((r) => r.sku).join(", ")}.</p>}
         </div>
       )}
-      <div className="overflow-x-auto rounded-lg border border-black/10 bg-white">
+      <div className="relative overflow-x-auto rounded-lg border border-black/10 bg-white">
         <table className="w-full min-w-[860px] border-collapse text-sm">
           <thead>
             <tr className="bg-[#fafaf9] text-left text-xs text-taupe">

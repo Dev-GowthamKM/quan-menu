@@ -14,7 +14,7 @@ const LINKS = [
 export default function AccountNav() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Account" className="flex gap-1 overflow-x-auto border-b border-line pb-2 lg:flex-col lg:border-none lg:pb-0">
+    <nav aria-label="Account" className="relative flex gap-1 overflow-x-auto border-b border-line pb-2 lg:flex-col lg:border-none lg:pb-0">
       {LINKS.map((l) => {
         const active = l.href === "/account" ? pathname === "/account" : pathname.startsWith(l.href);
         return (

@@ -165,9 +165,9 @@ export default function OrderView({ detail, accessKey, justPlaced, stripeSession
             {o.cod_fee > 0 && <div className="flex justify-between"><dt className="text-taupe">Cash on delivery fee</dt><dd className="tabular-nums">{formatMoney(o.cod_fee, c)}</dd></div>}
             {o.tax_mode === "exclusive" && <div className="flex justify-between"><dt className="text-taupe">{o.tax_label}</dt><dd className="tabular-nums">{formatMoney(o.tax_total, c)}</dd></div>}
             <div className="mt-2 flex justify-between border-t border-line pt-3 text-base"><dt>Total</dt><dd className="font-medium tabular-nums">{formatMoney(o.grand_total, c)}</dd></div>
-            {o.tax_mode === "inclusive" && o.tax_total > 0 && <p className="text-right text-xs text-stone">Includes {formatMoney(o.tax_total, c)} {o.tax_label}</p>}
             {o.amount_refunded > 0 && <div className="flex justify-between text-violet-800"><dt>Refunded</dt><dd className="tabular-nums">−{formatMoney(o.amount_refunded, c)}</dd></div>}
           </dl>
+          {o.tax_mode === "inclusive" && o.tax_total > 0 && <p className="-mt-3 text-right text-xs text-stone">Includes {formatMoney(o.tax_total, c)} {o.tax_label}</p>}
           <p className="text-xs text-stone">
             Need help with this order? <Link href={`/contact`} className="underline">Contact us</Link> and mention {o.order_number}.
           </p>

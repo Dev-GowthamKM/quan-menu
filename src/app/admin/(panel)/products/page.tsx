@@ -59,7 +59,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
       {list.error && <Notice tone="error" className="mb-4">Products couldn&apos;t load: {list.error.message}</Notice>}
 
-      <nav aria-label="Product status" className="mb-3 flex gap-1 overflow-x-auto border-b border-black/10">
+      <nav aria-label="Product status" className="relative mb-3 flex gap-1 overflow-x-auto border-b border-black/10">
         {TABS.map((t) => {
           const active = status === t.key;
           return (

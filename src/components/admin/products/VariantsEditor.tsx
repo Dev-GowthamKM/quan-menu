@@ -235,7 +235,7 @@ export default function VariantsEditor({
         </label>
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-black/10">
+      <div className="relative overflow-x-auto rounded-md border border-black/10">
         <table className="w-full min-w-[760px] border-collapse text-sm">
           <thead>
             <tr className="bg-[#fafaf9] text-left text-xs text-taupe">

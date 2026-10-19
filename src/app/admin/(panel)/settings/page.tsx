@@ -37,7 +37,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <Notice tone="error">Settings couldn&apos;t load: {error?.message}</Notice>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
-          <nav aria-label="Settings sections" className="flex gap-1 overflow-x-auto lg:flex-col">
+          <nav aria-label="Settings sections" className="relative flex gap-1 overflow-x-auto lg:flex-col">
             {TABS.map((t) => (
               <Link key={t.key} href={`/admin/settings?tab=${t.key}`} aria-current={tab === t.key ? "page" : undefined}
                 className={cx("rounded-md px-3 py-2 text-sm whitespace-nowrap", tab === t.key ? "bg-white font-medium shadow-sm ring-1 ring-black/10" : "text-taupe hover:bg-black/5 hover:text-ink")}>

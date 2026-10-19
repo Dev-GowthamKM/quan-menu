@@ -27,7 +27,7 @@ export function PageHeader({ title, description, actions, back }: { title: React
 
 export function Card({ title, actions, children, className, padded = true }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; padded?: boolean }) {
   return (
-    <section className={cx("rounded-lg border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]", className)}>
+    <section className={cx("min-w-0 rounded-lg border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]", className)}>
       {(title || actions) && (
         <div className="flex items-center justify-between gap-3 border-b border-black/10 px-4 py-3">
           {title && <h2 className="text-sm font-semibold">{title}</h2>}
@@ -51,7 +51,7 @@ export function Stat({ label, value, hint, tone }: { label: string; value: React
 
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cx("overflow-x-auto rounded-lg border border-black/10 bg-white", className)}>
+    <div className={cx("relative overflow-x-auto rounded-lg border border-black/10 bg-white", className)}>
       <table className="w-full min-w-max border-collapse text-sm">{children}</table>
     </div>
   );

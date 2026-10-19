@@ -36,7 +36,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         actions={roleAtLeast(role, "admin") ? <a href={`/admin/orders/export${exportQuery ? `?${exportQuery}` : ""}`} className={buttonClass("ghost", "sm", "border-black/15! bg-white")}><DownloadIcon size={14} /> Export CSV</a> : undefined}
       />
       {error && <Notice tone="error" className="mb-4">{error.message}</Notice>}
-      <nav aria-label="Order views" className="mb-3 flex gap-1 overflow-x-auto border-b border-black/10">
+      <nav aria-label="Order views" className="relative mb-3 flex gap-1 overflow-x-auto border-b border-black/10">
         {ORDER_VIEWS.map((v) => {
           const active = f.view === v.key && !f.status && !f.fulfillment && !f.payment;
           const n = counts[v.key];

@@ -200,7 +200,7 @@ export default function ProductTable({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-black/10 bg-white">
+        <div className="relative overflow-x-auto rounded-lg border border-black/10 bg-white">
           <table className="w-full min-w-[900px] border-collapse text-sm">
             <thead>
               <tr className="bg-[#fafaf9] text-left text-xs text-taupe">

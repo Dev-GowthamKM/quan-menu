@@ -333,7 +333,7 @@ function SizeGuideDialog({ guide, open, onClose }: { guide: SizeGuide; open: boo
       <div className="p-5 md:p-8">
         <p className="font-serif text-2xl">{guide.name}</p>
         {guide.description && <p className="mt-2 text-sm text-taupe">{guide.description}</p>}
-        <div className="mt-6 overflow-x-auto">
+        <div className="relative mt-6 overflow-x-auto">
           <table className="w-full min-w-[28rem] border-collapse text-sm">
             <caption className="sr-only">Measurements in {guide.unit === "in" ? "inches" : "centimetres"}</caption>
             <thead>

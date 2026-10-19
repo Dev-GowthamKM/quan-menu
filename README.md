@@ -358,8 +358,13 @@ expired, late, duplicate and mismatched payments; returns and restocking; refund
    people's orders, or upload files.
 7. Carts, products and orders are stored on the server and survive a fresh browser.
 
-Latest local run: typecheck clean, unit 2/2, integration 33/33, acceptance 7/7, production build
-(`next build`) succeeds.
+**Accessibility checks (2, Playwright + axe-core)** scan 13 storefront pages (including the
+checkout) and 14 admin pages for WCAG 2.1 A/AA problems and fail on anything serious or critical.
+Automated checks don't replace testing with a keyboard and a screen reader.
+
+Latest local run: typecheck clean, unit 2/2, integration 33/33, Playwright 9/9 (acceptance 7/7,
+accessibility 2/2), every page checked at 390 px wide without horizontal scrolling, and the
+production build (`next build`) succeeds.
 
 ## Running the store
 

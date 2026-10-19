@@ -41,7 +41,7 @@ export default function Gallery({ images, title, color }: { images: PageImage[];
       <div className="lg:hidden">
         <div
           ref={strip}
-          className="scrollbar-none -mx-4 flex snap-x snap-mandatory overflow-x-auto sm:-mx-6"
+          className="scrollbar-none relative -mx-4 flex snap-x snap-mandatory overflow-x-auto sm:-mx-6"
           onScroll={(e) => {
             const el = e.currentTarget;
             setActive(Math.round(el.scrollLeft / el.clientWidth));

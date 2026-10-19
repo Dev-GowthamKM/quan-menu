@@ -51,7 +51,7 @@ export default function RevenueChart({ data, currency }: { data: Point[]; curren
   return (
     <div>
       <div className="relative">
-        <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label="Net revenue per day for the last 30 days">
+        <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="group" aria-label="Net revenue per day for the last 30 days">
           {ticks.map((t) => (
             <g key={t}>
               <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke={GRID} strokeWidth={1} />
@@ -80,7 +80,7 @@ export default function RevenueChart({ data, currency }: { data: Point[]; curren
                   height={innerH}
                   fill="transparent"
                   tabIndex={0}
-                  role="button"
+                  role="img"
                   aria-label={`${fmtDay.format(new Date(d.date))}: ${formatMoney(d.revenue, currency)}, ${d.orders} orders`}
                   onPointerEnter={() => setActive(i)}
                   onPointerLeave={() => setActive(null)}

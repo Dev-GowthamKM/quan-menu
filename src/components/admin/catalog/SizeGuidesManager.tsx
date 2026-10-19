@@ -121,7 +121,7 @@ export default function SizeGuidesManager({ rows }: { rows: GuideRow[] }) {
             <TextArea label="Note above the chart" value={draft.description} rows={2} maxLength={2000} onChange={(e) => patch({ description: e.target.value })} placeholder="Body measurements. If you're between sizes, size up." />
             <div>
               <p className="mb-1.5 text-xs font-medium text-taupe">Chart</p>
-              <div className="overflow-x-auto rounded-md border border-black/10 p-2">
+              <div className="relative overflow-x-auto rounded-md border border-black/10 p-2">
                 <table className="border-separate border-spacing-1">
                   <thead>
                     <tr>

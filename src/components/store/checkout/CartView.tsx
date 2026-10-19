@@ -145,10 +145,10 @@ export default function CartView({ initial }: { initial: CartQuote }) {
               <dt className="font-medium">Estimated total</dt>
               <dd className="font-serif text-2xl tabular-nums">{formatMoney(quote.grand_total, c)}</dd>
             </div>
-            {quote.tax_mode === "inclusive" && quote.tax_total > 0 && (
-              <p className="text-right text-xs text-stone">Includes {formatMoney(quote.tax_total, c)} {quote.tax_label}</p>
-            )}
           </dl>
+          {quote.tax_mode === "inclusive" && quote.tax_total > 0 && (
+            <p className="mt-2 text-right text-xs text-stone">Includes {formatMoney(quote.tax_total, c)} {quote.tax_label}</p>
+          )}
           <ButtonLink href="/checkout" size="lg" className={cx("mt-6 w-full", !quote.can_checkout && "pointer-events-none opacity-50")} aria-disabled={!quote.can_checkout}>
             <LockIcon size={16} /> Checkout
           </ButtonLink>
