@@ -5,5 +5,8 @@ node_modules
 *.tsbuildinfo
 next-env.d.ts
 
-# OCR engine files, copied from node_modules at build time (scripts/copy-ocr.mjs)
-/public/ocr
+
+# End-to-end test output and saved sessions
+/tests/e2e/.auth/
+/tests/e2e/report/
+/test-results/
