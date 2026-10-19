@@ -343,3 +343,169 @@ export async function deleteMedia(paths: string[]): Promise<ActionResult<{ delet
   const kept = list.length - unused.length;
   return ok({ deleted: unused.length, kept }, kept ? `${unused.length} deleted; ${kept} kept because products or pages still use them.` : `${unused.length} deleted.`);
 }
+
+// --- Product list helpers ---------------------------------------------------------------
+
+export interface QuickEditData {
+  id: string;
+  title: string;
+  price: number;
+  compare_at_price: number | null;
+  status: "draft" | "active" | "archived";
+  variants: { id: string; sku: string; size: string; color: string; stock_quantity: number; reserved_quantity: number }[];
+}
+
+export async function getQuickEdit(id: string): Promise<ActionResult<QuickEditData>> {
+  const ctx = await staff();
+  if (!ctx) return fail("Staff access required.");
+  const { data, error } = await ctx.supabase
+    .from("products")
+    .select("id, title, price, compare_at_price, status, variants:product_variants(id, sku, size, color, stock_quantity, reserved_quantity, position)")
+    .eq("id", id)
+    .order("position", { referencedTable: "product_variants" })
+    .single();
+  if (error) return fail(friendlyError(error));
+  return ok(data as unknown as QuickEditData);
+}
+
+const listFilters = z.object({
+  q: z.string().max(200).optional(),
+  status: z.enum(["all", "active", "draft", "scheduled", "archived"]).optional(),
+  brand: z.string().uuid().or(z.literal("")).optional(),
+  category: z.string().uuid().or(z.literal("")).optional(),
+  stock: z.enum(["", "in", "low", "out"]).optional(),
+});
+
+/** Every product id matching the list filters (for "select all matching"). */
+export async function productIdsMatching(filters: z.input<typeof listFilters>): Promise<ActionResult<string[]>> {
+  const ctx = await staff();
+  if (!ctx) return fail("Staff access required.");
+  const parsed = listFilters.safeParse(filters);
+  if (!parsed.success) return fail("Invalid filters.");
+  const { data, error } = await ctx.supabase.rpc("admin_product_list", { p: { ...parsed.data, ids_only: true } as Json });
+  if (error) return fail(friendlyError(error));
+  return ok((data ?? []) as string[]);
+}
+
+/** SKUs another product already uses, for live feedback in the editor. */
+export async function skuConflicts(skus: string[], productId: string | null): Promise<ActionResult<{ sku: string; title: string; product_id: string }[]>> {
+  const ctx = await staff();
+  if (!ctx) return fail("Staff access required.");
+  const list = skus.map((s) => s.trim()).filter(Boolean).slice(0, 250);
+  if (!list.length) return ok([]);
+  const { data, error } = await ctx.supabase.rpc("admin_sku_conflicts", { p_skus: list, p_product_id: productId ?? (null as unknown as string) });
+  if (error) return fail(friendlyError(error));
+  return ok((data ?? []) as { sku: string; title: string; product_id: string }[]);
+}
+
+// --- CSV import -------------------------------------------------------------------------
+
+const importVariant = z.object({
+  sku: z.string().trim().min(1).max(64),
+  size: z.string().max(30).optional(),
+  color: z.string().max(40).optional(),
+  color_hex: z.string().max(7).optional(),
+  price: z.number().int().min(0).nullable().optional(),
+  compare_at_price: z.number().int().min(0).nullable().optional(),
+  stock: z.number().int().min(0).max(1_000_000).nullable().optional(),
+  barcode: z.string().max(64).optional(),
+  weight_grams: z.number().int().min(0).max(100000).nullable().optional(),
+  low_stock_threshold: z.number().int().min(0).max(10000).nullable().optional(),
+  is_active: z.boolean().optional(),
+});
+const importProduct = z.object({
+  handle: z.string().trim().min(1).max(120),
+  rows: z.array(z.number().int()).max(300),
+  title: z.string().max(200).optional(),
+  brand: z.string().max(120).optional(),
+  category: z.string().max(240).optional(),
+  description: z.string().max(20000).optional(),
+  fabric: z.string().max(2000).optional(),
+  fit: z.string().max(2000).optional(),
+  care: z.string().max(2000).optional(),
+  tags: z.array(z.string().max(40)).max(40).optional(),
+  collections: z.array(z.string().max(120)).max(40).optional(),
+  price: z.number().int().min(0).nullable().optional(),
+  compare_at_price: z.number().int().min(0).nullable().optional(),
+  tax_rate_bps: z.number().int().min(0).max(5000).nullable().optional(),
+  weight_grams: z.number().int().min(0).max(100000).nullable().optional(),
+  length_mm: z.number().int().min(0).max(10000).nullable().optional(),
+  width_mm: z.number().int().min(0).max(10000).nullable().optional(),
+  height_mm: z.number().int().min(0).max(10000).nullable().optional(),
+  is_featured: z.boolean().optional(),
+  is_returnable: z.boolean().optional(),
+  return_window_days: z.number().int().min(0).max(365).nullable().optional(),
+  seo_title: z.string().max(120).optional(),
+  seo_description: z.string().max(320).optional(),
+  images: z.array(z.object({ url: z.string().max(1000), storage_path: z.string().max(500).optional(), alt: z.string().max(300).optional() })).max(30).optional(),
+  variants: z.array(importVariant).min(1).max(250),
+});
+const importOptions = z.object({ dry_run: z.boolean(), update_existing: z.boolean(), create_missing: z.boolean() });
+
+export type ImportProduct = z.input<typeof importProduct>;
+export interface ImportResult {
+  handle: string;
+  rows: number[];
+  ok: boolean;
+  action: "create" | "update" | null;
+  id?: string | null;
+  error?: string;
+}
+
+/** Validates (dry run) or imports one batch of products from a CSV file. */
+export async function importProducts(products: ImportProduct[], options: z.input<typeof importOptions>): Promise<ActionResult<ImportResult[]>> {
+  const ctx = await staff();
+  if (!ctx) return fail("Your session has expired or you no longer have staff access.");
+  if (products.length > 50) return fail("Send at most 50 products per batch.");
+  const opts = importOptions.safeParse(options);
+  if (!opts.success) return fail("Invalid import options.");
+  const results: ImportResult[] = [];
+  const valid: z.output<typeof importProduct>[] = [];
+  for (const p of products) {
+    const parsed = importProduct.safeParse(p);
+    if (parsed.success) valid.push(parsed.data);
+    else {
+      const issue = parsed.error.issues[0];
+      results.push({ handle: String(p.handle ?? ""), rows: Array.isArray(p.rows) ? p.rows : [], ok: false, action: null, error: `${issue.path.join(".")}: ${issue.message}` });
+    }
+  }
+  if (valid.length) {
+    const { data, error } = await ctx.supabase.rpc("admin_import_products", { p_products: valid as unknown as Json, p_options: opts.data as unknown as Json });
+    if (error) return fail(friendlyError(error, "The import couldn't run."));
+    results.push(...((data ?? []) as unknown as ImportResult[]));
+  }
+  if (!opts.data.dry_run) refreshStore(["/admin/products"]);
+  return ok(results);
+}
+
+/** Final import step: statuses and publish dates from the file, applied only after every row imported. */
+export async function applyImportStatuses(items: { id: string; status: "draft" | "active" | "archived"; published_at: string | null }[]): Promise<ActionResult<{ count: number }>> {
+  const ctx = await staff();
+  if (!ctx) return fail("Staff access required.");
+  const parsed = z
+    .array(z.object({ id: z.string().uuid(), status: z.enum(["draft", "active", "archived"]), published_at: z.string().datetime({ offset: true }).nullable() }))
+    .max(5000)
+    .safeParse(items);
+  if (!parsed.success) return fail("Invalid statuses.");
+  let count = 0;
+  for (let i = 0; i < parsed.data.length; i += 200) {
+    const { data, error } = await ctx.supabase.rpc("admin_import_apply_status", { p_items: parsed.data.slice(i, i + 200) as unknown as Json });
+    if (error) return fail(friendlyError(error));
+    count += Number(data);
+  }
+  refreshStore(["/admin/products"]);
+  return ok({ count }, `Statuses applied to ${count} product${count === 1 ? "" : "s"}.`);
+}
+
+/** Resolves image file names from a CSV to files already in the media library. */
+export async function lookupMedia(names: string[]): Promise<ActionResult<Record<string, string>>> {
+  const ctx = await staff();
+  if (!ctx) return fail("Staff access required.");
+  const list = [...new Set(names)].filter((n) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(n)).slice(0, 2000);
+  if (!list.length) return ok({});
+  const { data, error } = await ctx.supabase.rpc("admin_media_lookup", { p_names: list });
+  if (error) return fail(friendlyError(error));
+  const map: Record<string, string> = {};
+  for (const row of (data ?? []) as { name: string; path: string | null }[]) if (row.path) map[row.name] = row.path;
+  return ok(map);
+}

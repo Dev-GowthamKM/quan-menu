@@ -20,12 +20,18 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const [settings, departments] = await Promise.all([getSettings(), getDepartments()]);
   const home = homepageOf(settings);
+  const heading = HEADING_FONTS[settings.heading_font as keyof typeof HEADING_FONTS]?.css ?? HEADING_FONTS.cormorant.css;
+  const body = BODY_FONTS[settings.body_font as keyof typeof BODY_FONTS]?.css ?? BODY_FONTS.jost.css;
+  // Custom properties resolve where they are declared, so the font stacks themselves are
+  // redeclared here (setting only --font-heading would not reach .font-serif).
   const theme = {
     "--color-ink": settings.primary_color,
     "--color-accent": settings.accent_color,
     "--color-ivory": settings.background_color,
-    "--font-heading": HEADING_FONTS[settings.heading_font as keyof typeof HEADING_FONTS]?.css ?? HEADING_FONTS.cormorant.css,
-    "--font-body": BODY_FONTS[settings.body_font as keyof typeof BODY_FONTS]?.css ?? BODY_FONTS.jost.css,
+    "--font-heading": heading,
+    "--font-body": body,
+    "--font-serif": `${heading}, Georgia, "Times New Roman", serif`,
+    "--font-sans": `${body}, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`,
   } as React.CSSProperties;
 
   return (

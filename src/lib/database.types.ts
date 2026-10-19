@@ -817,8 +817,28 @@ isOneToOne: false
 "admin_duplicate_product":
 { Args: { "p_id": string }; Returns: string
                            },
+"admin_import_apply_status":
+{ Args: { "p_items": Json }; Returns: number
+                           },
+"admin_import_products":
+{ Args: { "p_options": Json,"p_products": Json }; Returns: Json
+                           },
+"admin_inventory_list":
+{ Args: { "p": Json }; Returns: Json
+                           },
 "admin_mark_cod_paid":
 { Args: { "p_order_id": string,"p_reference": string }; Returns: Json
+                           },
+"admin_media_list":
+{ Args: { "p_filter": string,"p_limit": number,"p_offset": number,"p_q": string }; Returns: Json
+                           },
+"admin_media_lookup":
+{ Args: { "p_names": (string)[] }; Returns: {
+              "name": string,"path": string
+            }[]
+                           },
+"admin_product_list":
+{ Args: { "p": Json }; Returns: Json
                            },
 "admin_save_product":
 { Args: { "p": Json }; Returns: string
@@ -828,6 +848,11 @@ isOneToOne: false
                            },
 "admin_set_stock":
 { Args: { "p_items": Json,"p_note": string,"p_reason": Database["public"]['Enums']["inventory_reason"] }; Returns: number
+                           },
+"admin_sku_conflicts":
+{ Args: { "p_product_id": string,"p_skus": (string)[] }; Returns: {
+              "product_id": string,"sku": string,"title": string
+            }[]
                            },
 "admin_staff":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -1021,6 +1046,12 @@ isOneToOne: false
 "housekeeping":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"import_brand_id":
+{ Args: { "p_create": boolean,"p_name": string }; Returns: string
+                           },
+"import_category_id":
+{ Args: { "p_create": boolean,"p_value": string }; Returns: string
+                           },
 "is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
@@ -1047,6 +1078,9 @@ isOneToOne: false
                            },
 "match_shipping_zone":
 { Args: { "p_country": string,"p_postal_code": string,"p_state": string }; Returns: string
+                           },
+"media_in_use":
+{ Args: { "p_path": string }; Returns: boolean
                            },
 "my_role":
 { Args: Record<PropertyKey, never>; Returns: Database["public"]['Enums']["app_role"]
@@ -1192,6 +1226,9 @@ isOneToOne: false
                            },
 "unreferenced_media":
 { Args: { "p_paths": (string)[] }; Returns: string[]
+                           },
+"url_has_path":
+{ Args: { "p_path": string,"p_url": string }; Returns: boolean
                            },
 "write_audit":
 { Args: { "p_action": string,"p_changes": Json,"p_entity_id": string,"p_entity_type": string }; Returns: undefined

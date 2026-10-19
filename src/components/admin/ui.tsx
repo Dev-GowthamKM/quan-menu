@@ -128,7 +128,7 @@ export function FilterBar({ children, action }: { children: ReactNode; action: s
   );
 }
 
-export const adminInput = "h-9 rounded-md border border-black/15 bg-white px-2.5 text-sm focus:border-ink focus:outline-none";
+export const adminInput = "h-9 min-w-0 rounded-md border border-black/15 bg-white px-2.5 text-sm focus:border-ink focus:outline-none";
 
 export function sp(params: Record<string, string | string[] | undefined>, key: string) {
   const v = params[key];

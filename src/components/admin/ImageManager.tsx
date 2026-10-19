@@ -130,7 +130,7 @@ export default function ImageManager({ images, onChange, colors, folder = "produ
       )}
 
       {images.length > 0 && (
-        <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+        <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-4">
           {images.map((im, i) => (
             <li
               key={im.key}
@@ -163,7 +163,7 @@ export default function ImageManager({ images, onChange, colors, folder = "produ
                     {colors.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 )}
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
                   <div className="flex gap-1">
                     <button type="button" onClick={() => move(i, i - 1)} disabled={i === 0} className="grid size-7 place-items-center rounded border border-black/10 disabled:opacity-30" aria-label="Move earlier"><ChevronLeft size={14} /></button>
                     <button type="button" onClick={() => move(i, i + 1)} disabled={i === images.length - 1} className="grid size-7 place-items-center rounded border border-black/10 disabled:opacity-30" aria-label="Move later"><ChevronRight size={14} /></button>

@@ -171,7 +171,10 @@ begin
   end if;
 
   -- Variants
-  perform public.set_stock_context('adjustment', 'Product editor', null);
+  -- Stock changes are logged as editor adjustments, or as an import when CSV import saves.
+  perform public.set_stock_context(
+    case when p ->> 'stock_reason' = 'import' then 'import' else 'adjustment' end::public.inventory_reason,
+    case when p ->> 'stock_reason' = 'import' then 'CSV import' else 'Product editor' end, null);
   for v in select x from jsonb_array_elements(v_variants) x loop
     v_pos := v_pos + 1;
     v_existing := null;

@@ -1,4 +1,5 @@
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { Toaster } from "@/components/admin/Toaster";
 import { requireStaffPage } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -21,7 +22,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         role={role}
         counts={{ orders: toFulfil.count ?? 0, returns: openReturns.count ?? 0, messages: newMessages.count ?? 0, reviews: pendingReviews.count ?? 0 }}
       />
-      <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+      <Toaster>
+        <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+      </Toaster>
     </div>
   );
 }
