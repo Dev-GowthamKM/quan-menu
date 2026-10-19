@@ -800,6 +800,12 @@ isOneToOne: false
 "admin_cancel_order":
 { Args: { "p_order_id": string,"p_reason": string,"p_restock"?: boolean }; Returns: Json
                            },
+"admin_collection_list":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"admin_collection_preview":
+{ Args: { "p_rules": Json }; Returns: Json
+                           },
 "admin_customers":
 { Args: { "p_limit"?: number,"p_offset"?: number,"p_q"?: string }; Returns: {
               "created_at": string,"email": string,"full_name": string,"id": string,"last_order_at": string,"lifetime_spend": number,"orders_count": number,"phone": string,"total_count": number

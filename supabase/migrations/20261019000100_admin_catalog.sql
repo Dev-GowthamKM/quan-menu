@@ -578,3 +578,47 @@ begin
 end $$;
 revoke execute on function public.admin_import_apply_status(jsonb) from public, anon;
 grant execute on function public.admin_import_apply_status(jsonb) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Collections
+-- ---------------------------------------------------------------------------
+
+-- Collections with how many products each holds (rules evaluated for automated ones).
+create function public.admin_collection_list() returns jsonb
+language plpgsql stable security invoker set search_path = '' as $$
+begin
+  perform public.require_staff();
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+             'id', c.id, 'title', c.title, 'slug', c.slug, 'kind', c.kind, 'is_published', c.is_published,
+             'is_featured', c.is_featured, 'is_seasonal', c.is_seasonal, 'season', c.season,
+             'starts_at', c.starts_at, 'ends_at', c.ends_at, 'image_url', coalesce(c.image_url, c.banner_url),
+             'sort_order', c.sort_order, 'is_sample', c.is_sample,
+             'product_count', (select count(*) from public.products p where public.product_in_collection(p, c)),
+             'live_count', (select count(*) from public.products p
+                            where p.status = 'active' and p.published_at <= now() and public.product_in_collection(p, c))
+           ) order by c.sort_order, c.title)
+    from public.collections c
+  ), '[]');
+end $$;
+revoke execute on function public.admin_collection_list() from public, anon;
+grant execute on function public.admin_collection_list() to authenticated;
+
+-- Products an automated collection's rules would include, for the rules editor.
+create function public.admin_collection_preview(p_rules jsonb) returns jsonb
+language plpgsql stable security invoker set search_path = '' as $$
+begin
+  perform public.require_staff();
+  return jsonb_build_object(
+    'count', (select count(*) from public.products p where public.product_matches_rules(p, p_rules)),
+    'live', (select count(*) from public.products p where p.status = 'active' and p.published_at <= now() and public.product_matches_rules(p, p_rules)),
+    'products', coalesce((
+      select jsonb_agg(jsonb_build_object('id', x.id, 'title', x.title, 'status', x.status,
+                                          'image', (select i.url from public.product_images i where i.product_id = x.id order by i.position limit 1)))
+      from (select p.id, p.title, p.status from public.products p where public.product_matches_rules(p, p_rules)
+            order by p.updated_at desc limit 12) x
+    ), '[]')
+  );
+end $$;
+revoke execute on function public.admin_collection_preview(jsonb) from public, anon;
+grant execute on function public.admin_collection_preview(jsonb) to authenticated;
