@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { AppearanceForm, CheckoutForm, ContentForm, EmailsForm, GeneralForm, HomepageForm, MaintenanceForm, SeoForm } from "@/components/admin/store/SettingsForms";
+import WhatsAppSettings from "@/components/admin/store/WhatsAppSettings";
 import { PageHeader } from "@/components/admin/ui";
 import { cx, Notice } from "@/components/ui/controls";
 import { requireRole, requireStaffPage } from "@/lib/auth";
 import { razorpayConfigured } from "@/lib/payments/razorpay";
 import { stripeConfigured } from "@/lib/payments/stripe";
 import { EMAIL_FROM, RESEND_API_KEY } from "@/lib/server-env";
+import { whatsappConfigured } from "@/lib/whatsapp";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -18,6 +20,7 @@ const TABS = [
   { key: "content", label: "Policies and FAQ" },
   { key: "seo", label: "SEO" },
   { key: "emails", label: "Emails" },
+  { key: "whatsapp", label: "WhatsApp" },
   { key: "maintenance", label: "Maintenance and data" },
 ] as const;
 
@@ -53,6 +56,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             {tab === "content" && <ContentForm s={s} />}
             {tab === "seo" && <SeoForm s={s} />}
             {tab === "emails" && <EmailsForm s={s} emailReady={!!(RESEND_API_KEY && EMAIL_FROM)} />}
+            {tab === "whatsapp" && <WhatsAppSettings enabled={s.whatsapp_enabled} templates={(s.whatsapp_templates ?? {}) as never} connected={whatsappConfigured()} />}
             {tab === "maintenance" && <MaintenanceForm s={s} sampleCount={samples.count ?? 0} />}
           </div>
         </div>

@@ -8,6 +8,7 @@ import { Badge, cx } from "../../ui/controls";
 import { CheckIcon, ExternalIcon } from "../../ui/icons";
 import OrderActions from "./OrderActions";
 import PaymentWatcher from "./PaymentWatcher";
+import WhatsAppToggle from "./WhatsAppToggle";
 
 const STAGES = [
   { key: "placed", label: "Placed" },
@@ -26,7 +27,7 @@ function stageIndex(d: OrderDetail) {
   return 0;
 }
 
-export default function OrderView({ detail, accessKey, justPlaced, stripeSession }: { detail: OrderDetail; accessKey: string | null; justPlaced?: boolean; stripeSession?: string | null }) {
+export default function OrderView({ detail, accessKey, justPlaced, stripeSession, whatsapp }: { detail: OrderDetail; accessKey: string | null; justPlaced?: boolean; stripeSession?: string | null; whatsapp?: boolean }) {
   const o = detail.order;
   const c = o.currency;
   const stage = stageIndex(detail);
@@ -145,6 +146,9 @@ export default function OrderView({ detail, accessKey, justPlaced, stripeSession
           </ul>
 
           <OrderActions detail={detail} accessKey={accessKey} />
+          {whatsapp && o.phone && o.status !== "cancelled" && o.fulfillment_status !== "delivered" && (
+            <div className="mt-6"><WhatsAppToggle orderNumber={o.order_number} accessKey={accessKey} initial={o.whatsapp_opt_in} /></div>
+          )}
 
           {detail.events.length > 0 && (
             <section className="mt-12">

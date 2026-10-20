@@ -37,6 +37,7 @@ const placeSchema = z.object({
   paymentMethod: z.enum(["razorpay", "stripe", "cod"]),
   note: z.string().trim().max(500).default(""),
   saveAddress: z.boolean().default(false),
+  whatsapp: z.boolean().default(false),
 });
 
 export type PlaceOrderInput = z.input<typeof placeSchema>;
@@ -54,8 +55,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<ActionResult<{
   const id = await cartIdentity();
   // Signed-in customers' orders always use their account email.
   const email = id.email ?? p.email;
+  const sb = supabaseService();
+  // Choices that travel with the order (copied from the cart when it's placed).
+  await sb.rpc("cart_set_contact", { p_user_id: sqlNull(id.userId), p_token: sqlNull(id.token), p_contact: { whatsapp_opt_in: p.whatsapp } });
 
-  const { data, error } = await supabaseService().rpc("place_order", {
+  const { data, error } = await sb.rpc("place_order", {
     p_user_id: sqlNull(id.userId),
     p_cart_token: sqlNull(id.token),
     p_idempotency_key: p.idempotencyKey,

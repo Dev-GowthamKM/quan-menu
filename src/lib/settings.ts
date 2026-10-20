@@ -50,6 +50,8 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   shiprocket_pickup_postcode: "",
   shiprocket_courier_choice: "recommended",
   package_defaults: { length_cm: 30, breadth_cm: 25, height_cm: 5, item_weight_grams: 400 },
+  whatsapp_enabled: false,
+  whatsapp_templates: {},
   updated_at: new Date(0).toISOString(),
   updated_by: null,
 };

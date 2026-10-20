@@ -31,6 +31,15 @@ export const SHIPROCKET_API_BASE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?
   ? process.env.SHIPROCKET_API_BASE!.replace(/\/$/, "")
   : "https://apiv2.shiprocket.in";
 
+/** WhatsApp Business Platform (Cloud API): a permanent access token and the sending number's id. */
+export const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN || "";
+export const WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || "";
+export const WHATSAPP_API_VERSION = /^v\d+\.\d+$/.test(process.env.WHATSAPP_API_VERSION || "") ? process.env.WHATSAPP_API_VERSION! : "v23.0";
+/** Only for tests: a local mock. Any other host is ignored so the token only ever goes to Meta. */
+export const WHATSAPP_API_BASE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(process.env.WHATSAPP_API_BASE || "")
+  ? process.env.WHATSAPP_API_BASE!.replace(/\/$/, "")
+  : "https://graph.facebook.com";
+
 /** Signs guest order links and the guest cart cookie. Falls back to the service key. */
 export const LINK_SECRET = process.env.ORDER_LINK_SECRET || SUPABASE_SERVICE_ROLE_KEY;
 

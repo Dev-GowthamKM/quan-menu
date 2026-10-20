@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 // End-to-end acceptance tests. They run against a local Supabase (`npm run db:start`)
-// and the bundled Razorpay and Shiprocket mocks, never against a live store: global setup
+// and the bundled Razorpay, Shiprocket and WhatsApp mocks, never against a live store: global setup
 // refuses a non-local database. See README › Testing.
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
@@ -26,6 +26,7 @@ export default defineConfig({
     : [
         { command: "node tests/e2e/support/mock-razorpay.mjs", port: 4010, reuseExistingServer: true },
         { command: "node tests/e2e/support/mock-shiprocket.mjs", port: 4011, reuseExistingServer: true },
+        { command: "node tests/e2e/support/mock-whatsapp.mjs", port: 4012, reuseExistingServer: true },
         { command: "npm run dev", url: `${baseURL}/api/health`, reuseExistingServer: true, timeout: 240_000 },
       ],
 });

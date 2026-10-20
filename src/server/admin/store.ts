@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AccessError, requireRole } from "@/lib/auth";
 import { fail, friendlyError, ok, type ActionResult } from "@/lib/errors";
 import type { AppRole } from "@/lib/types";
+import { WHATSAPP_EVENTS, type WhatsAppEvent } from "@/lib/whatsapp-format";
 
 // Store configuration: shipping, settings, staff roles. Admins only (owners for roles);
 // row-level security enforces the same rule in the database.
@@ -188,6 +189,16 @@ const SECTIONS = {
     email_templates: z.record(z.string().regex(/^[a-z_]{3,40}$/), z.object({ subject: z.string().max(200), body: z.string().max(5000) })),
   }),
   maintenance: z.object({ maintenance_mode: z.boolean(), maintenance_message: text(500) }),
+  whatsapp: z.object({
+    whatsapp_enabled: z.boolean(),
+    whatsapp_templates: z.partialRecord(
+      z.enum(WHATSAPP_EVENTS.map((e) => e.key) as [WhatsAppEvent, ...WhatsAppEvent[]]),
+      z.object({
+        name: z.string().trim().max(512).regex(/^$|^[a-z0-9_]+$/, "Template names use lowercase letters, numbers and underscores."),
+        language: z.string().trim().regex(/^[a-z]{2,3}(_[A-Z]{2})?$/, "Use a language code like en, en_US or hi."),
+      }),
+    ),
+  }),
   courier: z.object({
     shiprocket_enabled: z.boolean(),
     shiprocket_pickup_location: z.string().trim().min(1, "Enter the pickup address name from Shiprocket.").max(80),

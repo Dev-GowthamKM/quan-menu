@@ -5,6 +5,7 @@ import { EMAIL_FROM, RESEND_API_BASE, RESEND_API_KEY } from "./server-env";
 import { getSettings } from "./settings";
 import { supabaseService } from "./supabase/admin";
 import type { OrderDetail, StoreSettings, Tables } from "./types";
+import { processWhatsapp } from "./whatsapp";
 
 // Customer emails. Database functions queue a row in email_outbox when something
 // happens (order confirmed, shipped, refunded...); processOutbox renders the store's
@@ -107,8 +108,17 @@ async function send(to: string, message: { subject: string; html: string; text: 
   return String(body.id ?? "");
 }
 
-/** Sends queued customer emails. Safe to call from many places at once. */
+/** Sends queued customer emails, then queued WhatsApp messages. Safe to call from many places at once. */
 export async function processOutbox(limit = 20) {
+  const emails = await processEmails(limit);
+  const whatsapp = await processWhatsapp(limit).catch((e: Error) => {
+    console.error("[whatsapp]", e.message);
+    return { sent: 0, failed: 0, skipped: 0 };
+  });
+  return { ...emails, whatsapp };
+}
+
+async function processEmails(limit: number) {
   const sb = supabaseService();
   const { data: rows, error } = await sb.rpc("claim_outbox", { p_limit: limit });
   if (error) {

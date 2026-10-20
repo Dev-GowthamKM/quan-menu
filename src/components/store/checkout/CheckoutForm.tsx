@@ -20,7 +20,7 @@ interface Props {
   initialQuote: CartQuote;
   user: { email: string; name: string; phone: string } | null;
   addresses: SavedAddress[];
-  config: { storeName: string; razorpay: boolean; stripe: boolean; reservationMinutes: number };
+  config: { storeName: string; razorpay: boolean; stripe: boolean; reservationMinutes: number; whatsapp: boolean };
 }
 
 const EMPTY: Address = { full_name: "", phone: "", line1: "", line2: "", landmark: "", city: "", state: "", postal_code: "", country: "IN" };
@@ -55,7 +55,7 @@ export default function CheckoutForm({ initialQuote, user, addresses, config }: 
   const router = useRouter();
   const [quote, setQuote] = useState<CartQuote>(initialQuote);
   const [step, setStep] = useState(0);
-  const [contact, setContact] = useState({ email: user?.email ?? "", phone: user?.phone ?? "" });
+  const [contact, setContact] = useState({ email: user?.email ?? "", phone: user?.phone ?? "", whatsapp: false });
   const defaultSaved = addresses.find((a) => a.is_default) ?? addresses[0];
   const [savedId, setSavedId] = useState<string | "new">(defaultSaved?.id ?? "new");
   const [address, setAddress] = useState<Address>({ ...EMPTY, full_name: user?.name ?? "", phone: user?.phone ?? "" });
@@ -215,6 +215,7 @@ export default function CheckoutForm({ initialQuote, user, addresses, config }: 
       paymentMethod: provider,
       note,
       saveAddress: !!user && savedId === "new" && saveAddress,
+      whatsapp: config.whatsapp && contact.whatsapp,
     });
     setBusy(null);
     if (!res.ok) {
@@ -255,6 +256,12 @@ export default function CheckoutForm({ initialQuote, user, addresses, config }: 
               <Input id="co-phone" type="tel" autoComplete="tel" placeholder="+91 98765 43210" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} />
             </Field>
           </div>
+          {config.whatsapp && (
+            <label className="mt-4 flex items-start gap-3 text-sm">
+              <input type="checkbox" checked={contact.whatsapp} onChange={(e) => setContact({ ...contact, whatsapp: e.target.checked })} className="mt-0.5 size-4 accent-ink" />
+              <span>Send my order updates on WhatsApp <span className="block text-xs text-taupe">From {config.storeName}, to this mobile number. You can turn them off any time on your order page.</span></span>
+            </label>
+          )}
           {!user && (
             <p className="mt-4 text-sm text-taupe">
               Have an account? <Link href="/login?next=/checkout" className="text-ink underline underline-offset-4">Sign in</Link> for saved addresses, or continue as a guest.

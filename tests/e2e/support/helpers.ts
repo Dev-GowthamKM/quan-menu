@@ -34,7 +34,7 @@ export async function addToBag(page: Page, slug: string, size: string, quantity 
 }
 
 /** Guest checkout from the cart through to the pay button. */
-export async function checkout(page: Page, email: string, opts: { coupon?: string } = {}) {
+export async function checkout(page: Page, email: string, opts: { coupon?: string; whatsapp?: boolean } = {}) {
   await page.goto("/cart");
   if (opts.coupon) {
     await page.fill("#cart-coupon", opts.coupon);
@@ -45,6 +45,7 @@ export async function checkout(page: Page, email: string, opts: { coupon?: strin
   await page.waitForURL("**/checkout");
   await page.fill("#co-email", email);
   await page.fill("#co-phone", "+91 98765 43210");
+  if (opts.whatsapp) await page.getByLabel(/Send my order updates on WhatsApp/).check();
   await page.getByRole("button", { name: "Continue to address" }).click();
   await page.fill("#a-name", "Asha Rao");
   await page.fill("#a-line1", "12, 4th Cross, Indiranagar");

@@ -13,6 +13,7 @@ import { formatMoney } from "@/lib/money";
 import { getSettings } from "@/lib/settings";
 import { shiprocketConfigured } from "@/lib/shipping/shiprocket";
 import type { CourierScan } from "@/lib/types";
+import { WHATSAPP_EVENTS } from "@/lib/whatsapp-format";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -45,7 +46,7 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
   const { data: order } = await supabase.from("orders").select(ORDER_COLUMNS).eq("order_number", number.toUpperCase()).maybeSingle();
   if (!order) notFound();
 
-  const [items, events, shipments, returns, providers, payments, refunds, customer, settings] = await Promise.all([
+  const [items, events, shipments, returns, providers, payments, refunds, customer, settings, whatsapp] = await Promise.all([
     supabase.from("order_items").select("*").eq("order_id", order.id).order("created_at"),
     supabase.from("order_events").select("id, kind, message, is_internal, actor_type, created_at").eq("order_id", order.id).order("created_at", { ascending: false }).order("id", { ascending: false }),
     supabase.from("shipments").select("*").eq("order_id", order.id).order("created_at", { ascending: false }),
@@ -55,6 +56,7 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
     isAdmin ? supabase.from("refunds").select("id, amount, status, reason, error, provider_refund_id, created_at, processed_at").eq("order_id", order.id).order("created_at") : Promise.resolve({ data: null }),
     order.user_id ? supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", order.user_id).neq("status", "cancelled") : Promise.resolve({ count: null }),
     getSettings(),
+    supabase.from("whatsapp_outbox").select("id, template, status, last_error, created_at, sent_at").eq("order_id", order.id).order("created_at"),
   ]);
 
   const c = order.currency;
@@ -181,6 +183,18 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
               ) : "Guest checkout"}
             </p>
             {order.customer_note && <p className="mt-3 rounded bg-amber-50 px-3 py-2 text-sm"><span className="block text-xs font-medium text-amber-900">Note from customer</span>{order.customer_note}</p>}
+            {(order.whatsapp_opt_in || (whatsapp.data ?? []).length > 0) && (
+              <div className="mt-3 border-t border-black/10 pt-3 text-xs">
+                <p className="font-medium">WhatsApp updates {order.whatsapp_opt_in ? "on" : "off"}</p>
+                <ul className="mt-1 grid gap-0.5 text-stone">
+                  {(whatsapp.data ?? []).map((m) => (
+                    <li key={m.id} title={m.last_error ?? undefined}>
+                      {WHATSAPP_EVENTS.find((e) => e.key === m.template)?.label ?? m.template} · {m.status === "sent" ? `sent ${formatDateTime(m.sent_at)}` : m.status}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </Card>
           <Card title="Shipping address"><AddressBlock a={ship} />{method?.name && <p className="mt-2 text-xs text-stone">{method.name}{method.min_days ? ` · ${method.min_days}–${method.max_days} days` : ""}</p>}</Card>
           <Card title="Billing address"><AddressBlock a={bill} /></Card>

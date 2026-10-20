@@ -78,3 +78,14 @@ export async function lookupOrder(_: unknown, form: FormData): Promise<{ error?:
   }
   redirect(orderPath(data.order_number, data.id));
 }
+
+/** Customers switch WhatsApp order updates off (or back on) from their order page. */
+export async function setWhatsappUpdates(orderNumber: string, key: string | null, on: boolean): Promise<ActionResult<null>> {
+  const access = await findAccessibleOrder(orderNumber, key);
+  if (!access) return fail("Order not found.");
+  if (!(await rateLimit("wa-toggle", 20, 600))) return fail("Too many requests. Please wait a moment.");
+  const { error } = await supabaseService().rpc("set_order_whatsapp", { p_order_id: access.id, p_on: !!on });
+  if (error) return fail(friendlyError(error));
+  revalidatePath(`/orders/${orderNumber}`);
+  return ok(null, on ? "WhatsApp updates are on." : "WhatsApp updates are off for this order.");
+}

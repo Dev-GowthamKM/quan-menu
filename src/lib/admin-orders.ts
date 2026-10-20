@@ -21,7 +21,7 @@ export const ORDER_VIEWS = [
 ] as const;
 
 export const ORDER_COLUMNS =
-  "id, order_number, user_id, email, phone, customer_name, status, payment_status, fulfillment_status, payment_method, currency, subtotal, discount_total, shipping_total, cod_fee, tax_total, grand_total, amount_refunded, tax_mode, tax_label, coupon_code, shipping_address, billing_address, shipping_method, customer_note, expires_at, placed_at, paid_at, shipped_at, delivered_at, cancelled_at, cancel_reason, needs_attention, attention_reason";
+  "id, order_number, user_id, email, phone, customer_name, status, payment_status, fulfillment_status, payment_method, currency, subtotal, discount_total, shipping_total, cod_fee, tax_total, grand_total, amount_refunded, tax_mode, tax_label, coupon_code, shipping_address, billing_address, shipping_method, customer_note, expires_at, placed_at, paid_at, shipped_at, delivered_at, cancelled_at, cancel_reason, needs_attention, attention_reason, whatsapp_opt_in";
 
 export function orderFilters(params: Params) {
   return {

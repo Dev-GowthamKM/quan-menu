@@ -21,6 +21,7 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
 - [Deploy](#deploy)
 - [Payment providers](#payment-providers)
 - [Courier (Shiprocket)](#courier-shiprocket)
+- [WhatsApp updates](#whatsapp-updates)
 - [Email](#email)
 - [Testing](#testing)
 - [Running the store](#running-the-store)
@@ -45,7 +46,8 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
   the account on sign-in.
 - Checkout: contact → address (Indian states, PIN validation) → delivery options → payment
   (Razorpay: UPI, cards, netbanking, wallets; cash on delivery where allowed; Stripe optional) →
-  review → confirmation. Orders can't be placed twice by double-clicking or refreshing.
+  review → confirmation. Orders can't be placed twice by double-clicking or refreshing. Shoppers
+  can opt in to order updates on WhatsApp.
 - Accounts: sign up with email verification, sign in, password reset, optional Google, profile,
   address book, order history and tracking (courier status, expected date and scan history),
   wishlist, cancellation and return requests. Guests
@@ -80,7 +82,7 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
   codes, customers with lifetime spend and notes (CSV export), review moderation, contact inbox.
 - Shipping zones and rates (by state or PIN prefix), blocked PIN codes, couriers with tracking
   links. Settings for store details, appearance, homepage, tax (GST slabs, GSTIN), payment methods
-  and COD limits, returns, reviews, policies, FAQ, SEO, email templates, maintenance mode and sample
+  and COD limits, returns, reviews, policies, FAQ, SEO, email templates, WhatsApp templates, maintenance mode and sample
   data removal. Staff and roles. Audit log.
 
 ## Architecture
@@ -257,9 +259,10 @@ which settings are present (yes/no only) and whether the database answers.
 | `RESEND_API_KEY`, `EMAIL_FROM` | Optional | Order emails (otherwise queued, not sent) |
 | `SHIPROCKET_EMAIL`, `SHIPROCKET_PASSWORD` | Optional | Courier bookings through Shiprocket's API |
 | `SHIPROCKET_WEBHOOK_TOKEN` | With Shiprocket | Verifies `/api/webhooks/courier` |
+| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` | Optional | WhatsApp order updates (Cloud API); `WHATSAPP_API_VERSION` defaults to `v23.0` |
 | `CRON_SECRET` | Recommended | Authorises `/api/cron/housekeeping` |
 | `NEXT_PUBLIC_GOOGLE_SIGN_IN` | Optional | Shows "Continue with Google" (`1`) |
-| `RAZORPAY_API_BASE`, `STRIPE_API_BASE`, `RESEND_API_BASE`, `SHIPROCKET_API_BASE` | Tests only | Point at local mocks (ignored with live payment keys; Shiprocket only accepts localhost) |
+| `RAZORPAY_API_BASE`, `STRIPE_API_BASE`, `RESEND_API_BASE`, `SHIPROCKET_API_BASE`, `WHATSAPP_API_BASE` | Tests only | Point at local mocks (ignored with live payment keys; Shiprocket and WhatsApp only accept localhost) |
 
 ## Deploy
 
@@ -356,6 +359,31 @@ A parcel that comes back undelivered (from tracking, or **Mark returned to origi
 order) puts its stock back; an unpaid cash-on-delivery order is cancelled and a paid one is
 flagged for a refund.
 
+## WhatsApp updates
+
+Optional. Customers who tick "Send my order updates on WhatsApp" at checkout (or turn it on from
+their order page) get the same updates as their emails: confirmed, shipped with tracking,
+delivered, cancelled, refunded and return updates. They can turn them off on the order page.
+
+1. Set up the **WhatsApp Business Platform** in Meta Business Suite (a Business portfolio, a
+   WhatsApp Business account and a phone number that isn't on the WhatsApp app). Meta charges per
+   delivered template message; see their pricing for India.
+2. Create a **system user** with a permanent access token that has `whatsapp_business_messaging`
+   permission, and note the sending number's **phone number ID**. Set `WHATSAPP_TOKEN` and
+   `WHATSAPP_PHONE_NUMBER_ID`.
+3. Messages a business starts must use templates WhatsApp approved. In **WhatsApp Manager ›
+   Message templates**, create one per update you want (category *Utility*). **Admin › Settings ›
+   WhatsApp** lists, for each update, the values it sends in order (`{{1}}` first name,
+   `{{2}}` order number, and so on) with suggested text to copy.
+4. Enter the approved template names (and language, usually `en`) in **Settings › WhatsApp**,
+   turn it on, and use **Send WhatsApp test** (Meta's ready-made `hello_world` template) to check
+   the connection.
+
+Messages are queued with the emails and sent by the same job (after each action, from webhooks
+and from the scheduled job), with retries; each order's page in the admin lists what was sent.
+Replies from customers go to your WhatsApp inbox (for example the WhatsApp Business app or
+Meta Business Suite); the store doesn't read them.
+
 ## Email
 
 Orders, shipping, delivery, cancellations, refunds and return updates send emails from editable
@@ -370,14 +398,15 @@ Account emails (verification, password reset) are sent by Supabase Auth with the
 npm run typecheck          # TypeScript
 npm test                   # unit tests (src/**/*.test.ts)
 npm run test:integration   # database tests against the local Supabase
-npm run test:e2e           # Playwright tests (local Supabase + Razorpay and Shiprocket mocks)
+npm run test:e2e           # Playwright tests (local Supabase + Razorpay, Shiprocket and WhatsApp mocks)
 ```
 
 The integration and end-to-end tests need the local stack (`npm run db:start`) and `.env.local`
 pointing at it with the mock payment settings shown above, plus the courier mock:
 `SHIPROCKET_EMAIL=api@shiprocket.test`, `SHIPROCKET_PASSWORD=mock-password`,
-`SHIPROCKET_WEBHOOK_TOKEN=` any value and `SHIPROCKET_API_BASE=http://localhost:4011`. Playwright
-starts both mocks itself. The end-to-end setup creates test accounts with an owner role, so it
+`SHIPROCKET_WEBHOOK_TOKEN=` any value and `SHIPROCKET_API_BASE=http://localhost:4011`, and the
+WhatsApp mock: `WHATSAPP_TOKEN=mock_whatsapp_token`, `WHATSAPP_PHONE_NUMBER_ID=1234567890`,
+`WHATSAPP_API_BASE=http://localhost:4012`. Playwright starts the mocks itself. The end-to-end setup creates test accounts with an owner role, so it
 refuses to run against any non-local database.
 
 **Integration tests (33)** cover access control for anonymous users, customers, staff, admins and
@@ -391,6 +420,12 @@ out-of-order scans change nothing), failed deliveries flagged for staff, parcels
 undelivered (COD orders cancelled and restocked, paid ones flagged for a refund), and the full
 admin flow against the Shiprocket mock: turning it on, booking, label, webhook token checks,
 the customer's tracking view and "Refresh tracking".
+
+**WhatsApp tests (4 unit, 5 database, 1 Playwright)** cover number formatting and template values,
+queueing only for customers who opted in and only for events with a template, customers turning
+updates off (waiting messages are dropped), one sender per message, server-only access, and the
+full flow: an admin maps templates and sends a test, a shopper opts in at checkout and receives
+the confirmation and shipping messages, then turns them off.
 
 **Acceptance tests (7, Playwright)** follow the brief:
 

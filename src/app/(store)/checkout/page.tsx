@@ -5,6 +5,7 @@ import { getUser } from "@/lib/auth";
 import { razorpayConfigured } from "@/lib/payments/razorpay";
 import { stripeConfigured } from "@/lib/payments/stripe";
 import { getSettings } from "@/lib/settings";
+import { whatsappConfigured } from "@/lib/whatsapp";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getCart } from "@/server/cart";
 
@@ -34,6 +35,7 @@ export default async function CheckoutPage() {
         razorpay: settings.razorpay_enabled && razorpayConfigured(),
         stripe: settings.stripe_enabled && stripeConfigured(),
         reservationMinutes: settings.reservation_minutes,
+        whatsapp: settings.whatsapp_enabled && whatsappConfigured(),
       }}
     />
   );
