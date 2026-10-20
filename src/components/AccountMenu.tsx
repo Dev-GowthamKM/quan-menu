@@ -85,6 +85,7 @@ export default function AccountMenu({ email, liveSlug, onDashboard }: Props) {
             </form>
           )}
           {liveSlug && <a role="menuitem" href={`/m/${liveSlug}`} target="_blank" rel="noreferrer">{t.viewPublic}</a>}
+          <a role="menuitem" href="/to-roi">🖨 {t.flyerLink}</a>
           <button role="menuitem" onClick={out} disabled={leaving}>{leaving ? t.signingOut : t.signOut}</button>
         </div>
       )}

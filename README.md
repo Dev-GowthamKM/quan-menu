@@ -54,18 +54,21 @@ Set `NEXT_PUBLIC_SITE_URL` **before** printing stickers. The QR code contains th
 |---|---|
 | `src/app/page.tsx` | Landing page |
 | `src/app/login`, `src/app/auth/callback` | Email magic-link sign-in |
-| `src/app/dashboard` | Vendor editor: photo → AI → edit dishes and allergens → publish → QR sticker. `actions.ts` saves through the `save_menu` database function. |
+| `src/app/dashboard` | Vendor editor: photo → AI → edit dishes and allergens → publish → QR sticker. One account can run several stalls (`?s=<address>` picks one, **+ Add a stall** starts another), for a helper setting up menus for many vendors. `actions.ts` saves through the `save_menu` database function, which refuses to overwrite a menu changed elsewhere since the editor opened it. |
+| `src/app/k/[token]` | The owner's page: a secret link (and QR) the helper hands to the stall owner, who can then mark dishes sold out and change prices on their phone with no account. Checked by the `quick_*` database functions; the helper can replace or turn off the link. |
+| `src/app/to-roi` | Printable Vietnamese flyer for walking up to stalls, with QR codes to the sample menus and the helper's name and Zalo number. |
 | `src/app/m/[slug]` | Public customer menu (what the QR code opens). Cached and served to every scanner, rebuilt at most once a minute, and refreshed immediately when the vendor saves. |
 | `src/app/api/extract` | Photo → dishes, using Claude vision. Signed-in vendors only. |
 | `src/app/api/translate` | Names of new dishes → translations, allergens, pronunciation (the editor sends 15 at a time) |
 | `src/app/api/health` | Deployment check: which settings are missing |
 | `src/components/DishMedia.tsx` | Per-dish photos and videos in the editor: photos are shrunk to 1280 px in the browser, videos must be MP4/MOV/WebM under 25 MB, up to 6 per dish. Files go straight to Supabase Storage. |
-| `src/components/MenuView.tsx` | Customer menu, also used as the live phone preview |
+| `src/components/MenuView.tsx` | Customer menu, also used as the live phone preview. Shows “must-try” and “sold out today” badges, a VietQR bank-transfer code for the exact order total (with a short order code as the transfer note), and a Google Maps review button. |
+| `src/lib/vietqr.ts` | Builds VietQR (NAPAS/EMVCo) codes in the app, with no outside service, and the list of banks. |
 | `src/lib/dishes.ts` | Built-in translations for 184 common Saigon dishes and drinks, including café and milk-tea drinks. Used before any AI call, so known dishes cost nothing; matching ignores tone marks, portion notes and prices. |
 | `src/lib/drinks.ts` | Coffee and milk-tea shops: shop type, sizes with their own prices, sugar (0–100%), ice, and a shop-wide topping list. Customers choose in their language; the vendor's order screen shows e.g. “Trà sữa trân châu (L) · 50% đường · ít đá · + Trân châu đen”. Example shop at `/m/demo-cafe`. |
 | `src/lib/strings.ts` | Every vendor-facing text in Vietnamese (default) and English, switched with the VI/EN button and kept in the `quan_ui` cookie. Server messages use the same choice. |
 | `src/lib/ai.ts` | Claude API calls: prompts, JSON-schema structured output, time budget, error messages |
-| `supabase/schema.sql` | Tables, row-level security, the atomic `save_menu` function, and the daily AI allowance |
+| `supabase/schema.sql` | Tables, row-level security, the atomic `save_menu` function, sold-out lists that clear themselves the next day, owner links, and the daily AI allowance. `schema_version()` lets the app and `/api/health` tell you when the file needs running again. |
 
 **Security model:** anyone can read a stall marked live. Only its owner can read a draft or change anything; this is enforced by Postgres row-level security, not just the app. The AI routes refuse anyone who isn't signed in, and each vendor gets 40 AI calls per day (the `take_ai_call` function in `supabase/schema.sql`; change the number there). In demo mode the AI routes only work during local development, so a deploy missing its Supabase settings can't be used to spend your API credit.
 
@@ -88,7 +91,7 @@ With a Claude key, photo reading and translation switch to Claude automatically,
 ## Known limits / next steps
 
 - **Pronunciation** uses the phone's built-in voice. Some phones have no Vietnamese voice, and then customers fall back to reading the spelling guide. A cloud text-to-speech service (for example Google TTS) would fix this.
-- **Currency rates** are fixed in `src/lib/i18n.ts`. Update them by hand, or fetch daily rates.
-- Each account has **one stall**. Supporting several would need a stall picker.
-- **Payments** (a monthly vendor plan) aren't built yet. Stripe or PayOS/MoMo for Vietnam would be the next step.
-- There is **no admin view and no analytics**. "How many scans did my sticker get?" would be a strong reason for vendors to pay.
+- **Customers pay vendors** by VietQR bank transfer, but Quán doesn't see or confirm payments: the vendor checks their banking app (the order code is in the transfer note). MoMo and ZaloPay wallets aren't supported yet.
+- **A vendor plan** (charging stalls monthly) isn't built yet. VietQR to your own account, or PayOS, would be the simplest start.
+- An owner link can be passed on by the owner. If it leaks, make a new one from the editor; the old one stops working at once.
+- **Analytics** are a daily view count. Which dishes customers look at most would be the next step.

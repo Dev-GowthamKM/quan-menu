@@ -1,17 +1,23 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveMenu } from "@/app/dashboard/actions";
+import { deleteStall, saveMenu, setSoldOut } from "@/app/dashboard/actions";
 import { DEMO_KEY, slugify } from "@/lib/config";
 import { EXAMPLE_MENU } from "@/lib/demo";
 import { DEFAULT_TOPPINGS, defaultOpts, toppingName } from "@/lib/drinks";
-import { ALLERGEN_KEYS, SHOP_KINDS, SIZE_KEYS, isTranslated, type Dish, type DrinkOpts, type ML, type MenuData, type ShopKind, type SizeKey, type Topping } from "@/lib/types";
+import {
+  ALLERGEN_KEYS, SHOP_KINDS, SIZE_KEYS, cleanMaps, cleanPay, isTranslated, soldToday, vnToday,
+  type Dish, type DrinkOpts, type ML, type MenuData, type Pay, type ShopKind, type SizeKey, type StallRef, type Topping,
+} from "@/lib/types";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { MEDIA_BUCKET, MEDIA_PREFIX, type Media } from "@/lib/types";
 import type { Rates } from "@/lib/rates";
 import AccountMenu from "./AccountMenu";
 import DishMedia from "./DishMedia";
 import MenuView from "./MenuView";
+import OwnerLink from "./OwnerLink";
+import PaySettings from "./PaySettings";
+import StallBar from "./StallBar";
 import { LangSwitch, useUi } from "./Ui";
 import Sticker from "./Sticker";
 
@@ -26,7 +32,17 @@ interface Props {
   rates?: Rates;
   /** Menu views today and in the last 7 days (missing until the schema with menu_views is run). */
   views?: { today: number; week: number };
+  /** Every stall on this account, for the stall switcher. */
+  stalls?: StallRef[];
+  /** This stall's owner link token, if one was made. */
+  ownerKey?: string | null;
+  /** The database is older than this version of the app: supabase/schema.sql needs running again. */
+  schemaOld?: boolean;
 }
+
+/** A message shown after the page reloads into a stall that was just created or deleted. */
+const FLASH = "quan-flash";
+const noPay: Pay = { bank: "", acct: "", name: "" };
 
 /** The built-in dish list is ~100 KB, so it loads on first use instead of with the page. */
 let listPromise: Promise<typeof import("@/lib/dishes")> | null = null;
@@ -58,10 +74,18 @@ type Status = { msg: string; kind?: "err" | "good" };
 const BATCH = 15;
 const key = (vi: string) => vi.trim().toLowerCase();
 
-export default function Editor({ initial, demo, ai, siteUrl, email, rates, views }: Props) {
+export default function Editor({ initial, demo, ai, siteUrl, email, rates, views, stalls = [], ownerKey = null, schemaOld }: Props) {
   const router = useRouter();
   const { t } = useUi();
-  const start = initial ?? { name: "", area: "", slug: "", published: false, dishes: [] };
+  const start: MenuData = initial ?? { name: "", area: "", slug: "", published: false, dishes: [] };
+  const [stallId, setStallId] = useState<string | null>(start.id ?? null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(start.updatedAt ?? null);
+  const [pay, setPay] = useState<Pay>(start.pay ?? noPay);
+  const [maps, setMaps] = useState(start.maps ?? "");
+  const [sold, setSold] = useState<string[]>(soldToday(start.soldOut));
+  const [todayMsg, setTodayMsg] = useState("");
+  const [stale, setStale] = useState(false);
+  const soldReq = useRef(0);
   const [name, setName] = useState(start.name);
   const [area, setArea] = useState(start.area);
   const [slug, setSlug] = useState(start.slug);
@@ -87,6 +111,10 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
 
   useEffect(() => {
     loadList().then((m) => { setListSize(m.DISH_COUNT); setList(m); }).catch(() => {});
+    try {
+      const msg = sessionStorage.getItem(FLASH);
+      if (msg) { sessionStorage.removeItem(FLASH); setS4({ msg, kind: "good" }); }
+    } catch {}
   }, []);
 
   // Demo mode: the menu lives in this browser.
@@ -98,6 +126,7 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
         setName(s.name); setArea(s.area); setSlug(s.slug); setSlugTouched(true);
         setPublished(s.published); setDishes(s.dishes); setSavedSlug(s.slug);
         setKind(s.kind ?? "food"); setToppings(s.toppings ?? []);
+        setPay(s.pay ?? noPay); setMaps(s.maps ?? "");
       }
     } catch {}
   }, [demo]);
@@ -188,6 +217,7 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
     touch();
   };
 
+  const previewSold = useMemo(() => ({ day: vnToday(), names: sold }), [sold]);
   const base = siteUrl || (typeof window !== "undefined" ? window.location.origin : "");
   const liveSlug = slugify(slug || name);
   const publicUrl = `${base}/m/${demo ? liveSlug : savedSlug || liveSlug}`;
@@ -332,23 +362,40 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
     setS4({ msg: t.saving });
     try {
       if (demo) {
-        const data: MenuData = { name, area, slug: liveSlug, published, dishes: clean, kind, toppings: cleanTops };
+        const data: MenuData = { name, area, slug: liveSlug, published, dishes: clean, kind, toppings: cleanTops, pay: cleanPay(pay), maps: cleanMaps(maps) };
         localStorage.setItem(DEMO_KEY, JSON.stringify(data));
         setSavedSlug(liveSlug);
         setDirty(false);
         setS4({ msg: t.savedDemo, kind: "good" });
       } else {
-        const r = await saveMenu({ name, area, slug: liveSlug, published, dishes: clean, kind, toppings: cleanTops });
-        if (!r.ok) return setS4({ msg: r.error || t.couldntSave, kind: "err" });
+        const r = await saveMenu({
+          id: stallId, expect: updatedAt, prevSlug: savedSlug,
+          name, area, slug: liveSlug, published, dishes: clean, kind, toppings: cleanTops, pay: cleanPay(pay), maps,
+        });
+        if (!r.ok) {
+          setStale(!!r.stale);
+          return setS4({ msg: r.error || t.couldntSave, kind: "err" });
+        }
         setSavedSlug(r.slug!);
         setSlug(r.slug!);
+        setUpdatedAt(r.updatedAt ?? null);
         setDirty(false);
         const now = new Set(clean.flatMap((d) => d.media ?? []).map((m) => m.url));
         const gone = [...savedMedia.current].filter((u) => !now.has(u) && u.startsWith(MEDIA_PREFIX)).map((u) => u.slice(MEDIA_PREFIX.length));
         savedMedia.current = now;
         if (gone.length) supabaseBrowser().storage.from(MEDIA_BUCKET).remove(gone).catch(() => {});
-        setS4({ msg: published ? t.savedLive : t.savedDraft, kind: "good" });
-        router.refresh();
+        const msg = published ? t.savedLive : t.savedDraft;
+        setS4({ msg, kind: "good" });
+        if (!stallId) {
+          // A new stall: reload into it, so the switcher lists it and a refresh opens it again.
+          setStallId(r.id ?? null);
+          try { sessionStorage.setItem(FLASH, msg); } catch {}
+          router.replace(`/dashboard?s=${encodeURIComponent(r.slug!)}`);
+        } else if (r.slug !== savedSlug) {
+          router.replace(`/dashboard?s=${encodeURIComponent(r.slug!)}`);
+        } else {
+          router.refresh();
+        }
       }
       setDishes(clean);
       setToppings(cleanTops);
@@ -357,6 +404,37 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
     } finally {
       setBusy("");
     }
+  }
+
+  /** Sold out today, or back on: saved at once and shown to customers straight away. */
+  async function toggleSold(vi: string) {
+    if (!stallId) return;
+    const on = !sold.includes(vi);
+    const req = ++soldReq.current;
+    setSold((s) => (on ? [...s, vi] : s.filter((n) => n !== vi)));
+    setTodayMsg("");
+    const r = await setSoldOut(stallId, savedSlug, vi, on).catch(() => ({ ok: false, error: t.soldOutFailed, soldOut: undefined }));
+    if (!r.ok) {
+      setSold((s) => (on ? s.filter((n) => n !== vi) : [...s, vi]));
+      setTodayMsg(r.error || t.soldOutFailed);
+    } else if (req === soldReq.current && r.soldOut) {
+      // Only the newest answer is trusted, in case taps on several dishes arrive out of order.
+      setSold(soldToday(r.soldOut));
+    }
+  }
+
+  async function removeStall() {
+    if (!stallId || !window.confirm(t.confirmDelete(name || savedSlug))) return;
+    setBusy("save");
+    const r = await deleteStall(stallId, savedSlug).catch(() => ({ ok: false, error: t.deleteFailed }));
+    if (!r.ok) {
+      setBusy("");
+      return setS4({ msg: r.error || t.deleteFailed, kind: "err" });
+    }
+    const files = [...savedMedia.current].filter((u) => u.startsWith(MEDIA_PREFIX)).map((u) => u.slice(MEDIA_PREFIX.length));
+    if (files.length) await supabaseBrowser().storage.from(MEDIA_BUCKET).remove(files).catch(() => {});
+    setDirty(false);
+    router.replace("/dashboard");
   }
 
   async function loadExample() {
@@ -382,8 +460,32 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
           </div>
         </header>
 
+        {schemaOld && <p className="banner" role="alert">⚠️ {t.schemaBanner}</p>}
+        {!demo && stalls.length > 0 && <StallBar stalls={stalls} current={stallId} dirty={dirty} />}
+
         <div className="grid">
           <div className="steps">
+            {!demo && stallId && savedSlug && dishes.some((d) => d.vi.trim()) && (
+              <section className="step today" aria-labelledby="s0">
+                <div className="step-h"><div className="num">☀</div><div><h2 id="s0">{t.todayTitle}</h2><small>{t.soldOutHint}</small></div></div>
+                {views && <p className="views">👀 {t.viewsLine(views.today, views.week)}</p>}
+                <div className="f" style={{ display: "grid", gap: 6 }}>
+                  <span className="f">{t.soldOutTitle} · {sold.length ? t.soldOutN(sold.filter((n) => dishes.some((d) => d.vi.trim() === n)).length) : t.soldOutNone}</span>
+                  <div className="chips">
+                    {[...new Set(dishes.map((d) => d.vi.trim()).filter(Boolean))].map((vi) => {
+                      const out = sold.includes(vi);
+                      return (
+                        <button key={vi} type="button" className="chip sold" aria-pressed={out} onClick={() => toggleSold(vi)}>
+                          {out ? "✕ " : ""}{vi}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {todayMsg && <p className="status err" aria-live="polite">{todayMsg}</p>}
+              </section>
+            )}
+
             <section className="step" aria-labelledby="s1">
               <div className="step-h"><div className="num">1</div><div><h2 id="s1">{t.s1Title}</h2><small>{t.s1Hint}</small></div></div>
               <div className="two">
@@ -439,7 +541,7 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
                         if (zs?.length) setOpts(i, { sizes: zs.map((z) => ({ ...z, price: Math.max(0, z.price + p - zs[0].price) })) });
                         else update(i, { price: p });
                       }} />
-                    <span className="encol">{isTranslated(d) ? <span className="en">{d.name!.en}</span> : <span className="pending">{t.needsTranslation}</span>}{!!d.media?.length && <span className="mcount" title={t.mediaCount}> · 📷 {d.media.length}</span>}{!!d.opts && <span className="mcount"> · ☕ {t.optBadge}</span>}</span>
+                    <span className="encol">{isTranslated(d) ? <span className="en">{d.name!.en}</span> : <span className="pending">{t.needsTranslation}</span>}{!!d.media?.length && <span className="mcount" title={t.mediaCount}> · 📷 {d.media.length}</span>}{!!d.opts && <span className="mcount"> · ☕ {t.optBadge}</span>}{d.special && <span className="mcount" title={t.specialBadge}> · ⭐</span>}</span>
                     <button className="icon" aria-expanded={open === i} onClick={() => setOpen(open === i ? null : i)}>{open === i ? t.close : t.edit}</button>
                     <button className="icon del" aria-label={t.remove(d.vi)} onClick={() => { setDishes((ds) => ds.filter((_, k) => k !== i)); setOpen(null); touch(); }}>✕</button>
                     {open === i && (
@@ -458,6 +560,7 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
                         <label className="f">{t.sayIt}
                           <input type="text" value={d.pron} placeholder={t.sayItPh} onChange={(e) => update(i, { pron: e.target.value })} />
                         </label>
+                        <label className="check"><input type="checkbox" checked={!!d.special} onChange={(e) => update(i, { special: e.target.checked })} /> {t.specialOpt}</label>
                         <div className="f" style={{ display: "grid", gap: 6 }}>
                           <span className="f">{t.contains}</span>
                           <div className="chips">
@@ -536,6 +639,7 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
                 <input id="slug" type="text" value={slug} onChange={(e) => { setSlug(e.target.value); setSlugTouched(true); touch(); }}
                   onBlur={() => setSlug(slugify(slug || name))} />
               </label>
+              <PaySettings pay={pay} maps={maps} onPay={(p) => { setPay(p); touch(); }} onMaps={(m) => { setMaps(m); touch(); }} />
               <label className="row" style={{ gap: 8, cursor: "pointer" }}>
                 <input type="checkbox" checked={published} onChange={(e) => { setPublished(e.target.checked); touch(); }} />
                 <span><b>{t.liveToggle}</b> · {t.liveToggleHint}</span>
@@ -545,24 +649,27 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
                 {savedSlug && (published || demo) && <a className="btn" href={`/m/${savedSlug}`} target="_blank" rel="noreferrer">{t.openPublic}</a>}
               </div>
               <p className={"status " + (s4.kind ?? "")} aria-live="polite">{s4.msg}</p>
+              {stale && <div className="row"><button className="btn" onClick={() => window.location.reload()}>↻ {t.reload}</button></div>}
+              {!demo && stallId && <div className="row"><button className="icon del" disabled={!!busy} onClick={removeStall}>{t.deleteStall}</button></div>}
             </section>
 
             <section className="step" aria-labelledby="s4">
               <div className="step-h"><div className="num">4</div><div><h2 id="s4">{t.s4Title}</h2><small>{t.s4Hint}</small></div></div>
-              {views && savedSlug && <p className="views">👀 {t.viewsLine(views.today, views.week)}</p>}
               {savedSlug ? (
                 <Sticker name={name} url={publicUrl} slug={savedSlug} />
               ) : (
                 <p className="status">{t.saveFirst}</p>
               )}
               {savedSlug && liveSlug !== savedSlug && !demo && <p className="status err">{t.slugChanged}</p>}
+              {!demo && stallId && savedSlug && <OwnerLink stallId={stallId} base={base} initial={ownerKey} />}
             </section>
           </div>
 
           <aside className="phone-col" aria-label={t.previewLabel}>
             <div className="phone-cap"><span>{t.customersSee}</span><span>{t.dishCount(dishes.length)}</span></div>
             <div className="phone">
-              <MenuView name={name} area={area} dishes={dishes.filter((d) => d.vi)} toppings={toppings.filter((tp) => tp.vi.trim())} rates={rates} />
+              <MenuView name={name} area={area} dishes={dishes.filter((d) => d.vi)} toppings={toppings.filter((tp) => tp.vi.trim())} rates={rates}
+                soldOut={previewSold} pay={cleanPay(pay)} maps={cleanMaps(maps)} />
             </div>
           </aside>
         </div>

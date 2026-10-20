@@ -21,6 +21,7 @@ const dishes: Dish[] = ITEMS.map(([vi, price]) =>
 
 // Coffee is sold in one size here, with sugar and ice choices only.
 for (const d of dishes) {
+  if (d.vi === "Trà sữa trân châu đường đen") d.special = true;
   if (/^(Cà phê|Bạc xỉu)/.test(d.vi)) d.opts = { sugar: true, ice: true };
   if (d.vi.startsWith("Sinh tố")) d.opts = { sugar: true };
 }

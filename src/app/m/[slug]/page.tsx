@@ -8,13 +8,14 @@ import { EXAMPLE_MENU } from "@/lib/demo";
 import { EXAMPLE_CAFE } from "@/lib/demo-cafe";
 import { liveRates } from "@/lib/rates";
 import { supabasePublic } from "@/lib/supabase/public";
-import { cleanDish, cleanKind, cleanToppings, type Dish, type MenuData } from "@/lib/types";
+import { cleanDish, cleanKind, cleanMaps, cleanPay, cleanSoldOut, cleanToppings, vnToday, type Dish, type MenuData } from "@/lib/types";
 
 type Params = { params: Promise<{ slug: string }> };
 
 /** Shared by the page and its metadata, so each render queries the database once. */
 const load = cache(async (slug: string): Promise<MenuData | null> => {
-  if (slug === "demo") return EXAMPLE_MENU;
+  // The food example shows one dish sold out, so vendors can see what customers see.
+  if (slug === "demo") return { ...EXAMPLE_MENU, soldOut: { day: vnToday(), names: ["Hủ tiếu Nam Vang"] } };
   if (slug === "demo-cafe") return EXAMPLE_CAFE;
   if (DEMO) return null;
   const supabase = supabasePublic();
@@ -34,6 +35,9 @@ const load = cache(async (slug: string): Promise<MenuData | null> => {
     dishes: (rows ?? []).map(cleanDish).filter((d): d is Dish => !!d),
     kind: cleanKind(stall.kind),
     toppings: cleanToppings(stall.toppings),
+    pay: cleanPay(stall.pay),
+    maps: cleanMaps(stall.maps),
+    soldOut: cleanSoldOut(stall.sold_out),
   };
 });
 
@@ -59,5 +63,8 @@ export default async function PublicMenu({ params }: Params) {
   }
   const rates = await liveRates();
   const demoSlug = slug === "demo" || slug === "demo-cafe";
-  return <MenuView full name={menu.name} area={menu.area} dishes={menu.dishes} toppings={menu.toppings} rates={rates} countSlug={demoSlug ? undefined : menu.slug} />;
+  return (
+    <MenuView full name={menu.name} area={menu.area} dishes={menu.dishes} toppings={menu.toppings} rates={rates}
+      countSlug={demoSlug ? undefined : menu.slug} soldOut={menu.soldOut} pay={menu.pay} maps={menu.maps} />
+  );
 }

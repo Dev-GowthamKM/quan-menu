@@ -1,6 +1,7 @@
 "use client";
 import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
+import ShareButton from "./ShareButton";
 import { useUi } from "./Ui";
 
 interface Props {
@@ -72,6 +73,7 @@ export default function Sticker({ name, url, slug }: Props) {
         <code>{url}</code>
         <div className="row">
           <button className="btn" onClick={download}>{t.downloadSticker}</button>
+          <ShareButton url={url} title={t.shareMenuText(name)} />
           <button className="btn" onClick={copy}>{copied ? t.copied : t.copyLink}</button>
         </div>
       </div>

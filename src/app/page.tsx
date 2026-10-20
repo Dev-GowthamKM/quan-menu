@@ -13,8 +13,10 @@ async function currentVendor() {
   const supabase = await supabaseServer();
   const { data } = await supabase.auth.getUser();
   if (!data.user) return null;
-  const { data: stall } = await supabase.from("stalls").select("slug, published").eq("owner_id", data.user.id).maybeSingle();
-  return { email: data.user.email ?? "", liveSlug: stall?.published ? stall.slug : undefined };
+  // An account can run several stalls: link the most recently edited live one.
+  const { data: stalls } = await supabase.from("stalls").select("slug").eq("owner_id", data.user.id).eq("published", true)
+    .order("updated_at", { ascending: false }).limit(1);
+  return { email: data.user.email ?? "", liveSlug: stalls?.[0]?.slug as string | undefined };
 }
 
 export default async function Home() {

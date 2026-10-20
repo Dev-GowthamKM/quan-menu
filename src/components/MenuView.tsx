@@ -4,7 +4,9 @@ import { ALLERGENS, LANGS, foreign, guessLang, vnd } from "@/lib/i18n";
 import { ICE, OPT_UI, SUGAR, hasOpts, lineVi, sameLine, unitPrice, type Line } from "@/lib/drinks";
 import type { Rates } from "@/lib/rates";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/config";
-import { LANG_KEYS, isTranslated, type Dish, type Lang, type Media, type Topping } from "@/lib/types";
+import { LANG_KEYS, isTranslated, soldToday, vnToday, type Dish, type Lang, type Media, type Pay, type SoldOut, type Topping } from "@/lib/types";
+import { bankName, vietQr } from "@/lib/vietqr";
+import QrImage from "./QrImage";
 
 interface Props {
   name: string;
@@ -18,6 +20,12 @@ interface Props {
   rates?: Rates;
   /** Public menus count a view once per visit, for the vendor's scan counter. */
   countSlug?: string;
+  /** Dishes sold out today. */
+  soldOut?: SoldOut;
+  /** Bank account for paying the order total by VietQR transfer. */
+  pay?: Pay | null;
+  /** The stall's Google Maps link, for the review button. */
+  maps?: string;
 }
 
 function useViVoice() {
@@ -32,13 +40,21 @@ function useViVoice() {
   return voice;
 }
 
-export default function MenuView({ name, area, dishes, full, toppings = [], rates = {}, countSlug }: Props) {
+export default function MenuView({ name, area, dishes, full, toppings = [], rates = {}, countSlug, soldOut, pay, maps }: Props) {
   const [lang, setLang] = useState<Lang>("en");
   const [cart, setCart] = useState<Line[]>([]);
   // The drink whose options are being chosen, with the choices so far.
   const [pick, setPick] = useState<Line | null>(null);
   const [showOrder, setShowOrder] = useState(false);
   const [viewer, setViewer] = useState<{ items: Media[]; at: number; title: string } | null>(null);
+  // Short code shown on the order screen and sent as the transfer note, so the vendor can match payments.
+  const [orderNo, setOrderNo] = useState("");
+  const [showPay, setShowPay] = useState(false);
+  const [copied, setCopied] = useState(false);
+  // Sold-out lists from the server are for one day only: a page cached overnight must not keep yesterday's.
+  const [today, setToday] = useState(soldOut?.day ?? "");
+  useEffect(() => setToday(vnToday()), []);
+  const out = useMemo(() => new Set(soldToday(soldOut, today)), [soldOut, today]);
   const closeRef = useRef<HTMLButtonElement>(null);
   const voice = useViVoice();
   const L = LANGS[lang];
@@ -68,6 +84,9 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
     setCart((c) => c.filter((l) => l.i < dishes.length));
     setPick(null);
   }, [dishes.length]);
+  useEffect(() => {
+    setCart((c) => (c.some((l) => out.has(dishes[l.i]?.vi)) ? c.filter((l) => !out.has(dishes[l.i]?.vi)) : c));
+  }, [out, dishes]);
 
   useEffect(() => {
     if (showOrder) closeRef.current?.focus();
@@ -146,8 +165,15 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
           const title = done ? d.name![lang] || d.name!.en : d.vi;
           const desc = d.desc ? d.desc[lang] || d.desc.en : "";
           const q = qtyOf(i);
+          const gone = out.has(d.vi);
           return (
-            <div key={i} className={"dish" + (q ? " on" : "")}>
+            <div key={i} className={"dish" + (q ? " on" : "") + (gone ? " gone" : "")}>
+              {(d.special || gone) && (
+                <div className="badges">
+                  {gone && <span className="badge out">{L.soldOut}</span>}
+                  {d.special && !gone && <span className="badge star">⭐ {L.mustTry}</span>}
+                </div>
+              )}
               <div className="dish-top">
                 <h2 className="tn">{title}</h2>
                 <div className="pr">
@@ -210,7 +236,7 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
                     −
                   </button>
                   <span aria-live="polite">{q}</span>
-                  <button aria-label={hasOpts(d) ? O.choose : "Add one"} onClick={() => plus(i)}>
+                  <button aria-label={hasOpts(d) ? O.choose : "Add one"} disabled={gone} onClick={() => plus(i)}>
                     +
                   </button>
                 </div>
@@ -218,10 +244,16 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
             </div>
           );
         })}
+        {maps && dishes.length > 0 && (
+          <div className="review">
+            <span>{L.reviewAsk}</span>
+            <a className="btn" href={maps} target="_blank" rel="noreferrer noopener">⭐ {L.review}</a>
+          </div>
+        )}
       </div>
 
       <div className="m-foot">
-        <button className="btn primary" disabled={!count} onClick={() => setShowOrder(true)}>
+        <button className="btn primary" disabled={!count} onClick={() => { setOrderNo(String(1000 + Math.floor(Math.random() * 9000))); setShowPay(false); setShowOrder(true); }}>
           {count ? L.show(count) : L.show0}
         </button>
         <small>{L.note}{rates[lang] ? <> · <a href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer">Rates by Exchange Rate API</a></> : null}</small>
@@ -305,6 +337,26 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
             })}
           </ul>
           <div className="tot">Tổng: {vnd(total)}</div>
+          <div className="ono">Mã đơn #{orderNo} <span lang={lang}>· {L.order} #{orderNo}</span></div>
+          {pay && total > 0 && (
+            showPay ? (
+              <div className="paybox" lang={lang}>
+                <QrImage text={vietQr({ bank: pay.bank, acct: pay.acct, amount: total, note: `QUAN ${orderNo}` })} size={220} label={`VietQR ${vnd(total)}`} />
+                <div className="paywho">
+                  <b>{vnd(total)}</b>
+                  <span>{bankName(pay.bank)} · {pay.acct}</span>
+                  {pay.name && <span>{pay.name}</span>}
+                </div>
+                <small>{L.payHint}</small>
+                <button className="btn" onClick={async () => {
+                  try { await navigator.clipboard.writeText(pay.acct); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {}
+                }}>{copied ? L.copied : L.copyAcct}</button>
+              </div>
+            ) : (
+              <button className="btn paybtn" onClick={() => setShowPay(true)} lang={lang}>💳 {L.pay}</button>
+            )
+          )}
+          {maps && <a className="btn" href={maps} target="_blank" rel="noreferrer noopener" lang={lang}>⭐ {L.review}</a>}
           <button ref={closeRef} className="btn" onClick={() => setShowOrder(false)} lang={lang}>
             {L.close}
           </button>

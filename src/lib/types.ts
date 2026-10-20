@@ -1,4 +1,5 @@
 import { SUPABASE_URL } from "./config";
+import { BANKS } from "./vietqr";
 
 export const LANG_KEYS = ["en", "ko", "zh", "ja"] as const;
 export type Lang = (typeof LANG_KEYS)[number];
@@ -51,7 +52,25 @@ export interface Dish {
   desc: ML | null;
   media?: Media[];
   opts?: DrinkOpts | null;
+  /** "Must-try" badge on the customer menu. */
+  special?: boolean;
 }
+
+/** Bank account customers can pay into by VietQR transfer. */
+export interface Pay {
+  bank: string;
+  acct: string;
+  name: string;
+}
+
+/** Dishes marked sold out, and the Vietnam-time day they were marked. Stale days mean nothing is sold out. */
+export interface SoldOut {
+  day: string;
+  names: string[];
+}
+
+/** Today's date in Vietnam (UTC+7, no daylight saving), as YYYY-MM-DD. */
+export const vnToday = (now = Date.now()) => new Date(now + 7 * 3600_000).toISOString().slice(0, 10);
 
 export interface Stall {
   name: string;
@@ -64,6 +83,20 @@ export interface MenuData extends Stall {
   dishes: Dish[];
   kind?: ShopKind;
   toppings?: Topping[];
+  /** Database id and last-change time: saves are refused if the menu changed since it was loaded. */
+  id?: string;
+  updatedAt?: string;
+  pay?: Pay | null;
+  maps?: string;
+  soldOut?: SoldOut;
+}
+
+/** One of the stalls an account runs, for the stall switcher. */
+export interface StallRef {
+  id: string;
+  slug: string;
+  name: string;
+  published: boolean;
 }
 
 const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
@@ -133,7 +166,60 @@ export function cleanDish(d: unknown): Dish | null {
     desc: ml(o.desc ?? o.descr),
     media: media(o.media),
     opts: opts(o.opts),
+    special: o.special === true,
   };
 }
+
+/** Strips tone marks and upper-cases, the way banks print account holder names. */
+const plainUpper = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "D").toUpperCase();
+
+export function cleanPay(v: unknown): Pay | null {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const bank = str(o.bank);
+  const acct = str(o.acct).replace(/[\s.-]/g, "").toUpperCase();
+  if (!BANKS.some((b) => b.bin === bank) || !/^[0-9A-Z]{4,19}$/.test(acct)) return null;
+  const name = plainUpper(str(o.name)).replace(/[^A-Z0-9 ]/g, "").replace(/\s+/g, " ").trim().slice(0, 50);
+  return { bank, acct, name };
+}
+
+/** Google Maps share links only, so the review button can't send customers anywhere else. */
+export function cleanMaps(v: unknown): string {
+  let s = str(v);
+  if (!s) return "";
+  if (/^http:\/\//i.test(s)) s = "https://" + s.slice(7);
+  else if (!/^https:\/\//i.test(s)) s = "https://" + s;
+  let u: URL;
+  try {
+    u = new URL(s);
+  } catch {
+    return "";
+  }
+  const h = u.hostname.toLowerCase();
+  const path = u.pathname;
+  const ok =
+    u.protocol === "https:" &&
+    !u.username && !u.password && !u.port &&
+    (h === "maps.app.goo.gl" ||
+      h === "g.page" ||
+      h === "share.google" ||
+      h === "maps.google.com" ||
+      (h === "goo.gl" && path.startsWith("/maps")) ||
+      (h === "g.co" && path.startsWith("/kgs/")) ||
+      (h === "search.google.com" && path.startsWith("/local/")) ||
+      (/^(www\.)?google\.(com|com\.vn|co\.[a-z]{2}|[a-z]{2})$/.test(h) && path.startsWith("/maps")));
+  return ok && u.href.length <= 500 ? u.href : "";
+}
+
+export function cleanSoldOut(v: unknown): SoldOut {
+  const o = v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+  const day = typeof o.day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(o.day) ? o.day : "";
+  const names = Array.isArray(o.names) ? o.names.filter((n): n is string => typeof n === "string").slice(0, 300) : [];
+  return { day, names: day ? names : [] };
+}
+
+/** Names sold out today; yesterday's list no longer counts. */
+export const soldToday = (s: SoldOut | undefined, today = vnToday()) => (s && s.day === today ? s.names : []);
 
 export const isTranslated = (d: Dish) => !!d.name?.en;

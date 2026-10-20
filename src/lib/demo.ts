@@ -2,7 +2,7 @@ import type { Dish, MenuData } from "./types";
 
 /** Example stall shown in demo mode and at /m/demo. Marked as an example in the UI. */
 export const EXAMPLE_DISHES: Dish[] = [
- {vi:"Cơm tấm sườn bì chả",price:45000,spice:0,alg:["pork","egg","fish"],pron:"gum tum soo-un bee chah",
+ {vi:"Cơm tấm sườn bì chả",price:45000,spice:0,alg:["pork","egg","fish"],pron:"gum tum soo-un bee chah",special:true,
   name:{en:"Broken rice with grilled pork chop",ko:"숯불 돼지갈비 껌땀",zh:"烤猪排碎米饭",ja:"焼き豚のせコムタム"},
   desc:{en:"Charcoal-grilled lemongrass pork chop on broken rice, with shredded pork skin, egg meatloaf and sweet fish sauce.",ko:"레몬그라스 숯불 돼지갈비와 싸라기 쌀밥, 돼지껍데기채, 계란찜을 느억맘 소스와 함께.",zh:"炭烤香茅猪排配碎米饭，搭配猪皮丝、蛋肉饼和甜鱼露。",ja:"レモングラス風味の炭火焼き豚を砕き米ご飯に。豚皮の細切り、卵蒸し、甘いヌクマム付き。"}},
  {vi:"Bánh mì thịt",price:25000,spice:1,alg:["gluten","egg","pork","soy"],pron:"bun mee tit",

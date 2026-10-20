@@ -218,3 +218,77 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 8
 .sheet legend { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
 .sheet .btn.primary { width: 100%; justify-content: center; }
 .views { margin: 0; font-weight: 600; font-size: 15px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--ok) 12%, transparent); }
+
+/* Several stalls per account, today's card, payments, owner link */
+.banner { margin: 0; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--warn); color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, var(--surface)); font-weight: 600; font-size: 14px; }
+.stallbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.stallbar select { width: auto; max-width: 100%; min-width: min(240px, 100%); font-weight: 600; }
+.stallbar .status { flex-basis: 100%; }
+.step.today { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.step.today .num { background: var(--ok); }
+.chip.sold[aria-pressed="true"] { border-color: var(--chili); color: var(--chili); background: color-mix(in srgb, var(--chili) 10%, var(--surface)); text-decoration: line-through; }
+.extras { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.paycheck { display: flex; gap: 12px; align-items: center; }
+.qr-img { background: #fff; border-radius: 8px; display: block; flex: none; }
+.owner-link { display: grid; gap: 10px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.owner-link > div:first-child { display: grid; gap: 2px; }
+.owner-qr { margin: 0; display: grid; gap: 6px; justify-items: center; font-size: 12px; color: var(--muted); text-align: center; max-width: 170px; }
+.owner-qr .qr-img { padding: 6px; border: 1px solid var(--line); box-sizing: content-box; }
+
+/* Customer menu: badges, sold out, review, paying by VietQR */
+.badges { display: flex; gap: 6px; }
+.badge { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; }
+.badge.star { background: color-mix(in srgb, var(--sign) 60%, transparent); color: var(--sign-ink); }
+.badge.out { background: var(--chili); color: #fff; }
+.dish.gone .tn, .dish.gone .pr, .dish.gone p, .dish.gone .m-media { opacity: .5; }
+.dish.gone .tn { text-decoration: line-through; }
+.review { display: grid; gap: 8px; justify-items: center; text-align: center; padding: 20px 16px; color: var(--muted); font-size: 13px; }
+.order .ono { font-family: var(--mono); font-size: 14px; }
+.order .ono span { font-family: var(--font); opacity: .75; }
+.order .btn.paybtn { background: #fff; color: var(--sign-ink); border-color: var(--sign-ink); }
+.paybox { background: #fff; color: #14211e; border-radius: 14px; padding: 16px; display: grid; gap: 10px; justify-items: center; text-align: center; }
+.paybox .qr-img { width: min(220px, 64vw); height: auto; }
+.paywho { display: grid; gap: 2px; font-size: 14px; }
+.paywho b { font-family: var(--mono); font-size: 20px; }
+.paybox small { font-size: 12px; color: #56665f; max-width: 34ch; }
+.order .paybox .btn { background: #fff; color: #14211e; border-color: #ccd8d4; justify-self: center; }
+
+/* Owner page (/k/…) */
+.quick .wrap { max-width: 560px; }
+.quick-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 12px; }
+.quick-card h1 { margin: 0; font-size: 24px; line-height: 1.2; }
+.quick-card > .btn { justify-self: start; }
+.qlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.qrow { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
+.qrow.gone { border-color: var(--chili); background: color-mix(in srgb, var(--chili) 6%, var(--surface)); }
+.qtop { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.qtop b { font-size: 17px; line-height: 1.3; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; flex: none; }
+.seg button { font: inherit; font-weight: 700; font-size: 15px; padding: 9px 16px; border: 0; background: var(--surface); color: var(--muted); cursor: pointer; min-width: 64px; }
+.seg button[aria-pressed="true"] { background: var(--ok); color: #fff; }
+.seg button + button[aria-pressed="true"] { background: var(--chili); }
+.qprice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.qp { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.qp input[type="number"] { width: 118px; font-family: var(--mono); text-align: right; font-size: 17px; }
+.qcur { color: var(--muted); }
+
+/* Flyer (/to-roi): always light, sized for A4 */
+.flyer-controls { display: grid; gap: 12px; max-width: 760px; width: 100%; margin: 0 auto; }
+.flyer-controls h1 { margin: 0; font-size: 24px; }
+.flyer { background: #fff; color: #14211e; border-radius: 16px; border: 1px solid #ccd8d4; padding: clamp(18px, 5vw, 36px); display: grid; gap: 18px; max-width: 760px; width: 100%; margin: 0 auto; }
+.fl-badge { justify-self: start; background: #ffd23f; color: #1a1405; font-weight: 800; letter-spacing: .08em; font-size: 13px; padding: 6px 12px; border-radius: 99px; }
+.flyer h2 { margin: 0; font-size: clamp(28px, 6vw, 44px); line-height: 1.1; letter-spacing: -0.02em; text-wrap: balance; }
+.fl-sub { margin: 0; font-size: 18px; color: #3d4b46; }
+.fl-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 17px; }
+.fl-qrs { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
+.fl-qrs figure { margin: 0; display: grid; gap: 8px; justify-items: center; font-weight: 700; }
+.fl-qrs .qr-img { border: 1px solid #ccd8d4; padding: 8px; box-sizing: content-box; }
+.fl-contact { margin: 0; font-size: 18px; text-align: center; }
+.fl-foot { margin: 0; text-align: center; font-family: var(--mono); font-size: 13px; color: #56665f; }
+@media print {
+  @page { size: A4; margin: 12mm; }
+  html, body { background: #fff !important; }
+  .no-print { display: none !important; }
+  .page { padding: 0; }
+  .flyer { border: 0; padding: 0; max-width: none; }
+}
