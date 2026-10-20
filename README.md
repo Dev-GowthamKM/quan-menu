@@ -182,6 +182,8 @@ are archived instead of deleted). `scripts/generate-seed.mjs` regenerates the fi
 Requires Node 20+ and Docker (for the local Supabase stack).
 
 ```bash
+git clone https://github.com/gouthamgaro-commits/taana-store.git
+cd taana-store
 npm install
 cp .env.example .env.local
 npm run db:start          # starts Postgres, Auth, Storage locally (Docker)
@@ -275,10 +277,10 @@ psql "postgresql://postgres:YOUR_DB_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:543
 - **Google sign-in (optional):** add the provider with your Google OAuth client, then set
   `NEXT_PUBLIC_GOOGLE_SIGN_IN=1`.
 
-**2. Vercel.** This repository is already connected to the Vercel project `quan-menu`, which
-builds a preview of every push. Add the environment variables above (for Preview first, scoped to
-this branch, to test; then Production), then redeploy. Once this branch is merged into `main`,
-production serves the store. `vercel.json` schedules `/api/cron/housekeeping` daily (Hobby plan
+**2. Vercel.** In Vercel choose **Add New › Project** and import this repository (framework
+preset Next.js; the build settings need no changes). Add the environment variables above for
+Production and Preview, then deploy. Every push to `main` updates the live store and every other
+branch gets its own preview URL. `vercel.json` schedules `/api/cron/housekeeping` daily (Hobby plan
 limit); stock holds are also released every 5 minutes by pg_cron, and emails are sent as events
 happen.
 
@@ -382,9 +384,9 @@ production build (`next build`) succeeds.
 
 ## Known limitations
 
-- **Live deployment needs its own Supabase project.** The Vercel previews of this branch build
-  and run, but the project's environment variables still point at the earlier Quán app's database,
-  so they report "database unreachable" until the variables above are set (see Deploy).
+- **A deployment needs its own Supabase project.** Until the Supabase environment variables are
+  set and the migrations pushed (see Deploy), the site builds and runs but shows "The store
+  database is not connected yet" and `/api/health` reports the database as unreachable.
 - GST invoices show tax per line at the product's rate; HSN codes, CGST/SGST/IGST splits and
   invoice numbering separate from order numbers are not implemented. Confirm tax settings with
   your accountant.
