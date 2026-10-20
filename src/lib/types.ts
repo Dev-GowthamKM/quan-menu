@@ -49,6 +49,21 @@ export interface Policies {
   about?: string;
 }
 
+/** Default parcel for courier bookings (Settings › Shipping › Courier connection). */
+export interface PackageDefaults {
+  length_cm: number;
+  breadth_cm: number;
+  height_cm: number;
+  item_weight_grams: number;
+}
+
+/** A tracking scan kept on a shipment, newest first. */
+export interface CourierScan {
+  status: string;
+  location: string;
+  at: string;
+}
+
 export interface ContactInfo {
   email?: string;
   phone?: string;

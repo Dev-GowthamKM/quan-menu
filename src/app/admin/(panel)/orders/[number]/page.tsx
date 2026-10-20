@@ -10,6 +10,9 @@ import { ORDER_COLUMNS } from "@/lib/admin-orders";
 import { requireRole, roleAtLeast } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
+import { getSettings } from "@/lib/settings";
+import { shiprocketConfigured } from "@/lib/shipping/shiprocket";
+import type { CourierScan } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -42,7 +45,7 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
   const { data: order } = await supabase.from("orders").select(ORDER_COLUMNS).eq("order_number", number.toUpperCase()).maybeSingle();
   if (!order) notFound();
 
-  const [items, events, shipments, returns, providers, payments, refunds, customer] = await Promise.all([
+  const [items, events, shipments, returns, providers, payments, refunds, customer, settings] = await Promise.all([
     supabase.from("order_items").select("*").eq("order_id", order.id).order("created_at"),
     supabase.from("order_events").select("id, kind, message, is_internal, actor_type, created_at").eq("order_id", order.id).order("created_at", { ascending: false }).order("id", { ascending: false }),
     supabase.from("shipments").select("*").eq("order_id", order.id).order("created_at", { ascending: false }),
@@ -51,6 +54,7 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
     isAdmin ? supabase.from("payments").select("id, provider, provider_order_id, provider_payment_id, amount, amount_refunded, status, method, error_description, captured_at, created_at").eq("order_id", order.id).order("created_at") : Promise.resolve({ data: null }),
     isAdmin ? supabase.from("refunds").select("id, amount, status, reason, error, provider_refund_id, created_at, processed_at").eq("order_id", order.id).order("created_at") : Promise.resolve({ data: null }),
     order.user_id ? supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", order.user_id).neq("status", "cancelled") : Promise.resolve({ count: null }),
+    getSettings(),
   ]);
 
   const c = order.currency;
@@ -58,7 +62,8 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
   const bill = order.billing_address as Address | null;
   const method = order.shipping_method as { name?: string; min_days?: number; max_days?: number } | null;
   const lines = items.data ?? [];
-  const latestShipment = shipments.data?.[0];
+  const latestShipment = shipments.data?.find((s) => s.status !== "cancelled");
+  const booking = shipments.data?.find((s) => s.provider === "shiprocket" && s.status !== "cancelled");
   const captured = (payments.data ?? []).filter((p) => ["captured", "partially_refunded", "refunded"].includes(p.status));
   const refundable = captured.reduce((n, p) => n + p.amount - p.amount_refunded, 0) - (refunds.data ?? []).filter((r) => r.status === "pending").reduce((n, r) => n + r.amount, 0);
   const returnViews: ReturnRequestView[] = (returns.data ?? []).map((r) => ({
@@ -137,6 +142,14 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
             fulfillment={order.fulfillment_status}
             providers={providers.data ?? []}
             shipment={latestShipment ? { carrier: latestShipment.carrier, tracking_number: latestShipment.tracking_number, tracking_url: latestShipment.tracking_url, shipped_at: latestShipment.shipped_at, delivered_at: latestShipment.delivered_at } : null}
+            courier={{
+              enabled: settings.shiprocket_enabled && shiprocketConfigured(),
+              booking: booking ? {
+                carrier: booking.carrier, awb: booking.tracking_number, trackingUrl: booking.tracking_url, status: booking.status,
+                pickupAt: booking.pickup_scheduled_for, estimatedDelivery: booking.estimated_delivery, courierStatus: booking.courier_status,
+                courierStatusAt: booking.courier_status_at, events: (booking.courier_events ?? []) as unknown as CourierScan[],
+              } : null,
+            }}
           />
 
           {returnViews.length > 0 && <ReturnPanel requests={returnViews} orderId={order.id} orderNumber={order.order_number} isAdmin={isAdmin} currency={c} refundable={refundable} />}

@@ -193,6 +193,32 @@ isOneToOne: true
                   Relationships: [
                     
                   ]
+                },"courier_events": {
+                  Row: {
+                    "error": string | null,"event_key": string,"id": number,"order_id": string | null,"payload": NonNullable<Json>,"processed_at": string | null,"provider": string,"received_at": string,"shipment_id": string | null,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "error"?: string | null,"event_key": string,"id"?: never,"order_id"?: string | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider": string,"received_at"?: string,"shipment_id"?: string | null,"status"?: string
+                  }
+                  Update: {
+                    "error"?: string | null,"event_key"?: string,"id"?: never,"order_id"?: string | null,"payload"?: NonNullable<Json>,"processed_at"?: string | null,"provider"?: string,"received_at"?: string,"shipment_id"?: string | null,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "courier_events_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "courier_events_shipment_id_fkey"
+      columns: ["shipment_id"]
+isOneToOne: false
+      referencedRelation: "shipments"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"customer_addresses": {
                   Row: {
                     "city": string,"country": string,"created_at": string,"full_name": string,"id": string,"is_default": boolean,"label": string,"landmark": string,"line1": string,"line2": string,"phone": string,"postal_code": string,"state": string,"updated_at": string,"user_id": string
@@ -625,14 +651,14 @@ isOneToOne: false
                   ]
                 },"shipments": {
                   Row: {
-                    "carrier": string,"created_at": string,"created_by": string | null,"delivered_at": string | null,"id": string,"order_id": string,"shipped_at": string | null,"status": string,"tracking_number": string,"tracking_url": string,"updated_at": string
+                    "carrier": string,"courier_events": NonNullable<Json>,"courier_status": string,"courier_status_at": string | null,"created_at": string,"created_by": string | null,"delivered_at": string | null,"estimated_delivery": string | null,"id": string,"order_id": string,"package": NonNullable<Json>,"pickup_scheduled_for": string | null,"provider": string,"provider_order_id": string | null,"provider_shipment_id": string | null,"shipped_at": string | null,"status": string,"tracking_number": string,"tracking_url": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "carrier"?: string,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"id"?: string,"order_id": string,"shipped_at"?: string | null,"status"?: string,"tracking_number"?: string,"tracking_url"?: string,"updated_at"?: string
+                    "carrier"?: string,"courier_events"?: NonNullable<Json>,"courier_status"?: string,"courier_status_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"estimated_delivery"?: string | null,"id"?: string,"order_id": string,"package"?: NonNullable<Json>,"pickup_scheduled_for"?: string | null,"provider"?: string,"provider_order_id"?: string | null,"provider_shipment_id"?: string | null,"shipped_at"?: string | null,"status"?: string,"tracking_number"?: string,"tracking_url"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "carrier"?: string,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"id"?: string,"order_id"?: string,"shipped_at"?: string | null,"status"?: string,"tracking_number"?: string,"tracking_url"?: string,"updated_at"?: string
+                    "carrier"?: string,"courier_events"?: NonNullable<Json>,"courier_status"?: string,"courier_status_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"estimated_delivery"?: string | null,"id"?: string,"order_id"?: string,"package"?: NonNullable<Json>,"pickup_scheduled_for"?: string | null,"provider"?: string,"provider_order_id"?: string | null,"provider_shipment_id"?: string | null,"shipped_at"?: string | null,"status"?: string,"tracking_number"?: string,"tracking_url"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -707,14 +733,14 @@ isOneToOne: false
                   ]
                 },"store_settings": {
                   Row: {
-                    "accent_color": string,"background_color": string,"body_font": string,"cod_enabled": boolean,"cod_fee": number,"cod_max_order": number,"cod_min_order": number,"contact": NonNullable<Json>,"currency": string,"email_templates": NonNullable<Json>,"faq": NonNullable<Json>,"free_shipping_threshold": number | null,"gstin": string,"heading_font": string,"homepage": NonNullable<Json>,"id": number,"logo_url": string | null,"low_stock_threshold": number,"maintenance_message": string,"maintenance_mode": boolean,"og_image_url": string | null,"policies": NonNullable<Json>,"primary_color": string,"razorpay_enabled": boolean,"reservation_minutes": number,"return_shipping": string,"return_shipping_fee": number,"return_window_days": number,"reviews_auto_publish": boolean,"reviews_enabled": boolean,"reviews_require_purchase": boolean,"seo_description": string,"seo_title": string,"social": NonNullable<Json>,"store_name": string,"stripe_enabled": boolean,"tagline": string,"tax_label": string,"tax_mode": string,"tax_slabs": NonNullable<Json>,"timezone": string,"updated_at": string,"updated_by": string | null
+                    "accent_color": string,"background_color": string,"body_font": string,"cod_enabled": boolean,"cod_fee": number,"cod_max_order": number,"cod_min_order": number,"contact": NonNullable<Json>,"currency": string,"email_templates": NonNullable<Json>,"faq": NonNullable<Json>,"free_shipping_threshold": number | null,"gstin": string,"heading_font": string,"homepage": NonNullable<Json>,"id": number,"logo_url": string | null,"low_stock_threshold": number,"maintenance_message": string,"maintenance_mode": boolean,"og_image_url": string | null,"package_defaults": NonNullable<Json>,"policies": NonNullable<Json>,"primary_color": string,"razorpay_enabled": boolean,"reservation_minutes": number,"return_shipping": string,"return_shipping_fee": number,"return_window_days": number,"reviews_auto_publish": boolean,"reviews_enabled": boolean,"reviews_require_purchase": boolean,"seo_description": string,"seo_title": string,"shiprocket_courier_choice": string,"shiprocket_enabled": boolean,"shiprocket_pickup_location": string,"shiprocket_pickup_postcode": string,"social": NonNullable<Json>,"store_name": string,"stripe_enabled": boolean,"tagline": string,"tax_label": string,"tax_mode": string,"tax_slabs": NonNullable<Json>,"timezone": string,"updated_at": string,"updated_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "accent_color"?: string,"background_color"?: string,"body_font"?: string,"cod_enabled"?: boolean,"cod_fee"?: number,"cod_max_order"?: number,"cod_min_order"?: number,"contact"?: NonNullable<Json>,"currency"?: string,"email_templates"?: NonNullable<Json>,"faq"?: NonNullable<Json>,"free_shipping_threshold"?: number | null,"gstin"?: string,"heading_font"?: string,"homepage"?: NonNullable<Json>,"id"?: number,"logo_url"?: string | null,"low_stock_threshold"?: number,"maintenance_message"?: string,"maintenance_mode"?: boolean,"og_image_url"?: string | null,"policies"?: NonNullable<Json>,"primary_color"?: string,"razorpay_enabled"?: boolean,"reservation_minutes"?: number,"return_shipping"?: string,"return_shipping_fee"?: number,"return_window_days"?: number,"reviews_auto_publish"?: boolean,"reviews_enabled"?: boolean,"reviews_require_purchase"?: boolean,"seo_description"?: string,"seo_title"?: string,"social"?: NonNullable<Json>,"store_name"?: string,"stripe_enabled"?: boolean,"tagline"?: string,"tax_label"?: string,"tax_mode"?: string,"tax_slabs"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null
+                    "accent_color"?: string,"background_color"?: string,"body_font"?: string,"cod_enabled"?: boolean,"cod_fee"?: number,"cod_max_order"?: number,"cod_min_order"?: number,"contact"?: NonNullable<Json>,"currency"?: string,"email_templates"?: NonNullable<Json>,"faq"?: NonNullable<Json>,"free_shipping_threshold"?: number | null,"gstin"?: string,"heading_font"?: string,"homepage"?: NonNullable<Json>,"id"?: number,"logo_url"?: string | null,"low_stock_threshold"?: number,"maintenance_message"?: string,"maintenance_mode"?: boolean,"og_image_url"?: string | null,"package_defaults"?: NonNullable<Json>,"policies"?: NonNullable<Json>,"primary_color"?: string,"razorpay_enabled"?: boolean,"reservation_minutes"?: number,"return_shipping"?: string,"return_shipping_fee"?: number,"return_window_days"?: number,"reviews_auto_publish"?: boolean,"reviews_enabled"?: boolean,"reviews_require_purchase"?: boolean,"seo_description"?: string,"seo_title"?: string,"shiprocket_courier_choice"?: string,"shiprocket_enabled"?: boolean,"shiprocket_pickup_location"?: string,"shiprocket_pickup_postcode"?: string,"social"?: NonNullable<Json>,"store_name"?: string,"stripe_enabled"?: boolean,"tagline"?: string,"tax_label"?: string,"tax_mode"?: string,"tax_slabs"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Update: {
-                    "accent_color"?: string,"background_color"?: string,"body_font"?: string,"cod_enabled"?: boolean,"cod_fee"?: number,"cod_max_order"?: number,"cod_min_order"?: number,"contact"?: NonNullable<Json>,"currency"?: string,"email_templates"?: NonNullable<Json>,"faq"?: NonNullable<Json>,"free_shipping_threshold"?: number | null,"gstin"?: string,"heading_font"?: string,"homepage"?: NonNullable<Json>,"id"?: number,"logo_url"?: string | null,"low_stock_threshold"?: number,"maintenance_message"?: string,"maintenance_mode"?: boolean,"og_image_url"?: string | null,"policies"?: NonNullable<Json>,"primary_color"?: string,"razorpay_enabled"?: boolean,"reservation_minutes"?: number,"return_shipping"?: string,"return_shipping_fee"?: number,"return_window_days"?: number,"reviews_auto_publish"?: boolean,"reviews_enabled"?: boolean,"reviews_require_purchase"?: boolean,"seo_description"?: string,"seo_title"?: string,"social"?: NonNullable<Json>,"store_name"?: string,"stripe_enabled"?: boolean,"tagline"?: string,"tax_label"?: string,"tax_mode"?: string,"tax_slabs"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null
+                    "accent_color"?: string,"background_color"?: string,"body_font"?: string,"cod_enabled"?: boolean,"cod_fee"?: number,"cod_max_order"?: number,"cod_min_order"?: number,"contact"?: NonNullable<Json>,"currency"?: string,"email_templates"?: NonNullable<Json>,"faq"?: NonNullable<Json>,"free_shipping_threshold"?: number | null,"gstin"?: string,"heading_font"?: string,"homepage"?: NonNullable<Json>,"id"?: number,"logo_url"?: string | null,"low_stock_threshold"?: number,"maintenance_message"?: string,"maintenance_mode"?: boolean,"og_image_url"?: string | null,"package_defaults"?: NonNullable<Json>,"policies"?: NonNullable<Json>,"primary_color"?: string,"razorpay_enabled"?: boolean,"reservation_minutes"?: number,"return_shipping"?: string,"return_shipping_fee"?: number,"return_window_days"?: number,"reviews_auto_publish"?: boolean,"reviews_enabled"?: boolean,"reviews_require_purchase"?: boolean,"seo_description"?: string,"seo_title"?: string,"shiprocket_courier_choice"?: string,"shiprocket_enabled"?: boolean,"shiprocket_pickup_location"?: string,"shiprocket_pickup_postcode"?: string,"social"?: NonNullable<Json>,"store_name"?: string,"stripe_enabled"?: boolean,"tagline"?: string,"tax_label"?: string,"tax_mode"?: string,"tax_slabs"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null
                   }
                   Relationships: [
                     
@@ -797,6 +823,9 @@ isOneToOne: false
 "admin_bulk_update_products":
 { Args: { "p_action": string,"p_ids": (string)[],"p_value": Json }; Returns: number
                            },
+"admin_cancel_courier_booking":
+{ Args: { "p_order_id": string,"p_shipment_id": string }; Returns: Json
+                           },
 "admin_cancel_order":
 { Args: { "p_order_id": string,"p_reason": string,"p_restock"?: boolean }; Returns: Json
                            },
@@ -835,6 +864,9 @@ isOneToOne: false
 "admin_mark_cod_paid":
 { Args: { "p_order_id": string,"p_reference": string }; Returns: Json
                            },
+"admin_mark_rto":
+{ Args: { "p_note"?: string,"p_order_id": string }; Returns: Json
+                           },
 "admin_media_list":
 { Args: { "p_filter": string,"p_limit": number,"p_offset": number,"p_q": string }; Returns: Json
                            },
@@ -845,6 +877,9 @@ isOneToOne: false
                            },
 "admin_product_list":
 { Args: { "p": Json }; Returns: Json
+                           },
+"admin_record_courier_booking":
+{ Args: { "p_booking": Json,"p_order_id": string }; Returns: Json
                            },
 "admin_save_product":
 { Args: { "p": Json }; Returns: string
@@ -1028,6 +1063,9 @@ isOneToOne: false
 "confirm_order_payment":
 { Args: { "p_amount": number,"p_currency": string,"p_details"?: Json,"p_method": string,"p_order_id": string,"p_provider": Database["public"]['Enums']["payment_provider"],"p_provider_order_id": string,"p_provider_payment_id": string }; Returns: Json
                            },
+"courier_update":
+{ Args: { "p_awb": string,"p_etd"?: string,"p_event_at"?: string,"p_event_key": string,"p_label": string,"p_location"?: string,"p_payload"?: Json,"p_provider": string,"p_status": string }; Returns: Json
+                           },
 "customer_cancel_order":
 { Args: { "p_order_id": string,"p_reason": string,"p_user_id": string }; Returns: Json
                            },
@@ -1082,6 +1120,54 @@ isOneToOne: false
 "log_admin_action":
 { Args: { "p_action": string,"p_details"?: Json,"p_entity_id"?: string,"p_entity_type": string }; Returns: undefined
                            },
+"mark_rto_internal":
+{ Args: { "p_actor_id": string,"p_actor_type": string,"p_note": string,"p_order_id": string }; Returns: {
+              "amount_refunded": number,
+"attention_reason": string | null,
+"billing_address": Json | null,
+"cancel_reason": string | null,
+"cancelled_at": string | null,
+"cart_id": string | null,
+"cod_fee": number,
+"coupon_code": string | null,
+"created_at": string,
+"currency": string,
+"customer_name": string,
+"customer_note": string,
+"delivered_at": string | null,
+"discount_total": number,
+"email": string,
+"expires_at": string | null,
+"fulfillment_status": Database["public"]['Enums']["fulfillment_status"],
+"grand_total": number,
+"id": string,
+"idempotency_key": string | null,
+"needs_attention": boolean,
+"order_number": string,
+"paid_at": string | null,
+"payment_method": string,
+"payment_status": Database["public"]['Enums']["order_payment_status"],
+"phone": string,
+"placed_at": string,
+"shipped_at": string | null,
+"shipping_address": NonNullable<Json>,
+"shipping_method": NonNullable<Json>,
+"shipping_rate_id": string | null,
+"shipping_total": number,
+"status": Database["public"]['Enums']["order_status"],
+"subtotal": number,
+"tax_label": string,
+"tax_mode": string,
+"tax_total": number,
+"updated_at": string,
+"user_id": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "orders"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "match_shipping_zone":
 { Args: { "p_country": string,"p_postal_code": string,"p_state": string }; Returns: string
                            },
@@ -1206,6 +1292,54 @@ isOneToOne: false
               "available_stock": number,"brand_name": string,"brand_slug": string,"compare_at_price": number,"hover_image_url": string,"id": string,"image_alt": string,"image_url": string,"max_price": number,"on_sale": boolean,"price": number,"published_at": string,"rating_avg": number,"rating_count": number,"slug": string,"swatches": Json,"title": string,"total_count": number
             }[]
                            },
+"set_fulfillment_internal":
+{ Args: { "p_actor_id": string,"p_actor_type": string,"p_carrier": string,"p_note": string,"p_notify": boolean,"p_order_id": string,"p_status": Database["public"]['Enums']["fulfillment_status"],"p_tracking_number": string,"p_tracking_url": string }; Returns: {
+              "amount_refunded": number,
+"attention_reason": string | null,
+"billing_address": Json | null,
+"cancel_reason": string | null,
+"cancelled_at": string | null,
+"cart_id": string | null,
+"cod_fee": number,
+"coupon_code": string | null,
+"created_at": string,
+"currency": string,
+"customer_name": string,
+"customer_note": string,
+"delivered_at": string | null,
+"discount_total": number,
+"email": string,
+"expires_at": string | null,
+"fulfillment_status": Database["public"]['Enums']["fulfillment_status"],
+"grand_total": number,
+"id": string,
+"idempotency_key": string | null,
+"needs_attention": boolean,
+"order_number": string,
+"paid_at": string | null,
+"payment_method": string,
+"payment_status": Database["public"]['Enums']["order_payment_status"],
+"phone": string,
+"placed_at": string,
+"shipped_at": string | null,
+"shipping_address": NonNullable<Json>,
+"shipping_method": NonNullable<Json>,
+"shipping_rate_id": string | null,
+"shipping_total": number,
+"status": Database["public"]['Enums']["order_status"],
+"subtotal": number,
+"tax_label": string,
+"tax_mode": string,
+"tax_total": number,
+"updated_at": string,
+"user_id": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "orders"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "set_stock_context":
 { Args: { "p_note"?: string,"p_order_id"?: string,"p_reason": Database["public"]['Enums']["inventory_reason"] }; Returns: undefined
                            },

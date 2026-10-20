@@ -318,6 +318,7 @@ function DeliveryChecker() {
                   <span><CheckIcon size={14} className="mr-1 inline text-ok" />{o.name}: {o.from === o.to ? o.from : `${o.from} – ${o.to}`}</span>
                 </li>
               ))}
+              {result.courierEta && <li><TruckIcon size={14} className="mr-1 inline" />Usually delivered by {result.courierEta}</li>}
               <li className="text-taupe">{result.cod ? "Cash on delivery available" : "Prepaid orders only for this PIN code"}</li>
             </ul>
           )}

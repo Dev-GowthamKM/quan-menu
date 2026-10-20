@@ -8,7 +8,7 @@ export function loadEnv() {
       if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
     }
   }
-  const need = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "RAZORPAY_WEBHOOK_SECRET", "CRON_SECRET"];
+  const need = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "RAZORPAY_WEBHOOK_SECRET", "CRON_SECRET", "SHIPROCKET_WEBHOOK_TOKEN"];
   const missing = need.filter((k) => !process.env[k]);
   if (missing.length) throw new Error(`End-to-end tests need ${missing.join(", ")} (see README › Testing).`);
   return process.env as Record<string, string>;

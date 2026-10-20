@@ -188,6 +188,18 @@ const SECTIONS = {
     email_templates: z.record(z.string().regex(/^[a-z_]{3,40}$/), z.object({ subject: z.string().max(200), body: z.string().max(5000) })),
   }),
   maintenance: z.object({ maintenance_mode: z.boolean(), maintenance_message: text(500) }),
+  courier: z.object({
+    shiprocket_enabled: z.boolean(),
+    shiprocket_pickup_location: z.string().trim().min(1, "Enter the pickup address name from Shiprocket.").max(80),
+    shiprocket_pickup_postcode: z.string().trim().regex(/^$|^[1-9][0-9]{5}$/, "Enter the pickup address's 6-digit PIN code."),
+    shiprocket_courier_choice: z.enum(["recommended", "cheapest", "fastest"]),
+    package_defaults: z.object({
+      length_cm: z.number().min(1).max(300),
+      breadth_cm: z.number().min(1).max(300),
+      height_cm: z.number().min(1).max(300),
+      item_weight_grams: z.number().int().min(10).max(50_000),
+    }),
+  }),
 } as const;
 
 export type SettingsSection = keyof typeof SECTIONS;
@@ -203,6 +215,9 @@ export async function saveSettings(section: SettingsSection, values: unknown): P
     return fail(`${issue?.path.join(" › ") ? `${issue.path.join(" › ")}: ` : ""}${issue?.message ?? "Check the form."}`);
   }
   const data = parsed.data as Record<string, unknown>;
+  if (section === "courier" && data.shiprocket_enabled && !data.shiprocket_pickup_postcode) {
+    return fail("Add the pickup PIN code to turn on Shiprocket.");
+  }
   if (section === "checkout") {
     const slabs = (data.tax_slabs as { up_to: number | null }[]) ?? [];
     if (slabs[slabs.length - 1]?.up_to !== null) return fail("The last tax slab must have no upper limit.");

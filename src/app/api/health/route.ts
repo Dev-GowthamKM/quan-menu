@@ -28,7 +28,12 @@ export async function GET() {
     stripe: !!env.STRIPE_SECRET_KEY,
     stripe_webhook: !!env.STRIPE_WEBHOOK_SECRET,
   };
-  const optional = { email: !!(env.RESEND_API_KEY && env.EMAIL_FROM), cron: !!env.CRON_SECRET };
+  const optional = {
+    email: !!(env.RESEND_API_KEY && env.EMAIL_FROM),
+    cron: !!env.CRON_SECRET,
+    shiprocket: !!(env.SHIPROCKET_EMAIL && env.SHIPROCKET_PASSWORD),
+    shiprocket_webhook: !!env.SHIPROCKET_WEBHOOK_TOKEN,
+  };
   const ok = database === "ok" && Object.values(required).every(Boolean);
   return NextResponse.json({ ok, site: SITE_URL, database, required, payments, optional }, { status: ok ? 200 : 503 });
 }

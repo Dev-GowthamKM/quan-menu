@@ -1,32 +1,14 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { addOrderNote, cancelOrderAdmin, markCodCollected, refundOrder, setFulfillment, updateReturnRequest } from "@/server/admin/orders";
 import { formatDateTime } from "@/lib/format";
 import { formatMoney, fromMinor, toMinor } from "@/lib/money";
 import type { FulfillmentStatus, OrderStatus, PaymentStatus } from "@/lib/types";
 import { Badge, Button, cx } from "../../ui/controls";
 import { CheckIcon, ExternalIcon } from "../../ui/icons";
-import { useToast } from "../Toaster";
 import { adminInput, Card } from "../ui";
-
-type Result = { ok: true; message?: string } | { ok: false; error: string };
-
-/** Runs an action, shows the outcome and refreshes the page data. */
-function useAction() {
-  const router = useRouter();
-  const toast = useToast();
-  const [pending, start] = useTransition();
-  const run = (fn: () => Promise<Result>, after?: () => void) =>
-    start(async () => {
-      const res = await fn();
-      if (!res.ok) return toast(res.error, "error");
-      toast(res.message ?? "Done.");
-      after?.();
-      router.refresh();
-    });
-  return { pending, run };
-}
+import { CourierSection, type CourierBooking } from "./CourierPanel";
+import { useAction } from "./useAction";
 
 const STEPS: { key: FulfillmentStatus; label: string }[] = [
   { key: "unfulfilled", label: "Received" },
@@ -36,13 +18,14 @@ const STEPS: { key: FulfillmentStatus; label: string }[] = [
   { key: "delivered", label: "Delivered" },
 ];
 
-export function FulfillmentPanel({ orderId, orderNumber, status, fulfillment, providers, shipment }: {
+export function FulfillmentPanel({ orderId, orderNumber, status, fulfillment, providers, shipment, courier }: {
   orderId: string;
   orderNumber: string;
   status: OrderStatus;
   fulfillment: FulfillmentStatus;
   providers: { name: string; tracking_url_template: string }[];
   shipment: { carrier: string; tracking_number: string; tracking_url: string; shipped_at: string | null; delivered_at: string | null } | null;
+  courier: { enabled: boolean; booking: CourierBooking | null };
 }) {
   const { pending, run } = useAction();
   const [ship, setShip] = useState(false);
@@ -69,7 +52,7 @@ export function FulfillmentPanel({ orderId, orderNumber, status, fulfillment, pr
         </ol>
       )}
 
-      {shipment && (shipment.carrier || shipment.tracking_number) && (
+      {!courier.booking && shipment && (shipment.carrier || shipment.tracking_number) && (
         <p className="mt-3 text-sm">
           {shipment.carrier} {shipment.tracking_number && <>· <span className="font-mono">{shipment.tracking_number}</span></>}
           {shipment.tracking_url && <a href={shipment.tracking_url} target="_blank" rel="noreferrer" className="ml-2 inline-flex items-center gap-1 text-xs underline">Track <ExternalIcon size={11} /></a>}
@@ -94,6 +77,10 @@ export function FulfillmentPanel({ orderId, orderNumber, status, fulfillment, pr
             <Button size="sm" variant="ghost" busy={pending} onClick={() => window.confirm("Mark the whole order as returned to you? Use the return requests below for partial returns.") && go("returned", { notify: false })}>Mark returned</Button>
           )}
         </div>
+      )}
+
+      {(courier.enabled || courier.booking || (open && fulfillment === "shipped")) && (
+        <CourierSection orderId={orderId} orderNumber={orderNumber} open={open} fulfillment={fulfillment} enabled={courier.enabled} booking={courier.booking} />
       )}
 
       {ship && (

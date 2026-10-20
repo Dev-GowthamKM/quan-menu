@@ -1,7 +1,10 @@
 "use server";
+import { unstable_cache } from "next/cache";
 import { getRelatedProducts, productCardsByIds, searchProducts } from "@/lib/catalog";
 import { deliveryWindow, formatDay } from "@/lib/format";
 import { rateLimit } from "@/lib/rate-limit";
+import { getSettings } from "@/lib/settings";
+import { serviceability, shiprocketConfigured } from "@/lib/shipping/shiprocket";
 import { supabasePublic } from "@/lib/supabase/public";
 import type { PostcodeCheck, ProductCard } from "@/lib/types";
 
@@ -42,7 +45,25 @@ export interface DeliveryCheck {
   message: string;
   cod?: boolean;
   options?: { name: string; price: number; from: string; to: string }[];
+  /** The courier's own delivery estimate ("Sat, 24 Oct"), when Shiprocket is connected. */
+  courierEta?: string;
 }
+
+// Courier delivery estimate for a PIN code, cached for six hours. Never slows the check
+// down for long: Shiprocket gets three seconds, and any problem just leaves it out.
+const courierDays = unstable_cache(
+  async (pickup: string, pin: string): Promise<number | null> => {
+    try {
+      const { couriers, recommendedId } = await serviceability({ pickup, delivery: pin, weightKg: 0.5, cod: false, timeoutMs: 3000 });
+      const pick = couriers.find((c) => c.id === recommendedId) ?? [...couriers].sort((a, b) => (a.days ?? 99) - (b.days ?? 99))[0];
+      return pick?.days ?? null;
+    } catch {
+      return null;
+    }
+  },
+  ["courier-days"],
+  { revalidate: 6 * 3600 },
+);
 
 /** Product page "check delivery": serviceability, dates and COD for a PIN code. */
 export async function checkDelivery(pin: string): Promise<DeliveryCheck> {
@@ -53,6 +74,10 @@ export async function checkDelivery(pin: string): Promise<DeliveryCheck> {
   if (error) return { ok: false, message: "We couldn't check that PIN code right now." };
   const res = data as unknown as PostcodeCheck;
   if (!res.serviceable) return { ok: false, message: res.message || "Sorry, we don't deliver to this PIN code yet." };
+  const settings = await getSettings();
+  const days = settings.shiprocket_enabled && settings.shiprocket_pickup_postcode && shiprocketConfigured()
+    ? await courierDays(settings.shiprocket_pickup_postcode, code)
+    : null;
   return {
     ok: true,
     message: `Delivers to ${code}`,
@@ -61,5 +86,6 @@ export async function checkDelivery(pin: string): Promise<DeliveryCheck> {
       const w = deliveryWindow(r.min_days, r.max_days);
       return { name: r.name, price: r.base_price, from: formatDay(w.from), to: formatDay(w.to) };
     }),
+    ...(days ? { courierEta: formatDay(deliveryWindow(days, days).to) } : {}),
   };
 }

@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import CourierSettings from "@/components/admin/store/CourierSettings";
 import ShippingManager, { type ZoneView } from "@/components/admin/store/ShippingManager";
 import { PageHeader } from "@/components/admin/ui";
 import { Notice } from "@/components/ui/controls";
 import { requireRole, roleAtLeast } from "@/lib/auth";
-import { getSettings } from "@/lib/settings";
+import { SITE_URL } from "@/lib/env";
+import { SHIPROCKET_WEBHOOK_TOKEN } from "@/lib/server-env";
+import { getSettings, packageDefaultsOf } from "@/lib/settings";
+import { shiprocketConfigured } from "@/lib/shipping/shiprocket";
 import { INDIAN_STATES } from "@/lib/india";
 
 export const metadata: Metadata = { title: "Shipping" };
@@ -22,6 +26,16 @@ export default async function ShippingPage() {
     <>
       <PageHeader title="Shipping" description="Delivery zones and rates, PIN codes you can't serve, and the couriers you use. Checkout picks the most specific zone for each address." />
       {zones.error && <Notice tone="error" className="mb-4">{zones.error.message}</Notice>}
+      <CourierSettings
+        settings={{
+          enabled: settings.shiprocket_enabled, pickupLocation: settings.shiprocket_pickup_location, pickupPostcode: settings.shiprocket_pickup_postcode,
+          choice: settings.shiprocket_courier_choice, pack: packageDefaultsOf(settings),
+        }}
+        connected={shiprocketConfigured()}
+        webhookReady={!!SHIPROCKET_WEBHOOK_TOKEN}
+        webhookUrl={`${SITE_URL}/api/webhooks/courier`}
+        canEdit={roleAtLeast(role, "admin")}
+      />
       <ShippingManager
         zones={view}
         rules={rules.data ?? []}

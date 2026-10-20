@@ -59,6 +59,39 @@ export async function checkout(page: Page, email: string, opts: { coupon?: strin
   await page.getByRole("button", { name: /^Pay ₹/ }).click();
 }
 
+/** The private link a guest uses to open their order (same signature as the app's). */
+export function orderLink(orderNumber: string, orderId: string) {
+  const key = createHmac("sha256", env.ORDER_LINK_SECRET || env.SUPABASE_SERVICE_ROLE_KEY).update(`order:${orderId}`).digest("base64url").slice(0, 32);
+  return `/orders/${orderNumber}?key=${key}`;
+}
+
+/**
+ * A guest order placed straight through the server-only checkout function (faster than
+ * clicking through checkout when a test is about what happens afterwards).
+ */
+export async function placeOrder(method: "cod" | "razorpay", email: string, address: Record<string, string> = {}) {
+  const sb = db();
+  const { data: variant } = await sb
+    .from("product_variants")
+    .select("id, products!inner(status)")
+    .eq("is_active", true)
+    .eq("products.status", "active")
+    .gte("stock_quantity", 5)
+    .limit(1)
+    .single();
+  const token = randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
+  const add = await sb.rpc("cart_set_item", { p_user_id: null as never, p_token: token, p_variant_id: variant!.id, p_quantity: 1, p_mode: "add" });
+  if (add.error) throw new Error(add.error.message);
+  const placed = await sb.rpc("place_order", {
+    p_user_id: null as never, p_cart_token: token, p_idempotency_key: randomUUID(), p_email: email, p_phone: "",
+    p_shipping_address: { full_name: "Ravi Kumar", phone: "+91 98450 12345", line1: "22 Residency Road", city: "Bengaluru", state: "Karnataka", postal_code: "560025", country: "IN", ...address },
+    p_billing_address: null as never, p_rate_id: null as never, p_payment_method: method,
+  });
+  if (placed.error) throw new Error(placed.error.message);
+  const o = placed.data as { id: string; order_number: string; grand_total: number };
+  return { id: o.id, number: o.order_number, total: o.grand_total };
+}
+
 /** A Razorpay webhook request signed with the configured secret. */
 export function signedWebhook(body: object, eventId = `evt_${randomUUID()}`) {
   const raw = JSON.stringify(body);

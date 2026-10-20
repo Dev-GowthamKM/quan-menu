@@ -22,6 +22,15 @@ export const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 export const RESEND_API_BASE = (process.env.RESEND_API_BASE || "https://api.resend.com").replace(/\/$/, "");
 export const EMAIL_FROM = process.env.EMAIL_FROM || "";
 
+/** Shiprocket API user (Settings > API in Shiprocket) and the token its webhook sends. */
+export const SHIPROCKET_EMAIL = process.env.SHIPROCKET_EMAIL || "";
+export const SHIPROCKET_PASSWORD = process.env.SHIPROCKET_PASSWORD || "";
+export const SHIPROCKET_WEBHOOK_TOKEN = process.env.SHIPROCKET_WEBHOOK_TOKEN || "";
+/** Only for tests: a local mock. Any other host is ignored so credentials only ever go to Shiprocket. */
+export const SHIPROCKET_API_BASE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(process.env.SHIPROCKET_API_BASE || "")
+  ? process.env.SHIPROCKET_API_BASE!.replace(/\/$/, "")
+  : "https://apiv2.shiprocket.in";
+
 /** Signs guest order links and the guest cart cookie. Falls back to the service key. */
 export const LINK_SECRET = process.env.ORDER_LINK_SECRET || SUPABASE_SERVICE_ROLE_KEY;
 

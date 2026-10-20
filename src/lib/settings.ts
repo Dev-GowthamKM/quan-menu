@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { SUPABASE_CONFIGURED } from "./env";
 import { supabasePublic } from "./supabase/public";
-import type { ContactInfo, FaqItem, Homepage, Policies, SocialLinks, StoreSettings } from "./types";
+import type { ContactInfo, FaqItem, Homepage, PackageDefaults, Policies, SocialLinks, StoreSettings } from "./types";
 
 export const DEFAULT_SETTINGS: StoreSettings = {
   id: 1,
@@ -45,6 +45,11 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   reviews_auto_publish: false,
   maintenance_mode: false,
   maintenance_message: "",
+  shiprocket_enabled: false,
+  shiprocket_pickup_location: "Primary",
+  shiprocket_pickup_postcode: "",
+  shiprocket_courier_choice: "recommended",
+  package_defaults: { length_cm: 30, breadth_cm: 25, height_cm: 5, item_weight_grams: 400 },
   updated_at: new Date(0).toISOString(),
   updated_by: null,
 };
@@ -74,3 +79,9 @@ export const policiesOf = (s: StoreSettings) => (s.policies ?? {}) as Policies;
 export const contactOf = (s: StoreSettings) => (s.contact ?? {}) as ContactInfo;
 export const socialOf = (s: StoreSettings) => (s.social ?? {}) as SocialLinks;
 export const faqOf = (s: StoreSettings) => (Array.isArray(s.faq) ? s.faq : []) as unknown as FaqItem[];
+
+export function packageDefaultsOf(s: StoreSettings): PackageDefaults {
+  const p = (s.package_defaults ?? {}) as Partial<PackageDefaults>;
+  const n = (v: unknown, fallback: number) => (typeof v === "number" && v > 0 ? v : fallback);
+  return { length_cm: n(p.length_cm, 30), breadth_cm: n(p.breadth_cm, 25), height_cm: n(p.height_cm, 5), item_weight_grams: n(p.item_weight_grams, 400) };
+}

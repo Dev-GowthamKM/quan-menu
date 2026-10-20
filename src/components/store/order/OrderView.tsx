@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
-import type { OrderDetail } from "@/lib/types";
+import type { CourierScan, OrderDetail } from "@/lib/types";
 import { FULFILLMENT_STATUS, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/types-ui";
 import CatalogImage from "../../ui/CatalogImage";
 import { Badge, cx } from "../../ui/controls";
@@ -83,20 +83,43 @@ export default function OrderView({ detail, accessKey, justPlaced, stripeSession
         </p>
       )}
 
-      {detail.shipments.filter((s) => s.tracking_number || s.carrier).map((s) => (
-        <div key={s.id} className="mt-8 flex flex-wrap items-center justify-between gap-4 border border-line bg-paper px-5 py-4 text-sm">
-          <p>
-            <span className="text-taupe">Shipped with</span> {s.carrier || "our courier"}
-            {s.tracking_number && <> · <span className="text-taupe">Tracking</span> <span className="font-medium">{s.tracking_number}</span></>}
-            {s.delivered_at && <> · Delivered {formatDate(s.delivered_at)}</>}
-          </p>
-          {s.tracking_url && (
-            <a href={s.tracking_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 underline underline-offset-4">
-              Track parcel <ExternalIcon size={14} />
-            </a>
-          )}
-        </div>
-      ))}
+      {detail.shipments.filter((s) => s.tracking_number || s.carrier).map((s) => {
+        const scans = (s.courier_events ?? []) as unknown as CourierScan[];
+        const moving = s.status === "packed" || s.status === "shipped";
+        return (
+          <div key={s.id} className="mt-8 border border-line bg-paper px-5 py-4 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <p>
+                <span className="text-taupe">{s.status === "packed" ? "Courier" : "Shipped with"}</span> {s.carrier || "our courier"}
+                {s.tracking_number && <> · <span className="text-taupe">Tracking</span> <span className="font-medium">{s.tracking_number}</span></>}
+                {s.delivered_at && <> · Delivered {formatDate(s.delivered_at)}</>}
+              </p>
+              {s.tracking_url && (
+                <a href={s.tracking_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 underline underline-offset-4">
+                  Track parcel <ExternalIcon size={14} />
+                </a>
+              )}
+            </div>
+            {moving && (s.courier_status || s.estimated_delivery) && (
+              <p className="mt-2 text-taupe">
+                {s.courier_status && <>Latest update: <span className="text-ink">{s.courier_status}</span>{s.courier_status_at && ` (${formatDateTime(s.courier_status_at)})`}</>}
+                {s.courier_status && s.estimated_delivery && " · "}
+                {s.estimated_delivery && <>Expected by <span className="text-ink">{formatDate(s.estimated_delivery, { weekday: "short", year: undefined })}</span></>}
+              </p>
+            )}
+            {scans.length > 0 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-xs underline underline-offset-4">Tracking history</summary>
+                <ol className="mt-2 grid gap-1 border-l border-line pl-3 text-xs">
+                  {scans.map((e, i) => (
+                    <li key={`${e.at}-${i}`}><span className="text-taupe">{formatDateTime(e.at)}</span> · {e.status}{e.location && <span className="text-taupe"> · {e.location}</span>}</li>
+                  ))}
+                </ol>
+              </details>
+            )}
+          </div>
+        );
+      })}
 
       <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div>

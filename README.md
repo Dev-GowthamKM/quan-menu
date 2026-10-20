@@ -20,6 +20,7 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
 - [Environment variables](#environment-variables)
 - [Deploy](#deploy)
 - [Payment providers](#payment-providers)
+- [Courier (Shiprocket)](#courier-shiprocket)
 - [Email](#email)
 - [Testing](#testing)
 - [Running the store](#running-the-store)
@@ -36,7 +37,8 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
   on sale), sorting, pagination, canonical URLs and empty states. Search across title, brand,
   category, tags and SKU.
 - Product pages: gallery with zoom and full-screen view, colour and size pickers with sold-out
-  states, size guide, quantity, add to bag, buy now, PIN code delivery check with dates, details,
+  states, size guide, quantity, add to bag, buy now, PIN code delivery check with dates (and the
+  courier's own estimate when Shiprocket is connected), details,
   fabric and care, shipping and returns, reviews (verified purchase badges), related products,
   structured data.
 - Bag with server-side pricing, discount codes, free-delivery progress. Guest bags are merged into
@@ -45,7 +47,8 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
   (Razorpay: UPI, cards, netbanking, wallets; cash on delivery where allowed; Stripe optional) →
   review → confirmation. Orders can't be placed twice by double-clicking or refreshing.
 - Accounts: sign up with email verification, sign in, password reset, optional Google, profile,
-  address book, order history and tracking, wishlist, cancellation and return requests. Guests
+  address book, order history and tracking (courier status, expected date and scan history),
+  wishlist, cancellation and return requests. Guests
   get a private link to their order, and can look it up by number and email.
 - Policy pages, FAQ, contact form, maintenance page, sitemap and robots.
 
@@ -68,7 +71,9 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
 - Brands, categories (tree), collections (hand-picked with drag ordering, or automated by rules
   with a live preview; seasonal and scheduled), size guides, media library with bulk uploads.
 - Orders: views for awaiting payment / to fulfil / shipped / needs attention, search and filters,
-  fulfilment steps with courier and tracking (customers are emailed), cancellations that return
+  fulfilment steps with courier and tracking (customers are emailed), courier booking through
+  Shiprocket (AWB, label, pickup; tracking moves the order to shipped, delivered or returned),
+  parcels returned undelivered (stock goes back, unpaid COD orders close), cancellations that return
   stock and refund, partial refunds through the payment provider, cash-on-delivery collection,
   internal notes, printable GST invoice and packing slip, CSV export, full timeline.
 - Returns and cancellation requests, payments with reconciliation and the webhook log, discount
@@ -250,9 +255,11 @@ which settings are present (yes/no only) and whether the database answers.
 | `RAZORPAY_WEBHOOK_SECRET` | For online payments | Verifies `/api/webhooks/razorpay` |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Optional | Stripe Checkout and `/api/webhooks/stripe` |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Optional | Order emails (otherwise queued, not sent) |
+| `SHIPROCKET_EMAIL`, `SHIPROCKET_PASSWORD` | Optional | Courier bookings through Shiprocket's API |
+| `SHIPROCKET_WEBHOOK_TOKEN` | With Shiprocket | Verifies `/api/webhooks/courier` |
 | `CRON_SECRET` | Recommended | Authorises `/api/cron/housekeeping` |
 | `NEXT_PUBLIC_GOOGLE_SIGN_IN` | Optional | Shows "Continue with Google" (`1`) |
-| `RAZORPAY_API_BASE`, `STRIPE_API_BASE`, `RESEND_API_BASE` | Tests only | Point at local mocks (ignored with live payment keys) |
+| `RAZORPAY_API_BASE`, `STRIPE_API_BASE`, `RESEND_API_BASE`, `SHIPROCKET_API_BASE` | Tests only | Point at local mocks (ignored with live payment keys; Shiprocket only accepts localhost) |
 
 ## Deploy
 
@@ -319,6 +326,36 @@ the order page when the courier remits it.
 `refund.updated`, `charge.refund.updated`) with `STRIPE_WEBHOOK_SECRET`, then enable Stripe in
 Settings.
 
+## Courier (Shiprocket)
+
+Optional. Without it, staff ship with any courier and type in the tracking number. With it,
+staff book the courier from the order page and tracking updates arrive on their own.
+
+1. In Shiprocket, add your warehouse under **Settings › Pickup addresses** and note its name
+   (for example `Primary`) and PIN code. Keep some balance in the Shiprocket wallet; bookings are
+   charged to it.
+2. **Settings › API › Configure › Create an API user** (an email address different from your
+   login). Set `SHIPROCKET_EMAIL` and `SHIPROCKET_PASSWORD` to that user's details.
+3. **Settings › API › Webhooks:** URL `https://YOUR-SITE/api/webhooks/courier`, and a long random
+   token that you also set as `SHIPROCKET_WEBHOOK_TOKEN`. (Shiprocket rejects webhook URLs that
+   contain "shiprocket", "sr" or "kr", hence the neutral path.)
+4. In **Admin › Shipping › Courier connection**, turn Shiprocket on, enter the pickup address name
+   and PIN code, choose the default courier (Shiprocket's pick, cheapest or fastest) and the
+   default parcel size, then **Test connection**.
+
+On an order, **Book courier…** lists the couriers that serve the PIN code with Shiprocket's price
+and delivery time, then creates the shipment, assigns the AWB and schedules the pickup (each step
+is saved as it succeeds, so a retry never books twice). **Shipping label** opens the label PDF.
+Cash-on-delivery orders are booked as COD for the order total. Tracking updates move the order
+to shipped (the customer is emailed the tracking link), delivered, or returned to origin, and
+flag failed delivery attempts under **Needs attention**; **Refresh tracking** pulls the latest
+status if a webhook was missed. Customers see the courier status, expected date and scans on
+their order page. Customers still pay the delivery rates you set in the shipping zones.
+
+A parcel that comes back undelivered (from tracking, or **Mark returned to origin** on any shipped
+order) puts its stock back; an unpaid cash-on-delivery order is cancelled and a paid one is
+flagged for a refund.
+
 ## Email
 
 Orders, shipping, delivery, cancellations, refunds and return updates send emails from editable
@@ -333,17 +370,27 @@ Account emails (verification, password reset) are sent by Supabase Auth with the
 npm run typecheck          # TypeScript
 npm test                   # unit tests (src/**/*.test.ts)
 npm run test:integration   # database tests against the local Supabase
-npm run test:e2e           # Playwright acceptance tests (local Supabase + Razorpay mock)
+npm run test:e2e           # Playwright tests (local Supabase + Razorpay and Shiprocket mocks)
 ```
 
 The integration and end-to-end tests need the local stack (`npm run db:start`) and `.env.local`
-pointing at it with the mock payment settings shown above. The end-to-end setup creates test
-accounts with an owner role, so it refuses to run against any non-local database.
+pointing at it with the mock payment settings shown above, plus the courier mock:
+`SHIPROCKET_EMAIL=api@shiprocket.test`, `SHIPROCKET_PASSWORD=mock-password`,
+`SHIPROCKET_WEBHOOK_TOKEN=` any value and `SHIPROCKET_API_BASE=http://localhost:4011`. Playwright
+starts both mocks itself. The end-to-end setup creates test accounts with an owner role, so it
+refuses to run against any non-local database.
 
 **Integration tests (33)** cover access control for anonymous users, customers, staff, admins and
 owners; 20 simultaneous checkouts for 5 units of stock (exactly 5 succeed); concurrent cash on
 delivery orders; idempotent order placement; coupon usage limits under concurrency; failed,
 expired, late, duplicate and mismatched payments; returns and restocking; refund limits.
+
+**Courier tests (9 database, 2 Playwright)** cover who may record bookings and post tracking,
+tracking that moves orders to shipped and delivered with one email each (duplicates and late,
+out-of-order scans change nothing), failed deliveries flagged for staff, parcels returned
+undelivered (COD orders cancelled and restocked, paid ones flagged for a refund), and the full
+admin flow against the Shiprocket mock: turning it on, booking, label, webhook token checks,
+the customer's tracking view and "Refresh tracking".
 
 **Acceptance tests (7, Playwright)** follow the brief:
 
@@ -376,6 +423,8 @@ production build (`next build`) succeeds.
   schedule a launch.
 - **Daily orders:** Admin › Orders › "To fulfil": start preparing → packed → shipped (courier and
   tracking; the customer is emailed) → delivered. Print the packing slip and invoice from the order.
+  With Shiprocket connected: **Book courier…**, print the label, hand the parcel over at pickup;
+  shipped and delivered then update by themselves.
 - **Problems:** "Needs attention" lists orders with payment issues (for example a payment that
   arrived after the order expired, which is refunded automatically). Admin › Payments shows
   refunds that failed and lets you check for payments a webhook missed.
@@ -390,8 +439,10 @@ production build (`next build`) succeeds.
 - GST invoices show tax per line at the product's rate; HSN codes, CGST/SGST/IGST splits and
   invoice numbering separate from order numbers are not implemented. Confirm tax settings with
   your accountant.
-- Shipping is rate-table based; there is no live courier rate or label integration (couriers are
-  recorded with tracking links). Return pickups are arranged outside the app.
+- Customers pay the store's own delivery rates; live courier prices are shown to staff when
+  booking through Shiprocket, not at checkout. Return (reverse) pickups are arranged outside the
+  app. The Shiprocket connection was built against Shiprocket's documented API and tested with the
+  bundled mock: make one real test booking before relying on it.
 - Stripe support is basic (Checkout, refunds); prices are charged in INR.
 - Product search uses Postgres trigram matching, which suits catalogs of thousands of products; a
   dedicated search service would be needed for very large catalogs or typo-tolerant ranking.
