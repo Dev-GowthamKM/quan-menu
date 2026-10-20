@@ -239,8 +239,8 @@ function CartDrawer({
         <ul className="divide-y divide-line">
           {cart.lines.map((line) => (
             <li key={line.variant_id} className="flex gap-4 px-5 py-4">
-              <Link href={`/products/${line.slug}`} onClick={onClose} className="relative aspect-[4/5] w-20 shrink-0 overflow-hidden bg-bone">
-                <CatalogImage src={line.image_url} alt={line.title} fill sizes="80px" className="object-cover" />
+              <Link href={`/products/${line.slug}`} onClick={onClose} tabIndex={-1} aria-hidden="true" className="relative aspect-[4/5] w-20 shrink-0 overflow-hidden bg-bone">
+                <CatalogImage src={line.image_url} alt="" fill sizes="80px" className="object-cover" />
               </Link>
               <div className="min-w-0 flex-1 text-sm">
                 <p className="label-caps text-stone">{line.brand}</p>

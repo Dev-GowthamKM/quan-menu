@@ -16,16 +16,20 @@ export function formatDay(value: Date) {
   return new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: TZ }).format(value);
 }
 
-/** Delivery estimate from business-day ranges, skipping Sundays. */
+/**
+ * Delivery estimate from business-day ranges, skipping Sundays. Days are counted on the
+ * Indian calendar wherever this runs (a server in UTC or a browser abroad).
+ */
 export function deliveryWindow(minDays: number, maxDays: number, from = new Date()) {
+  const IST = 5.5 * 3600_000;
   const add = (days: number) => {
-    const d = new Date(from);
+    const d = new Date(from.getTime() + IST);
     let left = days;
     while (left > 0) {
-      d.setDate(d.getDate() + 1);
-      if (d.getDay() !== 0) left--;
+      d.setUTCDate(d.getUTCDate() + 1);
+      if (d.getUTCDay() !== 0) left--;
     }
-    return d;
+    return new Date(d.getTime() - IST);
   };
   return { from: add(Math.max(minDays, 1)), to: add(Math.max(maxDays, minDays, 1)) };
 }

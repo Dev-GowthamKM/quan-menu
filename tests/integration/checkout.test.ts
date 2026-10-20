@@ -20,6 +20,18 @@ function place(token: string, method: "razorpay" | "cod" = "razorpay", email = "
   });
 }
 
+/** Expires an unpaid order and waits until it is released (a checkout running in another test may release it first). */
+async function expire(orderId: string) {
+  await sql("update public.orders set expires_at = now() - interval '1 minute' where id = $1", [orderId]);
+  for (let i = 0; i < 50; i++) {
+    await sb.rpc("release_expired_orders", { p_limit: 100 });
+    const [o] = await sql<{ status: string }>("select status from public.orders where id = $1", [orderId]);
+    if (o.status === "cancelled") return;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error("The order was not released.");
+}
+
 async function stock(variantId: string) {
   const [row] = await sql<{ stock_quantity: number; reserved_quantity: number }>(
     "select stock_quantity, reserved_quantity from public.product_variants where id = $1", [variantId]);
@@ -110,9 +122,7 @@ describe("payments", () => {
     let [order] = await sql<{ status: string; payment_status: string }>("select status, payment_status from public.orders where id = $1", [placed.data.id]);
     expect(order).toEqual({ status: "pending_payment", payment_status: "failed" });
 
-    await sql("update public.orders set expires_at = now() - interval '1 minute' where id = $1", [placed.data.id]);
-    const released = await sb.rpc("release_expired_orders", { p_limit: 100 });
-    expect(released.data).toBeGreaterThanOrEqual(1);
+    await expire(placed.data.id);
     [order] = await sql("select status, payment_status from public.orders where id = $1", [placed.data.id]);
     expect(order.status).toBe("cancelled");
     expect(await stock(p.variantId)).toEqual({ stock_quantity: 4, reserved_quantity: 0 });
@@ -122,8 +132,7 @@ describe("payments", () => {
     const p = await makeProduct({ stock: 1 });
     const token = await guestCart(p.variantId, 1);
     const placed = await place(token);
-    await sql("update public.orders set expires_at = now() - interval '1 minute' where id = $1", [placed.data.id]);
-    await sb.rpc("release_expired_orders", { p_limit: 100 });
+    await expire(placed.data.id);
 
     const late = await sb.rpc("confirm_order_payment", {
       p_order_id: placed.data.id, p_provider: "razorpay", p_provider_order_id: "order_l", p_provider_payment_id: `pay_l_${p.sku}`,
@@ -136,8 +145,7 @@ describe("payments", () => {
     await sql("update public.product_variants set stock_quantity = 1 where id = $1", [p.variantId]);
     const t2 = await guestCart(p.variantId, 1);
     const second = await place(t2);
-    await sql("update public.orders set expires_at = now() - interval '1 minute' where id = $1", [second.data.id]);
-    await sb.rpc("release_expired_orders", { p_limit: 100 });
+    await expire(second.data.id);
     const t3 = await guestCart(p.variantId, 1);
     expect((await place(t3, "cod")).error).toBeNull();
     const tooLate = await sb.rpc("confirm_order_payment", {

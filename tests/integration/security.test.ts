@@ -170,7 +170,7 @@ describe("staff", () => {
     const orders = await staff.client.from("orders").select("id").eq("id", bobOrderId);
     expect(orders.data).toHaveLength(1);
     const saved = await staff.client.rpc("admin_save_product", {
-      p: { title: "Staff product", price: 99900, status: "draft", variants: [{ sku: `STAFF-${Date.now()}`, size: "M", stock_quantity: 3 }] },
+      p: { title: `Staff product ${Date.now()}`, price: 99900, status: "draft", variants: [{ sku: `STAFF-${Date.now()}`, size: "M", stock_quantity: 3 }] },
     });
     expect(saved.error).toBeNull();
   });

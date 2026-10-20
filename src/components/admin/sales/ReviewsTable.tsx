@@ -55,7 +55,7 @@ export default function ReviewsTable({ rows, status }: { rows: ReviewRow[]; stat
             <input type="checkbox" aria-label={`Select review by ${r.author_name}`} className="mt-1 size-4 accent-ink" checked={selected.has(r.id)} onChange={(e) => { const s = new Set(selected); if (e.target.checked) s.add(r.id); else s.delete(r.id); setSelected(s); }} />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex text-amber-600" aria-label={`${r.rating} out of 5 stars`}>{Array.from({ length: 5 }, (_, i) => <StarIcon key={i} size={14} filled={i < r.rating} />)}</span>
+                <span className="inline-flex text-amber-600" role="img" aria-label={`${r.rating} out of 5 stars`}>{Array.from({ length: 5 }, (_, i) => <StarIcon key={i} size={14} filled={i < r.rating} />)}</span>
                 <span className="font-medium">{r.title}</span>
                 {r.is_verified_purchase && <Badge tone="green">Verified purchase</Badge>}
               </div>

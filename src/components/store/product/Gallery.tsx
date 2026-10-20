@@ -30,7 +30,7 @@ export default function Gallery({ images, title, color }: { images: PageImage[];
   }, [color]);
 
   if (!ordered.length) {
-    return <div className="aspect-[4/5] bg-bone" aria-label="No image available" />;
+    return <div className="aspect-[4/5] bg-bone" role="img" aria-label="No image available" />;
   }
   const current = ordered[Math.min(active, ordered.length - 1)];
   const go = (i: number) => setActive((i + ordered.length) % ordered.length);

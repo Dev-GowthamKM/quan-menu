@@ -69,7 +69,7 @@ export default function ProductCard({
         </h3>
         <Price price={product.price} compareAt={product.compare_at_price} maxPrice={product.max_price} />
         {swatches.length > 1 && (
-          <div className="mt-1 flex items-center gap-1.5" aria-label={`${swatches.length} colours`}>
+          <div className="mt-1 flex items-center gap-1.5" role="img" aria-label={`${swatches.length} colours`}>
             {swatches.slice(0, 5).map((s) => (
               <span
                 key={s.name}

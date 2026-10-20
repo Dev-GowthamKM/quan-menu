@@ -63,8 +63,8 @@ export default function CartView({ initial }: { initial: CartQuote }) {
           <ul className="divide-y divide-line border-y border-line">
             {quote.lines.map((l) => (
               <li key={l.variant_id} className="flex gap-4 py-6 md:gap-6">
-                <Link href={`/products/${l.slug}`} className="relative aspect-[4/5] w-24 shrink-0 overflow-hidden bg-bone md:w-32">
-                  <CatalogImage src={l.image_url} alt={l.title} fill sizes="128px" className="object-cover" />
+                <Link href={`/products/${l.slug}`} tabIndex={-1} aria-hidden="true" className="relative aspect-[4/5] w-24 shrink-0 overflow-hidden bg-bone md:w-32">
+                  <CatalogImage src={l.image_url} alt="" fill sizes="128px" className="object-cover" />
                 </Link>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div className="flex justify-between gap-4">
