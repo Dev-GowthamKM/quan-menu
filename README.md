@@ -308,8 +308,9 @@ keep its database password. Then load the database, either in the browser or wit
   `NEXT_PUBLIC_GOOGLE_SIGN_IN=1`.
 
 **2. Vercel.** In Vercel choose **Add New › Project** and import this repository (framework
-preset Next.js; the build settings need no changes; `vercel.json` runs the server code in Mumbai,
-next to the database). Add the environment variables above for
+preset Next.js; the build settings need no changes). In **Settings › Functions**, set the region
+next to your Supabase project (Mumbai `bom1` for `ap-south-1`, Singapore `sin1` for
+`ap-southeast-1`): every page talks to the database several times. Add the environment variables above for
 Production and Preview, then deploy. Every push to `main` updates the live store and every other
 branch gets its own preview URL. `vercel.json` schedules `/api/cron/housekeeping` daily (Hobby plan
 limit); stock holds are also released every 5 minutes by pg_cron, and emails are sent as events
