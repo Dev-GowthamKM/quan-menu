@@ -48,7 +48,7 @@ Open `https://YOUR-SITE/api/health` after deploying. It lists any missing settin
 
 Set `NEXT_PUBLIC_SITE_URL` **before** printing stickers. The QR code contains this address.
 
-Supabase's free plan pauses a project after a week without activity, which would stop every printed menu. `vercel.json` has Vercel call `/api/health` once a day (3 am Vietnam time); it reads from the database, so the project never counts as inactive.
+Supabase's free plan pauses a project after a week with too little database activity, which would stop every printed menu. `vercel.json` has Vercel call `/api/keepalive` once a day (3 am Vietnam time), which makes a few small database reads so the project keeps counting as active.
 
 ## How it's built
 
