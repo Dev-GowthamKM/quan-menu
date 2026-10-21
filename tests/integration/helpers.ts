@@ -102,3 +102,11 @@ export const address = {
 };
 
 export const guestToken = () => randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
+
+/** A mobile number no other test uses (cash-on-delivery limits count orders per phone). */
+export const uniquePhone = () => `+91 9${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
+
+/** The test address with its own phone number. */
+export const uniqueAddress = () => ({ ...address, phone: uniquePhone() });
+
+export const uniqueEmail = (prefix = "guest") => `${prefix}-${randomUUID().slice(0, 8)}@example.com`;

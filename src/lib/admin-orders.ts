@@ -18,10 +18,11 @@ export const ORDER_VIEWS = [
   { key: "completed", label: "Completed" },
   { key: "cancelled", label: "Cancelled" },
   { key: "attention", label: "Needs attention" },
+  { key: "cod_confirm", label: "COD to confirm" },
 ] as const;
 
 export const ORDER_COLUMNS =
-  "id, order_number, user_id, email, phone, customer_name, status, payment_status, fulfillment_status, payment_method, currency, subtotal, discount_total, shipping_total, cod_fee, tax_total, grand_total, amount_refunded, tax_mode, tax_label, coupon_code, shipping_address, billing_address, shipping_method, customer_note, expires_at, placed_at, paid_at, shipped_at, delivered_at, cancelled_at, cancel_reason, needs_attention, attention_reason, whatsapp_opt_in";
+  "id, order_number, user_id, email, phone, customer_name, status, payment_status, fulfillment_status, payment_method, currency, subtotal, discount_total, shipping_total, cod_fee, tax_total, grand_total, amount_refunded, tax_mode, tax_label, coupon_code, shipping_address, billing_address, shipping_method, customer_note, expires_at, placed_at, paid_at, shipped_at, delivered_at, cancelled_at, cancel_reason, needs_attention, attention_reason, whatsapp_opt_in, cod_confirmation, cod_confirm_by";
 
 export function orderFilters(params: Params) {
   return {
@@ -49,6 +50,7 @@ export function applyOrderFilters<Q extends { eq: any; in: any; or: any; gte: an
     case "completed": q = q.eq("status", "completed"); break;
     case "cancelled": q = q.eq("status", "cancelled"); break;
     case "attention": q = q.eq("needs_attention", true); break;
+    case "cod_confirm": q = q.eq("status", "confirmed").eq("cod_confirmation", "pending"); break;
   }
   if (["pending_payment", "confirmed", "completed", "cancelled"].includes(f.status)) q = q.eq("status", f.status);
   if (["pending", "unpaid", "paid", "partially_refunded", "refunded", "failed", "voided"].includes(f.payment)) q = q.eq("payment_status", f.payment);
@@ -67,11 +69,15 @@ export type OrderRow = Database["public"]["Tables"]["orders"]["Row"];
 
 export async function viewCounts(sb: SupabaseClient<Database>) {
   const head = { count: "exact" as const, head: true };
-  const [pending, toFulfil, shipped, attention] = await Promise.all([
+  const [pending, toFulfil, shipped, attention, codConfirm] = await Promise.all([
     sb.from("orders").select("id", head).eq("status", "pending_payment"),
     sb.from("orders").select("id", head).eq("status", "confirmed").in("fulfillment_status", ["unfulfilled", "processing", "packed"]),
     sb.from("orders").select("id", head).eq("fulfillment_status", "shipped"),
     sb.from("orders").select("id", head).eq("needs_attention", true),
+    sb.from("orders").select("id", head).eq("status", "confirmed").eq("cod_confirmation", "pending"),
   ]);
-  return { pending_payment: pending.count ?? 0, to_fulfil: toFulfil.count ?? 0, shipped: shipped.count ?? 0, attention: attention.count ?? 0 } as Record<string, number>;
+  return {
+    pending_payment: pending.count ?? 0, to_fulfil: toFulfil.count ?? 0, shipped: shipped.count ?? 0, attention: attention.count ?? 0,
+    cod_confirm: codConfirm.count ?? 0,
+  } as Record<string, number>;
 }

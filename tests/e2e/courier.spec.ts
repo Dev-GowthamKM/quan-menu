@@ -38,7 +38,8 @@ test("staff book a Shiprocket courier, and tracking updates reach the order and 
 
   // What Shiprocket was asked to deliver and collect.
   const sent = ((await (await request.get(`${MOCK}/__test/orders`)).json()) as Record<string, unknown>[]).find((x) => x.order_id === order.number)!;
-  expect(sent).toMatchObject({ payment_method: "COD", billing_pincode: "560025", billing_phone: "9845012345", pickup_location: "Primary", billing_customer_name: "Ravi" });
+  expect(sent).toMatchObject({ payment_method: "COD", billing_pincode: "560025", pickup_location: "Primary", billing_customer_name: "Ravi" });
+  expect(String(sent.billing_phone)).toMatch(/^9\d{9}$/);
   const collected = Number(sent.sub_total) + Number(sent.shipping_charges) + Number(sent.transaction_charges);
   expect(collected).toBeCloseTo(order.total / 100, 2);
 

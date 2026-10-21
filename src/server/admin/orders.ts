@@ -203,3 +203,25 @@ export async function deleteCustomerNote(noteId: string, customerId: string): Pr
   revalidatePath(`/admin/customers/${customerId}`);
   return ok(null, "Note deleted.");
 }
+
+/** Staff confirm a cash-on-delivery order after speaking to the customer. */
+export async function confirmCodForCustomer(orderId: string, orderNumber: string): Promise<ActionResult<null>> {
+  const ctx = await role("staff");
+  if (!ctx) return fail("Staff access required.");
+  if (!uuid.safeParse(orderId).success) return fail("Order not found.");
+  const { error } = await ctx.supabase.rpc("admin_confirm_cod", { p_order_id: orderId });
+  if (error) return fail(friendlyError(error));
+  refresh(orderNumber);
+  return ok(null, "Order confirmed. You can pack it now.");
+}
+
+/** Blocks (or allows again) cash on delivery for an order's customer, by email and phone. */
+export async function setCodBlock(orderId: string, orderNumber: string, blocked: boolean, reason = ""): Promise<ActionResult<null>> {
+  const ctx = await role("staff");
+  if (!ctx) return fail("Staff access required.");
+  if (!uuid.safeParse(orderId).success) return fail("Order not found.");
+  const { error } = await ctx.supabase.rpc("admin_set_cod_block", { p_order_id: orderId, p_blocked: blocked, p_reason: reason.trim().slice(0, 300) });
+  if (error) return fail(friendlyError(error));
+  refresh(orderNumber);
+  return ok(null, blocked ? "Cash on delivery is blocked for this customer." : "Cash on delivery is allowed again for this customer.");
+}

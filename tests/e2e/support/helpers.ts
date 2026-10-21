@@ -33,8 +33,15 @@ export async function addToBag(page: Page, slug: string, size: string, quantity 
   }
 }
 
-/** Guest checkout from the cart through to the pay button. */
-export async function checkout(page: Page, email: string, opts: { coupon?: string; whatsapp?: boolean } = {}) {
+/** A mobile number no other test uses (cash-on-delivery limits count orders per phone). */
+export const uniquePhone = () => `+91 9${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
+
+/**
+ * Guest checkout from the cart through to the pay button, or "Place order" for cash on
+ * delivery (with a phone number of its own, unless one is given).
+ */
+export async function checkout(page: Page, email: string, opts: { coupon?: string; whatsapp?: boolean; phone?: string; cod?: boolean } = {}) {
+  const phone = opts.phone ?? (opts.cod ? uniquePhone() : "+91 98765 43210");
   await page.goto("/cart");
   if (opts.coupon) {
     await page.fill("#cart-coupon", opts.coupon);
@@ -44,7 +51,7 @@ export async function checkout(page: Page, email: string, opts: { coupon?: strin
   await page.getByRole("link", { name: "Checkout" }).click();
   await page.waitForURL("**/checkout");
   await page.fill("#co-email", email);
-  await page.fill("#co-phone", "+91 98765 43210");
+  await page.fill("#co-phone", phone);
   if (opts.whatsapp) await page.getByLabel(/Send my order updates on WhatsApp/).check();
   await page.getByRole("button", { name: "Continue to address" }).click();
   await page.fill("#a-name", "Asha Rao");
@@ -52,12 +59,13 @@ export async function checkout(page: Page, email: string, opts: { coupon?: strin
   await page.fill("#a-pin", "560038");
   await page.fill("#a-city", "Bengaluru");
   await page.selectOption("#a-state", "Karnataka");
-  await page.fill("#a-phone", "+91 98765 43210");
+  await page.fill("#a-phone", phone);
   await page.getByRole("button", { name: "Continue to delivery" }).click();
   await page.getByRole("button", { name: "Continue to payment" }).click();
+  if (opts.cod) await page.getByRole("radio", { name: /^Cash on delivery/ }).check();
   await page.getByRole("button", { name: "Review order" }).click();
   await page.getByLabel(/I agree to the/).check();
-  await page.getByRole("button", { name: /^Pay ₹/ }).click();
+  await page.getByRole("button", { name: opts.cod ? /^Place order/ : /^Pay ₹/ }).click();
 }
 
 /** The private link a guest uses to open their order (same signature as the app's). */
@@ -85,7 +93,7 @@ export async function placeOrder(method: "cod" | "razorpay", email: string, addr
   if (add.error) throw new Error(add.error.message);
   const placed = await sb.rpc("place_order", {
     p_user_id: null as never, p_cart_token: token, p_idempotency_key: randomUUID(), p_email: email, p_phone: "",
-    p_shipping_address: { full_name: "Ravi Kumar", phone: "+91 98450 12345", line1: "22 Residency Road", city: "Bengaluru", state: "Karnataka", postal_code: "560025", country: "IN", ...address },
+    p_shipping_address: { full_name: "Ravi Kumar", phone: uniquePhone(), line1: "22 Residency Road", city: "Bengaluru", state: "Karnataka", postal_code: "560025", country: "IN", ...address },
     p_billing_address: null as never, p_rate_id: null as never, p_payment_method: method,
   });
   if (placed.error) throw new Error(placed.error.message);

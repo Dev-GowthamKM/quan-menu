@@ -2,7 +2,7 @@
 // other customers' orders or addresses, change prices or payment status, or grant
 // themselves a role. Everything goes through the public API with real sessions.
 import { beforeAll, describe, expect, it } from "vitest";
-import { address, anon, guestToken, makeProduct, makeUser, service, sql, type TestUser } from "./helpers";
+import { address, anon, guestToken, makeProduct, makeUser, service, sql, uniqueAddress, type TestUser } from "./helpers";
 
 let alice: TestUser;
 let bob: TestUser;
@@ -28,7 +28,7 @@ beforeAll(async () => {
   expect(add.error).toBeNull();
   const placed = await sb.rpc("place_order", {
     p_user_id: bob.id, p_cart_token: null, p_idempotency_key: crypto.randomUUID(), p_email: bob.email, p_phone: "",
-    p_shipping_address: address, p_billing_address: null, p_rate_id: null, p_payment_method: "cod",
+    p_shipping_address: uniqueAddress(), p_billing_address: null, p_rate_id: null, p_payment_method: "cod",
   });
   expect(placed.error).toBeNull();
   bobOrderId = placed.data.id;

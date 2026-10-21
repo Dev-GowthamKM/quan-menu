@@ -2,7 +2,7 @@
 // snapshots, stock reservations, concurrent checkouts, failed/expired/duplicate payments
 // and coupon limits.
 import { describe, expect, it } from "vitest";
-import { address, guestToken, makeProduct, makeUser, service, sql } from "./helpers";
+import { address, guestToken, makeProduct, makeUser, service, sql, uniqueAddress, uniqueEmail } from "./helpers";
 
 const sb = service();
 
@@ -13,10 +13,10 @@ async function guestCart(variantId: string, quantity = 1) {
   return token;
 }
 
-function place(token: string, method: "razorpay" | "cod" = "razorpay", email = "guest@example.com") {
+function place(token: string, method: "razorpay" | "cod" = "razorpay", email = uniqueEmail()) {
   return sb.rpc("place_order", {
     p_user_id: null, p_cart_token: token, p_idempotency_key: crypto.randomUUID(), p_email: email, p_phone: "",
-    p_shipping_address: address, p_billing_address: null, p_rate_id: null, p_payment_method: method,
+    p_shipping_address: uniqueAddress(), p_billing_address: null, p_rate_id: null, p_payment_method: method,
   });
 }
 
@@ -229,7 +229,7 @@ describe("coupons", () => {
     await sb.rpc("cart_set_item", { p_user_id: user.id, p_token: null, p_variant_id: p.variantId, p_quantity: 1, p_mode: "add" });
     const first = await sb.rpc("place_order", {
       p_user_id: user.id, p_cart_token: null, p_idempotency_key: crypto.randomUUID(), p_email: user.email, p_phone: "",
-      p_shipping_address: address, p_billing_address: null, p_rate_id: null, p_payment_method: "cod",
+      p_shipping_address: uniqueAddress(), p_billing_address: null, p_rate_id: null, p_payment_method: "cod",
     });
     expect(first.error).toBeNull();
     await sb.rpc("cart_set_item", { p_user_id: user.id, p_token: null, p_variant_id: p.variantId, p_quantity: 1, p_mode: "add" });

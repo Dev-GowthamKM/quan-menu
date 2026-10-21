@@ -3,12 +3,13 @@
 // switch them off; only the server can queue or claim them.
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { address, guestToken, makeProduct, makeUser, service, sql, type TestUser } from "./helpers";
+import { address, guestToken, makeProduct, makeUser, service, sql, uniquePhone, type TestUser } from "./helpers";
 
 const sb = service();
 let staff: TestUser;
 let customer: TestUser;
 let before: { whatsapp_enabled: boolean; whatsapp_templates: unknown };
+let lastPhone = "";
 
 beforeAll(async () => {
   [staff, customer] = await Promise.all([makeUser("staff"), makeUser()]);
@@ -28,11 +29,13 @@ async function codOrder(optIn: boolean) {
   await sb.rpc("cart_set_item", { p_user_id: null, p_token: token, p_variant_id: p.variantId, p_quantity: 1, p_mode: "add" });
   const contact = await sb.rpc("cart_set_contact", { p_user_id: null, p_token: token, p_contact: { whatsapp_opt_in: optIn } });
   expect(contact.error).toBeNull();
+  const phone = uniquePhone();
   const placed = await sb.rpc("place_order", {
-    p_user_id: null, p_cart_token: token, p_idempotency_key: randomUUID(), p_email: `wa-${p.sku.toLowerCase()}@example.com`, p_phone: "+91 98450 12345",
-    p_shipping_address: address, p_billing_address: null, p_rate_id: null, p_payment_method: "cod",
+    p_user_id: null, p_cart_token: token, p_idempotency_key: randomUUID(), p_email: `wa-${p.sku.toLowerCase()}@example.com`, p_phone: phone,
+    p_shipping_address: { ...address, phone }, p_billing_address: null, p_rate_id: null, p_payment_method: "cod",
   });
   expect(placed.error).toBeNull();
+  lastPhone = phone;
   return placed.data.id as string;
 }
 
@@ -42,10 +45,11 @@ const messages = (orderId: string) =>
 describe("WhatsApp order updates", () => {
   it("are queued with the email only for customers who opted in at checkout", async () => {
     const yes = await codOrder(true);
+    const yesPhone = lastPhone;
     const no = await codOrder(false);
     const [{ whatsapp_opt_in }] = await sql<{ whatsapp_opt_in: boolean }>("select whatsapp_opt_in from public.orders where id = $1", [yes]);
     expect(whatsapp_opt_in).toBe(true);
-    expect(await messages(yes)).toEqual([{ template: "order_confirmation", status: "queued", to_phone: "+91 98450 12345" }]);
+    expect(await messages(yes)).toEqual([{ template: "order_confirmation", status: "queued", to_phone: yesPhone }]);
     expect(await messages(no)).toEqual([]);
     const [{ n }] = await sql<{ n: number }>("select count(*)::int as n from public.email_outbox where order_id = $1", [no]);
     expect(n).toBe(1);

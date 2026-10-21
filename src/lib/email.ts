@@ -1,4 +1,5 @@
 import "server-only";
+import { formatDateTime } from "./format";
 import { formatMoney } from "./money";
 import { orderUrl } from "./order-link";
 import { EMAIL_FROM, RESEND_API_BASE, RESEND_API_KEY } from "./server-env";
@@ -72,8 +73,12 @@ export function renderEmail(
     refund_amount: data.refund_amount ? formatMoney(Number(data.refund_amount), o.currency) : "",
     return_status: String(data.return_status ?? ""),
   };
-  const subject = fill(t.subject, vars);
-  const body = fill(t.body, vars);
+  // A cash-on-delivery order waiting for the customer's confirmation asks for it first.
+  const confirm = template === "order_confirmation" && o.cod_confirmation === "pending" && o.status === "confirmed";
+  const subject = confirm ? `Please confirm your order ${o.order_number}` : fill(t.subject, vars);
+  const body = confirm
+    ? `Hi ${vars.customer_name},\n\nThank you for your order. Please confirm your cash-on-delivery order so we can start packing it.${o.cod_confirm_by ? ` Orders that aren't confirmed by ${formatDateTime(o.cod_confirm_by)} are cancelled automatically.` : ""}`
+    : fill(t.body, vars);
   const paragraphs = body
     .split(/\n{2,}/)
     .map((p) => `<p style="margin:0 0 14px;line-height:1.6">${escape(p).replace(/\n/g, "<br>")}</p>`)
@@ -88,11 +93,11 @@ export function renderEmail(
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border:1px solid #e4ddd1">
     <tr><td style="padding:28px 32px 0;font-family:Georgia,serif;font-size:24px;letter-spacing:.18em;text-transform:uppercase">${escape(settings.store_name)}</td></tr>
     <tr><td style="padding:24px 32px 8px;font-size:15px;color:#2b2724">${paragraphs}${tracking}${summary}</td></tr>
-    <tr><td style="padding:8px 32px 32px"><a href="${escape(link)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:13px 26px;font-size:12px;letter-spacing:.14em;text-transform:uppercase">View your order</a></td></tr>
+    <tr><td style="padding:8px 32px 32px"><a href="${escape(link)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:13px 26px;font-size:12px;letter-spacing:.14em;text-transform:uppercase">${confirm ? "Confirm your order" : "View your order"}</a></td></tr>
   </table>
   <p style="font-size:11px;color:#8a8178;margin-top:16px">Order ${escape(o.order_number)} · ${escape(settings.store_name)}</p>
   </td></tr></table></body></html>`;
-  const text = `${body}\n\nView your order: ${link}\n`;
+  const text = `${body}\n\n${confirm ? "Confirm your order" : "View your order"}: ${link}\n`;
   return { subject, html, text };
 }
 

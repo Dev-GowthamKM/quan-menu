@@ -4,6 +4,7 @@ import { formatMoney } from "@/lib/money";
 import type { CourierScan, OrderDetail } from "@/lib/types";
 import { FULFILLMENT_STATUS, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/types-ui";
 import CatalogImage from "../../ui/CatalogImage";
+import CodConfirm from "./CodConfirm";
 import { Badge, cx } from "../../ui/controls";
 import { CheckIcon, ExternalIcon } from "../../ui/icons";
 import OrderActions from "./OrderActions";
@@ -34,6 +35,7 @@ export default function OrderView({ detail, accessKey, justPlaced, stripeSession
   const cancelled = o.status === "cancelled";
   const awaiting = o.status === "pending_payment";
   const firstName = (o.customer_name || "").split(" ")[0];
+  const needsConfirm = o.cod_confirmation === "pending" && o.status === "confirmed";
 
   return (
     <div className="container-page py-10 md:py-14">
@@ -43,13 +45,14 @@ export default function OrderView({ detail, accessKey, justPlaced, stripeSession
           <h1 className="mt-4 font-serif text-4xl">Thank you{firstName ? `, ${firstName}` : ""}</h1>
           <p className="mt-2 text-taupe">
             {o.payment_method === "cod"
-              ? "Your order is confirmed. Pay when it arrives."
+              ? needsConfirm ? "Your order is placed. Please confirm it below so we can start packing." : "Your order is confirmed. Pay when it arrives."
               : "Your payment was received and your order is confirmed."}{" "}
             A confirmation is on its way to {o.email}.
           </p>
         </div>
       )}
       {awaiting && <PaymentWatcher orderNumber={o.order_number} accessKey={accessKey} paymentStatus={o.payment_status} expiresAt={o.expires_at} stripeSession={stripeSession ?? null} />}
+      {needsConfirm && <div className="mb-10"><CodConfirm orderNumber={o.order_number} accessKey={accessKey} deadline={o.cod_confirm_by} /></div>}
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>

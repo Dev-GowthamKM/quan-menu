@@ -10,6 +10,12 @@ export const WHATSAPP_EVENTS = [
     sample: "Hi {{1}}, thank you for your order! Order {{2}} for {{3}} is confirmed and we'll message you when it ships.\n\nView your order: {{4}}\n\nThank you for shopping with us.",
   },
   {
+    key: "cod_confirm",
+    label: "Confirm cash order",
+    params: ["first name", "order number", "order total", "order link"],
+    sample: "Hi {{1}}, thank you for your order {{2}} for {{3}}, to be paid in cash on delivery. Please confirm it so we can start packing:\n\n{{4}}\n\nUnconfirmed orders are cancelled automatically.",
+  },
+  {
     key: "order_shipped",
     label: "Shipped",
     params: ["first name", "order number", "courier", "tracking number", "tracking link"],
@@ -85,6 +91,7 @@ export interface MessageValues {
 export function templateParams(event: WhatsAppEvent, v: MessageValues): string[] {
   const values: Record<WhatsAppEvent, string[]> = {
     order_confirmation: [v.firstName, v.orderNumber, v.orderTotal, v.orderLink],
+    cod_confirm: [v.firstName, v.orderNumber, v.orderTotal, v.orderLink],
     order_shipped: [v.firstName, v.orderNumber, v.carrier || "our courier", v.trackingNumber || "on your order page", v.trackingLink || v.orderLink],
     order_delivered: [v.firstName, v.orderNumber, v.orderLink],
     order_cancelled: [v.firstName, v.orderNumber, v.orderLink],

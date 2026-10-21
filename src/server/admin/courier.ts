@@ -33,6 +33,7 @@ function refresh(orderNumber: string) {
 }
 
 const uuid = z.string().uuid();
+const UNCONFIRMED = "The customer hasn't confirmed this cash-on-delivery order yet. Confirm it first.";
 
 function problem(e: unknown, fallback: string) {
   if (e instanceof shiprocket.ShiprocketError) return `Shiprocket: ${e.message}`;
@@ -55,7 +56,7 @@ interface Address { full_name?: string; phone?: string; line1?: string; line2?: 
 
 async function loadOrder(ctx: Ctx, orderId: string) {
   const [{ data: order }, { data: items }, { data: shipments }] = await Promise.all([
-    ctx.supabase.from("orders").select("id, order_number, email, phone, customer_name, status, payment_status, fulfillment_status, payment_method, subtotal, discount_total, shipping_total, cod_fee, grand_total, shipping_address, placed_at").eq("id", orderId).maybeSingle(),
+    ctx.supabase.from("orders").select("id, order_number, email, phone, customer_name, status, payment_status, fulfillment_status, payment_method, subtotal, discount_total, shipping_total, cod_fee, grand_total, shipping_address, placed_at, cod_confirmation").eq("id", orderId).maybeSingle(),
     ctx.supabase.from("order_items").select("product_title, variant_title, sku, quantity, line_total, tax_rate_bps, variant:product_variants(weight_grams), product:products(weight_grams)").eq("order_id", orderId).order("created_at"),
     ctx.supabase.from("shipments").select("*").eq("order_id", orderId).order("created_at", { ascending: false }),
   ]);
@@ -92,6 +93,7 @@ export async function courierOptions(orderId: string): Promise<ActionResult<{ co
   if (!settings!.shiprocket_pickup_postcode) return fail("Add your pickup PIN code in Shipping › Courier connection.");
   const { order, items } = await loadOrder(ctx, orderId);
   if (!order) return fail("Order not found.");
+  if (order.cod_confirmation === "pending") return fail(UNCONFIRMED);
   const pack = packageDefaultsOf(settings!);
   const parcel = { weightKg: weightKg(items, pack.item_weight_grams), length: pack.length_cm, breadth: pack.breadth_cm, height: pack.height_cm };
   try {
@@ -155,6 +157,7 @@ export async function bookCourier(input: z.infer<typeof bookSchema>): Promise<Ac
   if (!order) return fail("Order not found.");
   if (!["confirmed", "completed"].includes(order.status)) return fail(order.status === "pending_payment" ? "This order is still waiting for payment." : "This order was cancelled.");
   if (!["unfulfilled", "processing", "packed"].includes(order.fulfillment_status)) return fail("This order has already shipped.");
+  if (order.cod_confirmation === "pending") return fail(UNCONFIRMED);
 
   const record = async (booking: Record<string, unknown>) => {
     const { error } = await ctx.supabase.rpc("admin_record_courier_booking", { p_order_id: order.id, p_booking: { provider: "shiprocket", ...booking } });

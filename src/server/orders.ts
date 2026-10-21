@@ -89,3 +89,15 @@ export async function setWhatsappUpdates(orderNumber: string, key: string | null
   revalidatePath(`/orders/${orderNumber}`);
   return ok(null, on ? "WhatsApp updates are on." : "WhatsApp updates are off for this order.");
 }
+
+/** The customer confirms a cash-on-delivery order from their order page. */
+export async function confirmCodOrder(orderNumber: string, key: string | null): Promise<ActionResult<null>> {
+  const access = await findAccessibleOrder(orderNumber, key);
+  if (!access) return fail("Order not found.");
+  if (!(await rateLimit("cod-confirm", 20, 600))) return fail("Too many requests. Please wait a moment.");
+  const { error } = await supabaseService().rpc("confirm_cod_order", { p_order_id: access.id });
+  if (error) return fail(friendlyError(error, "We couldn't confirm this order."));
+  revalidatePath(`/orders/${orderNumber}`);
+  revalidatePath(`/account/orders/${orderNumber}`);
+  return ok(null, "Thank you. Your order is confirmed and we'll start packing it.");
+}

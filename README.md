@@ -75,7 +75,8 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
 - Orders: views for awaiting payment / to fulfil / shipped / needs attention, search and filters,
   fulfilment steps with courier and tracking (customers are emailed), courier booking through
   Shiprocket (AWB, label, pickup; tracking moves the order to shipped, delivered or returned),
-  parcels returned undelivered (stock goes back, unpaid COD orders close), cancellations that return
+  parcels returned undelivered (stock goes back, unpaid COD orders close), cash-on-delivery
+  safeguards (customer confirmation, limits per customer, block list), cancellations that return
   stock and refund, partial refunds through the payment provider, cash-on-delivery collection,
   internal notes, printable GST invoice and packing slip, CSV export, full timeline.
 - Returns and cancellation requests, payments with reconciliation and the webhook log, discount
@@ -323,6 +324,24 @@ Refunds started in the admin are sent through Razorpay's refund API and confirme
 **Settings › Checkout and tax**; zones, rates and PIN codes can exclude it. Record the cash from
 the order page when the courier remits it.
 
+Cash orders that are never paid for (fake orders, parcels refused at the door) cost delivery
+both ways, so the same settings add safeguards. A customer is recognised by their account, email
+or phone number (any format of the same number):
+
+- **Confirmation (off by default).** The order page, the confirmation email and (with a
+  `cod_confirm` template) WhatsApp ask the customer to confirm. Nothing can be packed, shipped or
+  booked with a courier until they do, or until staff press **Confirmed with customer** after a
+  call. Orders not confirmed within the hours you set are cancelled and their stock goes back.
+  **Orders › COD to confirm** lists the ones waiting.
+- **Open orders limit (3 by default).** A customer with that many cash orders still waiting to
+  ship is asked to pay online for the next one.
+- **Returned parcels (2 by default).** After that many cash parcels came back undelivered, the
+  customer can only pay online.
+- **Block list.** On any order, **Block cash on delivery** blocks that customer's email and phone
+  (they can still pay online); the customer card shows their open and returned cash orders.
+
+Checkout shows the reason in place of the cash option, and never charges the COD fee then.
+
 **Stripe (optional, international cards).** Set `STRIPE_SECRET_KEY`, add a webhook at
 `https://YOUR-SITE/api/webhooks/stripe` (events `checkout.session.completed`,
 `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`,
@@ -420,6 +439,13 @@ out-of-order scans change nothing), failed deliveries flagged for staff, parcels
 undelivered (COD orders cancelled and restocked, paid ones flagged for a refund), and the full
 admin flow against the Shiprocket mock: turning it on, booking, label, webhook token checks,
 the customer's tracking view and "Refresh tracking".
+
+**Cash-on-delivery tests (9 database, 1 Playwright)** cover the open-orders limit (also across a
+second email with the same phone, written differently), the quote without the COD fee, returned
+parcels, blocking and unblocking (staff only), confirmation holding packing until the customer or
+staff confirm, cancellation and restocking when time runs out, the WhatsApp confirmation request,
+and the browser flow: a shopper confirms from their order page, then staff block the customer and
+the next checkout only offers online payment.
 
 **WhatsApp tests (4 unit, 5 database, 1 Playwright)** cover number formatting and template values,
 queueing only for customers who opted in and only for events with a template, customers turning

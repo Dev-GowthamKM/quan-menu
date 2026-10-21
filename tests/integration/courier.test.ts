@@ -2,7 +2,7 @@
 // a booking, how tracking moves an order along, and what happens when a parcel comes back.
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
-import { address, anon, guestToken, makeProduct, makeUser, service, sql, type TestUser } from "./helpers";
+import { anon, guestToken, makeProduct, makeUser, service, sql, uniqueAddress, type TestUser } from "./helpers";
 
 const sb = service();
 let staff: TestUser;
@@ -18,7 +18,7 @@ async function order(method: "cod" | "razorpay", stock = 5) {
   expect((await sb.rpc("cart_set_item", { p_user_id: null, p_token: token, p_variant_id: p.variantId, p_quantity: 2, p_mode: "add" })).error).toBeNull();
   const placed = await sb.rpc("place_order", {
     p_user_id: null, p_cart_token: token, p_idempotency_key: randomUUID(), p_email: `c-${p.sku.toLowerCase()}@example.com`, p_phone: "",
-    p_shipping_address: address, p_billing_address: null, p_rate_id: null, p_payment_method: method,
+    p_shipping_address: uniqueAddress(), p_billing_address: null, p_rate_id: null, p_payment_method: method,
   });
   expect(placed.error).toBeNull();
   if (method === "razorpay") {

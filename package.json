@@ -13,7 +13,7 @@
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local --schema public > src/lib/database.types.ts",
     "make-owner": "node scripts/make-owner.mjs",
-    "test:integration": "vitest run tests/integration"
+    "test:integration": "vitest run tests/integration --no-file-parallelism"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

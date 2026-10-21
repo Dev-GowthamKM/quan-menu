@@ -15,7 +15,8 @@ const PASSWORD = process.env.SHIPROCKET_PASSWORD || "mock-password";
 const tokens = new Set();
 const orders = new Map(); // shiprocket order id -> order
 const shipments = new Map(); // shipment id -> { orderId, awb, courier, cancelled, activities: [] }
-let nextId = 5_000_001;
+// Ids keep growing across restarts, so they never repeat ids already stored by the app.
+let nextId = Date.now();
 
 const COURIERS = [
   { courier_company_id: 10, courier_name: "Delhivery Surface", rate: 72.5, days: 4, cod: 1, rating: 4.1 },

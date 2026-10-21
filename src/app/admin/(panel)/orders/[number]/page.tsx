@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { CodConfirmNotice, CodCustomer } from "@/components/admin/orders/CodPanel";
 import { CancelPanel, FulfillmentPanel, NotePanel, PaymentPanel, ReturnPanel, type ReturnRequestView } from "@/components/admin/orders/OrderPanels";
 import { Card, OrderBadges } from "@/components/admin/ui";
 import CatalogImage from "@/components/ui/CatalogImage";
@@ -46,7 +47,7 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
   const { data: order } = await supabase.from("orders").select(ORDER_COLUMNS).eq("order_number", number.toUpperCase()).maybeSingle();
   if (!order) notFound();
 
-  const [items, events, shipments, returns, providers, payments, refunds, customer, settings, whatsapp] = await Promise.all([
+  const [items, events, shipments, returns, providers, payments, refunds, customer, settings, whatsapp, cod] = await Promise.all([
     supabase.from("order_items").select("*").eq("order_id", order.id).order("created_at"),
     supabase.from("order_events").select("id, kind, message, is_internal, actor_type, created_at").eq("order_id", order.id).order("created_at", { ascending: false }).order("id", { ascending: false }),
     supabase.from("shipments").select("*").eq("order_id", order.id).order("created_at", { ascending: false }),
@@ -57,7 +58,9 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
     order.user_id ? supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", order.user_id).neq("status", "cancelled") : Promise.resolve({ count: null }),
     getSettings(),
     supabase.from("whatsapp_outbox").select("id, template, status, last_error, created_at, sent_at").eq("order_id", order.id).order("created_at"),
+    supabase.rpc("admin_order_cod_status", { p_order_id: order.id }),
   ]);
+  const codStatus = cod.data as { blocked: boolean; returned: number; open: number; block_reason: string | null } | null;
 
   const c = order.currency;
   const ship = order.shipping_address as Address;
@@ -93,6 +96,9 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
 
       {order.needs_attention && (
         <Notice tone="warning" className="mb-5 flex items-start gap-2"><AlertIcon size={16} className="mt-0.5 shrink-0" /> {order.attention_reason || "This order needs a look."}</Notice>
+      )}
+      {order.cod_confirmation === "pending" && order.status === "confirmed" && (
+        <CodConfirmNotice orderId={order.id} orderNumber={order.order_number} deadline={order.cod_confirm_by} />
       )}
       {order.status === "pending_payment" && order.expires_at && (
         <Notice className="mb-5">Waiting for payment. The stock it holds is released at {formatDateTime(order.expires_at)} if no payment arrives.</Notice>
@@ -183,6 +189,7 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
               ) : "Guest checkout"}
             </p>
             {order.customer_note && <p className="mt-3 rounded bg-amber-50 px-3 py-2 text-sm"><span className="block text-xs font-medium text-amber-900">Note from customer</span>{order.customer_note}</p>}
+            {codStatus && <CodCustomer orderId={order.id} orderNumber={order.order_number} status={codStatus} />}
             {(order.whatsapp_opt_in || (whatsapp.data ?? []).length > 0) && (
               <div className="mt-3 border-t border-black/10 pt-3 text-xs">
                 <p className="font-medium">WhatsApp updates {order.whatsapp_opt_in ? "on" : "off"}</p>

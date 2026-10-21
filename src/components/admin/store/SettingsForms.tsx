@@ -210,6 +210,8 @@ export function CheckoutForm({ s, razorpayReady, stripeReady }: { s: StoreSettin
     slabs: ((s.tax_slabs ?? []) as unknown as Slab[]).map((x) => ({ up_to: fromMinor(x.up_to), rate: String(x.rate_bps / 100) })),
     free: fromMinor(s.free_shipping_threshold), low: String(s.low_stock_threshold), hold: String(s.reservation_minutes),
     razorpay: s.razorpay_enabled, stripe: s.stripe_enabled, cod: s.cod_enabled, cod_fee: fromMinor(s.cod_fee), cod_min: fromMinor(s.cod_min_order), cod_max: fromMinor(s.cod_max_order),
+    cod_confirm: s.cod_confirmation, cod_hours: String(s.cod_confirm_hours), cod_open: s.cod_max_open_orders == null ? "" : String(s.cod_max_open_orders),
+    cod_returned: s.cod_max_returned == null ? "" : String(s.cod_max_returned),
     return_days: String(s.return_window_days), return_shipping: s.return_shipping, return_fee: fromMinor(s.return_shipping_fee),
     reviews: s.reviews_enabled, reviews_purchase: s.reviews_require_purchase, reviews_auto: s.reviews_auto_publish,
   });
@@ -220,6 +222,8 @@ export function CheckoutForm({ s, razorpayReady, stripeReady }: { s: StoreSettin
       free_shipping_threshold: v.free.trim() ? toMinor(v.free) : null, low_stock_threshold: Number(v.low) || 0, reservation_minutes: Number(v.hold) || 30,
       razorpay_enabled: v.razorpay, stripe_enabled: v.stripe, cod_enabled: v.cod, cod_fee: toMinor(v.cod_fee) ?? 0, cod_min_order: toMinor(v.cod_min) ?? 0,
       cod_max_order: toMinor(v.cod_max) ?? 0, return_window_days: Number(v.return_days) || 0, return_shipping: v.return_shipping, return_shipping_fee: toMinor(v.return_fee) ?? 0,
+      cod_confirmation: v.cod_confirm, cod_confirm_hours: Number(v.cod_hours) || 24,
+      cod_max_open_orders: v.cod_open.trim() ? Number(v.cod_open) : null, cod_max_returned: v.cod_returned.trim() ? Number(v.cod_returned) : null,
       reviews_enabled: v.reviews, reviews_require_purchase: v.reviews_purchase, reviews_auto_publish: v.reviews_auto,
     });
   };
@@ -256,10 +260,25 @@ export function CheckoutForm({ s, razorpayReady, stripeReady }: { s: StoreSettin
           <Toggle label="Stripe (international cards)" hint={stripeReady ? "API keys are set." : "Optional. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET to enable."} checked={v.stripe} onChange={(x) => setV({ ...v, stripe: x })} />
           <Toggle label="Cash on delivery" checked={v.cod} onChange={(x) => setV({ ...v, cod: x })} />
           {v.cod && (
-            <div className="grid gap-3 pl-6 sm:grid-cols-3">
-              <TextField label="COD fee (₹)" value={v.cod_fee} onChange={(e) => setV({ ...v, cod_fee: e.target.value })} inputMode="decimal" />
-              <TextField label="Minimum order (₹)" value={v.cod_min} onChange={(e) => setV({ ...v, cod_min: e.target.value })} inputMode="decimal" />
-              <TextField label="Maximum order (₹)" value={v.cod_max} onChange={(e) => setV({ ...v, cod_max: e.target.value })} inputMode="decimal" />
+            <div className="grid gap-4 pl-6">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <TextField label="COD fee (₹)" value={v.cod_fee} onChange={(e) => setV({ ...v, cod_fee: e.target.value })} inputMode="decimal" />
+                <TextField label="Minimum order (₹)" value={v.cod_min} onChange={(e) => setV({ ...v, cod_min: e.target.value })} inputMode="decimal" />
+                <TextField label="Maximum order (₹)" value={v.cod_max} onChange={(e) => setV({ ...v, cod_max: e.target.value })} inputMode="decimal" />
+              </div>
+              <Toggle
+                label="Ask customers to confirm cash-on-delivery orders"
+                hint="The order page and confirmation email ask them to confirm; nothing can be packed until they do (or you confirm it for them)."
+                checked={v.cod_confirm}
+                onChange={(x) => setV({ ...v, cod_confirm: x })}
+              />
+              <div className="grid gap-3 sm:grid-cols-3">
+                {v.cod_confirm && (
+                  <TextField label="Cancel if not confirmed within (hours)" value={v.cod_hours} onChange={(e) => setV({ ...v, cod_hours: e.target.value })} inputMode="numeric" hint="Stock goes back on sale." />
+                )}
+                <TextField label="Most cash orders waiting per customer" value={v.cod_open} onChange={(e) => setV({ ...v, cod_open: e.target.value })} inputMode="numeric" placeholder="No limit" hint="Counted by account, email or phone." />
+                <TextField label="No COD after this many returned parcels" value={v.cod_returned} onChange={(e) => setV({ ...v, cod_returned: e.target.value })} inputMode="numeric" placeholder="Never" hint="Parcels that came back undelivered." />
+              </div>
             </div>
           )}
         </div>
