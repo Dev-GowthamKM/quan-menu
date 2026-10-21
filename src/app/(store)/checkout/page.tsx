@@ -36,6 +36,7 @@ export default async function CheckoutPage() {
         stripe: settings.stripe_enabled && stripeConfigured(),
         reservationMinutes: settings.reservation_minutes,
         whatsapp: settings.whatsapp_enabled && whatsappConfigured(),
+        cartReminders: settings.cart_reminders_enabled,
       }}
     />
   );

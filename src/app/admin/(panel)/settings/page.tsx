@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AppearanceForm, CheckoutForm, ContentForm, EmailsForm, GeneralForm, HomepageForm, MaintenanceForm, SeoForm } from "@/components/admin/store/SettingsForms";
+import { AppearanceForm, CheckoutForm, ContentForm, EmailsForm, GeneralForm, HomepageForm, MaintenanceForm, RemindersForm, SeoForm } from "@/components/admin/store/SettingsForms";
 import WhatsAppSettings from "@/components/admin/store/WhatsAppSettings";
 import { PageHeader } from "@/components/admin/ui";
 import { cx, Notice } from "@/components/ui/controls";
@@ -29,9 +29,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const { supabase } = await requireRole("admin");
   const { tab: raw } = await searchParams;
   const tab = TABS.find((t) => t.key === raw)?.key ?? "general";
-  const [{ data: s, error }, samples] = await Promise.all([
+  const [{ data: s, error }, samples, waiting] = await Promise.all([
     supabase.from("store_settings").select("*").eq("id", 1).single(),
     tab === "maintenance" ? supabase.from("products").select("id", { count: "exact", head: true }).eq("is_sample", true) : Promise.resolve({ count: 0 }),
+    tab === "emails" ? supabase.from("stock_alerts").select("id", { count: "exact", head: true }).is("notified_at", null) : Promise.resolve({ count: 0 }),
   ]);
   return (
     <>
@@ -55,7 +56,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             {tab === "checkout" && <CheckoutForm s={s} razorpayReady={razorpayConfigured()} stripeReady={stripeConfigured()} />}
             {tab === "content" && <ContentForm s={s} />}
             {tab === "seo" && <SeoForm s={s} />}
-            {tab === "emails" && <EmailsForm s={s} emailReady={!!(RESEND_API_KEY && EMAIL_FROM)} />}
+            {tab === "emails" && (
+              <div className="grid gap-8">
+                <RemindersForm s={s} waiting={waiting.count ?? 0} />
+                <EmailsForm s={s} emailReady={!!(RESEND_API_KEY && EMAIL_FROM)} />
+              </div>
+            )}
             {tab === "whatsapp" && <WhatsAppSettings enabled={s.whatsapp_enabled} templates={(s.whatsapp_templates ?? {}) as never} connected={whatsappConfigured()} />}
             {tab === "maintenance" && <MaintenanceForm s={s} sampleCount={samples.count ?? 0} />}
           </div>

@@ -1,8 +1,10 @@
 import "server-only";
 import { formatDateTime } from "./format";
 import { formatMoney } from "./money";
+import { SITE_URL } from "./env";
 import { orderUrl } from "./order-link";
 import { EMAIL_FROM, RESEND_API_BASE, RESEND_API_KEY } from "./server-env";
+import { cartRestoreUrl, oneClickUnsubscribeUrl, unsubscribeUrl } from "./signed-links";
 import { getSettings } from "./settings";
 import { supabaseService } from "./supabase/admin";
 import type { OrderDetail, StoreSettings, Tables } from "./types";
@@ -101,11 +103,103 @@ export function renderEmail(
   return { subject, html, text };
 }
 
-async function send(to: string, message: { subject: string; html: string; text: string }) {
+// --- Reminders (not tied to an order) ------------------------------------------------
+
+const REMINDER_FALLBACK: Record<string, Template> = {
+  back_in_stock: { subject: "{{product_title}} is back in stock", body: "Good news: {{product_title}} is back in stock{{variant}}. Popular sizes go quickly, so don't wait too long." },
+  cart_reminder: { subject: "You left something in your bag", body: "Hi,\n\nYou left these in your bag at {{store_name}}. We can't hold them for long, so here they are while they're still in stock." },
+  price_drop: { subject: "Price drop on your wishlist", body: "Hi,\n\nGood news: pieces on your wishlist at {{store_name}} now cost less." },
+};
+
+export const REMINDER_TEMPLATES = Object.keys(REMINDER_FALLBACK);
+
+interface ReminderItem {
+  title: string;
+  size?: string;
+  color?: string;
+  quantity?: number;
+  price?: number;
+  was?: number;
+  now?: number;
+  image_url?: string | null;
+}
+
+/** A small version of a catalog image for emails. */
+function thumb(url: string | null | undefined) {
+  if (!url || !/^https?:\/\//.test(url)) return null;
+  if (url.startsWith("https://images.unsplash.com/")) {
+    const u = new URL(url);
+    u.searchParams.set("w", "160");
+    return u.toString();
+  }
+  return url;
+}
+
+export function renderReminder(settings: StoreSettings, template: string, to: string, data: Record<string, unknown>) {
+  const templates = (settings.email_templates ?? {}) as Record<string, Template>;
+  const t = templates[template]?.subject ? templates[template] : REMINDER_FALLBACK[template];
+  if (!t) throw new Error(`Unknown email template ${template}`);
+  const currency = settings.currency;
+  const vars: Record<string, string> = { store_name: settings.store_name, product_title: "", variant: "", product_url: "", cart_url: "", wishlist_url: "" };
+  let items: ReminderItem[] = [];
+  let cta = { label: "Visit the store", url: SITE_URL };
+  if (template === "back_in_stock") {
+    const variant = [data.color, data.size ? `size ${data.size}` : ""].filter(Boolean).join(", ");
+    vars.product_title = String(data.product_title ?? "");
+    vars.variant = variant ? ` in ${variant}` : "";
+    vars.product_url = `${SITE_URL}/products/${encodeURIComponent(String(data.slug ?? ""))}${data.color ? `?color=${encodeURIComponent(String(data.color))}` : ""}`;
+    items = [{ title: vars.product_title, size: String(data.size ?? ""), color: String(data.color ?? ""), price: Number(data.price), image_url: data.image_url as string | null }];
+    cta = { label: "Shop now", url: vars.product_url };
+  } else if (template === "cart_reminder") {
+    vars.cart_url = cartRestoreUrl(String(data.cart_id));
+    items = (data.items ?? []) as ReminderItem[];
+    cta = { label: "Return to your bag", url: vars.cart_url };
+  } else if (template === "price_drop") {
+    vars.wishlist_url = `${SITE_URL}/account/wishlist`;
+    items = (data.items ?? []) as ReminderItem[];
+    cta = { label: "See your wishlist", url: vars.wishlist_url };
+  }
+  const unsubscribe = template === "back_in_stock" ? null : unsubscribeUrl(to);
+  const subject = fill(t.subject, vars);
+  const body = fill(t.body, vars);
+  const paragraphs = body
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 14px;line-height:1.6">${escape(p).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+  const rows = items
+    .map((i) => {
+      const img = thumb(i.image_url);
+      const details = [i.color, i.size ? `Size ${i.size}` : "", i.quantity ? `Qty ${i.quantity}` : ""].filter(Boolean).join(" · ");
+      const price = i.now !== undefined
+        ? `<span style="color:#8a8178;text-decoration:line-through">${formatMoney(i.was, currency)}</span> <strong>${formatMoney(i.now, currency)}</strong>`
+        : i.price !== undefined && !Number.isNaN(i.price) ? formatMoney(i.price, currency) : "";
+      return `<tr>
+        <td width="72" style="padding:10px 12px 10px 0;border-bottom:1px solid #e4ddd1">${img ? `<img src="${escape(img)}" width="60" alt="" style="display:block;width:60px;height:auto">` : ""}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #e4ddd1">${escape(i.title)}${details ? `<br><span style="color:#8a8178;font-size:12px">${escape(details)}</span>` : ""}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #e4ddd1;text-align:right;white-space:nowrap">${price}</td>
+      </tr>`;
+    })
+    .join("");
+  const table = rows ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin-top:8px">${rows}</table>` : "";
+  const html = `<!doctype html><html><body style="margin:0;background:#f7f3ec;font-family:Helvetica,Arial,sans-serif;color:#111">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border:1px solid #e4ddd1">
+    <tr><td style="padding:28px 32px 0;font-family:Georgia,serif;font-size:24px;letter-spacing:.18em;text-transform:uppercase">${escape(settings.store_name)}</td></tr>
+    <tr><td style="padding:24px 32px 8px;font-size:15px;color:#2b2724">${paragraphs}${table}</td></tr>
+    <tr><td style="padding:16px 32px 32px"><a href="${escape(cta.url)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:13px 26px;font-size:12px;letter-spacing:.14em;text-transform:uppercase">${escape(cta.label)}</a></td></tr>
+  </table>
+  <p style="font-size:11px;color:#8a8178;margin-top:16px">${escape(settings.store_name)}${unsubscribe ? ` · <a href="${escape(unsubscribe)}" style="color:#8a8178">Unsubscribe from reminders</a>` : ""}</p>
+  </td></tr></table></body></html>`;
+  const lines = items.map((i) => `- ${i.title}${i.size ? ` (size ${i.size})` : ""}`).join("\n");
+  const text = `${body}\n\n${lines}\n\n${cta.label}: ${cta.url}\n${unsubscribe ? `\nUnsubscribe from reminders: ${unsubscribe}\n` : ""}`;
+  return { subject, html, text, unsubscribe };
+}
+
+async function send(to: string, message: { subject: string; html: string; text: string }, headers?: Record<string, string>) {
   const res = await fetch(`${RESEND_API_BASE}/emails`, {
     method: "POST",
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: EMAIL_FROM, to: [to], subject: message.subject, html: message.html, text: message.text }),
+    body: JSON.stringify({ from: EMAIL_FROM, to: [to], subject: message.subject, html: message.html, text: message.text, ...(headers ? { headers } : {}) }),
     signal: AbortSignal.timeout(10_000),
   });
   const body = await res.json().catch(() => ({}));
@@ -139,11 +233,25 @@ async function processEmails(limit: number) {
         counts.skipped++;
         continue;
       }
-      if (!row.order_id) throw new Error("Message has no order");
-      const { data: detail, error: dErr } = await sb.rpc("order_detail", { p_order_id: row.order_id });
-      if (dErr || !detail) throw new Error(dErr?.message || "Order not found");
-      const message = renderEmail(settings, row.template, detail as unknown as OrderDetail, (row.data ?? {}) as Record<string, unknown>);
-      const id = await send(row.to_email, message);
+      let id: string;
+      if (row.order_id) {
+        const { data: detail, error: dErr } = await sb.rpc("order_detail", { p_order_id: row.order_id });
+        if (dErr || !detail) throw new Error(dErr?.message || "Order not found");
+        const message = renderEmail(settings, row.template, detail as unknown as OrderDetail, (row.data ?? {}) as Record<string, unknown>);
+        id = await send(row.to_email, message);
+      } else {
+        // Reminders: never to someone who unsubscribed after it was queued.
+        const { data: suppressed } = await sb.from("email_suppressions").select("email").eq("email", row.to_email.toLowerCase()).maybeSingle();
+        if (suppressed && row.template !== "back_in_stock") {
+          await sb.from("email_outbox").update({ status: "skipped", last_error: "Unsubscribed from reminders." }).eq("id", row.id);
+          counts.skipped++;
+          continue;
+        }
+        const message = renderReminder(settings, row.template, row.to_email, (row.data ?? {}) as Record<string, unknown>);
+        id = await send(row.to_email, message, message.unsubscribe
+          ? { "List-Unsubscribe": `<${oneClickUnsubscribeUrl(row.to_email)}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+          : undefined);
+      }
       await sb.from("email_outbox").update({ status: "sent", sent_at: new Date().toISOString(), provider_message_id: id, last_error: null }).eq("id", row.id);
       counts.sent++;
     } catch (e) {

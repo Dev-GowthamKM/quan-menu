@@ -61,14 +61,14 @@ isOneToOne: false
                   ]
                 },"carts": {
                   Row: {
-                    "coupon_code": string | null,"created_at": string,"id": string,"token_hash": string | null,"updated_at": string,"user_id": string | null,"whatsapp_opt_in": boolean
+                    "contact_email": string | null,"coupon_code": string | null,"created_at": string,"id": string,"reminder_sent_at": string | null,"token_hash": string | null,"updated_at": string,"user_id": string | null,"whatsapp_opt_in": boolean
                   }
                   ComputedFields: never
                   Insert: {
-                    "coupon_code"?: string | null,"created_at"?: string,"id"?: string,"token_hash"?: string | null,"updated_at"?: string,"user_id"?: string | null,"whatsapp_opt_in"?: boolean
+                    "contact_email"?: string | null,"coupon_code"?: string | null,"created_at"?: string,"id"?: string,"reminder_sent_at"?: string | null,"token_hash"?: string | null,"updated_at"?: string,"user_id"?: string | null,"whatsapp_opt_in"?: boolean
                   }
                   Update: {
-                    "coupon_code"?: string | null,"created_at"?: string,"id"?: string,"token_hash"?: string | null,"updated_at"?: string,"user_id"?: string | null,"whatsapp_opt_in"?: boolean
+                    "contact_email"?: string | null,"coupon_code"?: string | null,"created_at"?: string,"id"?: string,"reminder_sent_at"?: string | null,"token_hash"?: string | null,"updated_at"?: string,"user_id"?: string | null,"whatsapp_opt_in"?: boolean
                   }
                   Relationships: [
                     
@@ -286,6 +286,20 @@ isOneToOne: false
       referencedRelation: "orders"
       referencedColumns: ["id"]
     }
+                  ]
+                },"email_suppressions": {
+                  Row: {
+                    "created_at": string,"email": string,"reason": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"email": string,"reason"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"email"?: string,"reason"?: string
+                  }
+                  Relationships: [
+                    
                   ]
                 },"inventory_movements": {
                   Row: {
@@ -565,14 +579,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"email": string | null,"full_name": string,"id": string,"marketing_opt_in": boolean,"phone": string,"updated_at": string
+                    "created_at": string,"email": string | null,"full_name": string,"id": string,"marketing_opt_in": boolean,"phone": string,"price_alert_sent_at": string | null,"price_alerts": boolean,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"email"?: string | null,"full_name"?: string,"id": string,"marketing_opt_in"?: boolean,"phone"?: string,"updated_at"?: string
+                    "created_at"?: string,"email"?: string | null,"full_name"?: string,"id": string,"marketing_opt_in"?: boolean,"phone"?: string,"price_alert_sent_at"?: string | null,"price_alerts"?: boolean,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"email"?: string | null,"full_name"?: string,"id"?: string,"marketing_opt_in"?: boolean,"phone"?: string,"updated_at"?: string
+                    "created_at"?: string,"email"?: string | null,"full_name"?: string,"id"?: string,"marketing_opt_in"?: boolean,"phone"?: string,"price_alert_sent_at"?: string | null,"price_alerts"?: boolean,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -751,16 +765,42 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
-                },"store_settings": {
+                },"stock_alerts": {
                   Row: {
-                    "accent_color": string,"background_color": string,"body_font": string,"cod_confirm_hours": number,"cod_confirmation": boolean,"cod_enabled": boolean,"cod_fee": number,"cod_max_open_orders": number | null,"cod_max_order": number,"cod_max_returned": number | null,"cod_min_order": number,"contact": NonNullable<Json>,"currency": string,"email_templates": NonNullable<Json>,"faq": NonNullable<Json>,"free_shipping_threshold": number | null,"gstin": string,"heading_font": string,"homepage": NonNullable<Json>,"id": number,"logo_url": string | null,"low_stock_threshold": number,"maintenance_message": string,"maintenance_mode": boolean,"og_image_url": string | null,"package_defaults": NonNullable<Json>,"policies": NonNullable<Json>,"primary_color": string,"razorpay_enabled": boolean,"reservation_minutes": number,"return_shipping": string,"return_shipping_fee": number,"return_window_days": number,"reviews_auto_publish": boolean,"reviews_enabled": boolean,"reviews_require_purchase": boolean,"seo_description": string,"seo_title": string,"shiprocket_courier_choice": string,"shiprocket_enabled": boolean,"shiprocket_pickup_location": string,"shiprocket_pickup_postcode": string,"social": NonNullable<Json>,"store_name": string,"stripe_enabled": boolean,"tagline": string,"tax_label": string,"tax_mode": string,"tax_slabs": NonNullable<Json>,"timezone": string,"updated_at": string,"updated_by": string | null,"whatsapp_enabled": boolean,"whatsapp_templates": NonNullable<Json>
+                    "created_at": string,"email": string,"id": string,"notified_at": string | null,"product_id": string,"user_id": string | null,"variant_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "accent_color"?: string,"background_color"?: string,"body_font"?: string,"cod_confirm_hours"?: number,"cod_confirmation"?: boolean,"cod_enabled"?: boolean,"cod_fee"?: number,"cod_max_open_orders"?: number | null,"cod_max_order"?: number,"cod_max_returned"?: number | null,"cod_min_order"?: number,"contact"?: NonNullable<Json>,"currency"?: string,"email_templates"?: NonNullable<Json>,"faq"?: NonNullable<Json>,"free_shipping_threshold"?: number | null,"gstin"?: string,"heading_font"?: string,"homepage"?: NonNullable<Json>,"id"?: number,"logo_url"?: string | null,"low_stock_threshold"?: number,"maintenance_message"?: string,"maintenance_mode"?: boolean,"og_image_url"?: string | null,"package_defaults"?: NonNullable<Json>,"policies"?: NonNullable<Json>,"primary_color"?: string,"razorpay_enabled"?: boolean,"reservation_minutes"?: number,"return_shipping"?: string,"return_shipping_fee"?: number,"return_window_days"?: number,"reviews_auto_publish"?: boolean,"reviews_enabled"?: boolean,"reviews_require_purchase"?: boolean,"seo_description"?: string,"seo_title"?: string,"shiprocket_courier_choice"?: string,"shiprocket_enabled"?: boolean,"shiprocket_pickup_location"?: string,"shiprocket_pickup_postcode"?: string,"social"?: NonNullable<Json>,"store_name"?: string,"stripe_enabled"?: boolean,"tagline"?: string,"tax_label"?: string,"tax_mode"?: string,"tax_slabs"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_enabled"?: boolean,"whatsapp_templates"?: NonNullable<Json>
+                    "created_at"?: string,"email": string,"id"?: string,"notified_at"?: string | null,"product_id": string,"user_id"?: string | null,"variant_id": string
                   }
                   Update: {
-                    "accent_color"?: string,"background_color"?: string,"body_font"?: string,"cod_confirm_hours"?: number,"cod_confirmation"?: boolean,"cod_enabled"?: boolean,"cod_fee"?: number,"cod_max_open_orders"?: number | null,"cod_max_order"?: number,"cod_max_returned"?: number | null,"cod_min_order"?: number,"contact"?: NonNullable<Json>,"currency"?: string,"email_templates"?: NonNullable<Json>,"faq"?: NonNullable<Json>,"free_shipping_threshold"?: number | null,"gstin"?: string,"heading_font"?: string,"homepage"?: NonNullable<Json>,"id"?: number,"logo_url"?: string | null,"low_stock_threshold"?: number,"maintenance_message"?: string,"maintenance_mode"?: boolean,"og_image_url"?: string | null,"package_defaults"?: NonNullable<Json>,"policies"?: NonNullable<Json>,"primary_color"?: string,"razorpay_enabled"?: boolean,"reservation_minutes"?: number,"return_shipping"?: string,"return_shipping_fee"?: number,"return_window_days"?: number,"reviews_auto_publish"?: boolean,"reviews_enabled"?: boolean,"reviews_require_purchase"?: boolean,"seo_description"?: string,"seo_title"?: string,"shiprocket_courier_choice"?: string,"shiprocket_enabled"?: boolean,"shiprocket_pickup_location"?: string,"shiprocket_pickup_postcode"?: string,"social"?: NonNullable<Json>,"store_name"?: string,"stripe_enabled"?: boolean,"tagline"?: string,"tax_label"?: string,"tax_mode"?: string,"tax_slabs"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_enabled"?: boolean,"whatsapp_templates"?: NonNullable<Json>
+                    "created_at"?: string,"email"?: string,"id"?: string,"notified_at"?: string | null,"product_id"?: string,"user_id"?: string | null,"variant_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "stock_alerts_product_id_fkey"
+      columns: ["product_id"]
+isOneToOne: false
+      referencedRelation: "products"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "stock_alerts_variant_id_fkey"
+      columns: ["variant_id"]
+isOneToOne: false
+      referencedRelation: "product_variants"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"store_settings": {
+                  Row: {
+                    "accent_color": string,"background_color": string,"body_font": string,"cart_reminder_hours": number,"cart_reminders_enabled": boolean,"cod_confirm_hours": number,"cod_confirmation": boolean,"cod_enabled": boolean,"cod_fee": number,"cod_max_open_orders": number | null,"cod_max_order": number,"cod_max_returned": number | null,"cod_min_order": number,"contact": NonNullable<Json>,"currency": string,"email_templates": NonNullable<Json>,"faq": NonNullable<Json>,"free_shipping_threshold": number | null,"gstin": string,"heading_font": string,"homepage": NonNullable<Json>,"id": number,"logo_url": string | null,"low_stock_threshold": number,"maintenance_message": string,"maintenance_mode": boolean,"og_image_url": string | null,"package_defaults": NonNullable<Json>,"policies": NonNullable<Json>,"price_alerts_enabled": boolean,"primary_color": string,"razorpay_enabled": boolean,"reservation_minutes": number,"return_shipping": string,"return_shipping_fee": number,"return_window_days": number,"reviews_auto_publish": boolean,"reviews_enabled": boolean,"reviews_require_purchase": boolean,"seo_description": string,"seo_title": string,"shiprocket_courier_choice": string,"shiprocket_enabled": boolean,"shiprocket_pickup_location": string,"shiprocket_pickup_postcode": string,"social": NonNullable<Json>,"stock_alerts_enabled": boolean,"store_name": string,"stripe_enabled": boolean,"tagline": string,"tax_label": string,"tax_mode": string,"tax_slabs": NonNullable<Json>,"timezone": string,"updated_at": string,"updated_by": string | null,"whatsapp_enabled": boolean,"whatsapp_templates": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "accent_color"?: string,"background_color"?: string,"body_font"?: string,"cart_reminder_hours"?: number,"cart_reminders_enabled"?: boolean,"cod_confirm_hours"?: number,"cod_confirmation"?: boolean,"cod_enabled"?: boolean,"cod_fee"?: number,"cod_max_open_orders"?: number | null,"cod_max_order"?: number,"cod_max_returned"?: number | null,"cod_min_order"?: number,"contact"?: NonNullable<Json>,"currency"?: string,"email_templates"?: NonNullable<Json>,"faq"?: NonNullable<Json>,"free_shipping_threshold"?: number | null,"gstin"?: string,"heading_font"?: string,"homepage"?: NonNullable<Json>,"id"?: number,"logo_url"?: string | null,"low_stock_threshold"?: number,"maintenance_message"?: string,"maintenance_mode"?: boolean,"og_image_url"?: string | null,"package_defaults"?: NonNullable<Json>,"policies"?: NonNullable<Json>,"price_alerts_enabled"?: boolean,"primary_color"?: string,"razorpay_enabled"?: boolean,"reservation_minutes"?: number,"return_shipping"?: string,"return_shipping_fee"?: number,"return_window_days"?: number,"reviews_auto_publish"?: boolean,"reviews_enabled"?: boolean,"reviews_require_purchase"?: boolean,"seo_description"?: string,"seo_title"?: string,"shiprocket_courier_choice"?: string,"shiprocket_enabled"?: boolean,"shiprocket_pickup_location"?: string,"shiprocket_pickup_postcode"?: string,"social"?: NonNullable<Json>,"stock_alerts_enabled"?: boolean,"store_name"?: string,"stripe_enabled"?: boolean,"tagline"?: string,"tax_label"?: string,"tax_mode"?: string,"tax_slabs"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_enabled"?: boolean,"whatsapp_templates"?: NonNullable<Json>
+                  }
+                  Update: {
+                    "accent_color"?: string,"background_color"?: string,"body_font"?: string,"cart_reminder_hours"?: number,"cart_reminders_enabled"?: boolean,"cod_confirm_hours"?: number,"cod_confirmation"?: boolean,"cod_enabled"?: boolean,"cod_fee"?: number,"cod_max_open_orders"?: number | null,"cod_max_order"?: number,"cod_max_returned"?: number | null,"cod_min_order"?: number,"contact"?: NonNullable<Json>,"currency"?: string,"email_templates"?: NonNullable<Json>,"faq"?: NonNullable<Json>,"free_shipping_threshold"?: number | null,"gstin"?: string,"heading_font"?: string,"homepage"?: NonNullable<Json>,"id"?: number,"logo_url"?: string | null,"low_stock_threshold"?: number,"maintenance_message"?: string,"maintenance_mode"?: boolean,"og_image_url"?: string | null,"package_defaults"?: NonNullable<Json>,"policies"?: NonNullable<Json>,"price_alerts_enabled"?: boolean,"primary_color"?: string,"razorpay_enabled"?: boolean,"reservation_minutes"?: number,"return_shipping"?: string,"return_shipping_fee"?: number,"return_window_days"?: number,"reviews_auto_publish"?: boolean,"reviews_enabled"?: boolean,"reviews_require_purchase"?: boolean,"seo_description"?: string,"seo_title"?: string,"shiprocket_courier_choice"?: string,"shiprocket_enabled"?: boolean,"shiprocket_pickup_location"?: string,"shiprocket_pickup_postcode"?: string,"social"?: NonNullable<Json>,"stock_alerts_enabled"?: boolean,"store_name"?: string,"stripe_enabled"?: boolean,"tagline"?: string,"tax_label"?: string,"tax_mode"?: string,"tax_slabs"?: NonNullable<Json>,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"whatsapp_enabled"?: boolean,"whatsapp_templates"?: NonNullable<Json>
                   }
                   Relationships: [
                     
@@ -801,14 +841,14 @@ isOneToOne: false
                   ]
                 },"wishlist_items": {
                   Row: {
-                    "created_at": string,"product_id": string,"variant_id": string | null,"wishlist_id": string
+                    "alerted_price": number | null,"created_at": string,"price_at_add": number | null,"product_id": string,"variant_id": string | null,"wishlist_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"product_id": string,"variant_id"?: string | null,"wishlist_id": string
+                    "alerted_price"?: number | null,"created_at"?: string,"price_at_add"?: number | null,"product_id": string,"variant_id"?: string | null,"wishlist_id": string
                   }
                   Update: {
-                    "created_at"?: string,"product_id"?: string,"variant_id"?: string | null,"wishlist_id"?: string
+                    "alerted_price"?: number | null,"created_at"?: string,"price_at_add"?: number | null,"product_id"?: string,"variant_id"?: string | null,"wishlist_id"?: string
                   }
                   Relationships: [
                     {
@@ -1025,6 +1065,9 @@ isOneToOne: false
 "cart_merge":
 { Args: { "p_token": string,"p_user_id": string }; Returns: Json
                            },
+"cart_restore":
+{ Args: { "p_from_cart": string,"p_token": string,"p_user_id": string }; Returns: number
+                           },
 "cart_set_contact":
 { Args: { "p_contact": Json,"p_token": string,"p_user_id": string }; Returns: undefined
                            },
@@ -1209,6 +1252,12 @@ isOneToOne: false
 "customer_request_return":
 { Args: { "p_details": string,"p_items": Json,"p_order_id": string,"p_reason": string,"p_user_id": string }; Returns: string
                            },
+"email_suppressed":
+{ Args: { "p_email": string }; Returns: boolean
+                           },
+"email_unsubscribe":
+{ Args: { "p_email": string }; Returns: undefined
+                           },
 "format_money":
 { Args: { "p_amount": number,"p_currency": string }; Returns: string
                            },
@@ -1373,8 +1422,14 @@ isOneToOne: false
 "product_visible":
 { Args: { "p_product_id": string }; Returns: boolean
                            },
+"queue_cart_reminders":
+{ Args: { "p_limit"?: number }; Returns: number
+                           },
 "queue_email":
 { Args: { "p_data"?: Json,"p_order_id": string,"p_template": string,"p_to": string }; Returns: undefined
+                           },
+"queue_price_alerts":
+{ Args: { "p_limit"?: number }; Returns: number
                            },
 "queue_whatsapp":
 { Args: { "p_data"?: Json,"p_order_id": string,"p_template": string }; Returns: undefined
@@ -1505,6 +1560,9 @@ isOneToOne: false
                            },
 "slugify":
 { Args: { "p_text": string }; Returns: string
+                           },
+"stock_alert_subscribe":
+{ Args: { "p_email": string,"p_user_id"?: string,"p_variant_id": string }; Returns: Json
                            },
 "submit_review":
 { Args: { "p_body": string,"p_product_id": string,"p_rating": number,"p_title": string }; Returns: Json

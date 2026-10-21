@@ -203,6 +203,12 @@ const SECTIONS = {
       }),
     ),
   }),
+  reminders: z.object({
+    stock_alerts_enabled: z.boolean(),
+    cart_reminders_enabled: z.boolean(),
+    cart_reminder_hours: z.number().int().min(1, "Wait at least an hour.").max(72, "Send the reminder within three days."),
+    price_alerts_enabled: z.boolean(),
+  }),
   courier: z.object({
     shiprocket_enabled: z.boolean(),
     shiprocket_pickup_location: z.string().trim().min(1, "Enter the pickup address name from Shiprocket.").max(80),

@@ -11,6 +11,7 @@ import { CheckIcon, MapPinIcon, MinusIcon, PlusIcon, ReturnIcon, RulerIcon, Shar
 import { rememberViewed } from "../RecentlyViewed";
 import { useStore } from "../StoreProvider";
 import WishButton from "../WishButton";
+import BackInStock from "./BackInStock";
 import Gallery from "./Gallery";
 
 const LOW_STOCK = 3;
@@ -21,7 +22,7 @@ function sizeOrder(variants: PageVariant[]) {
   return seen;
 }
 
-export default function ProductView({ product, currency, preview }: { product: ProductPage; currency: string; preview?: boolean }) {
+export default function ProductView({ product, currency, preview, stockAlerts }: { product: ProductPage; currency: string; preview?: boolean; stockAlerts?: boolean }) {
   const router = useRouter();
   const search = useSearchParams();
   const { addItem } = useStore();
@@ -68,6 +69,10 @@ export default function ProductView({ product, currency, preview }: { product: P
   const compareAt = selected ? selected.compare_at_price : product.min_price_compare_at;
   const pct = discountPercent(price, compareAt);
   const soldOut = product.available_stock <= 0;
+  // Sizes that can be requested by email: in the chosen colour, or every variant when all are gone.
+  const soldOutSizes = product.variants
+    .filter((v) => v.available <= 0 && (soldOut || !colors.length || (v.color || null) === color))
+    .map((v) => ({ id: v.id, label: [soldOut && colors.length > 1 ? v.color : "", v.size || ""].filter(Boolean).join(" · ") || "One size" }));
 
   const pickColor = (name: string) => {
     setColor(name);
@@ -215,8 +220,10 @@ export default function ProductView({ product, currency, preview }: { product: P
             {selected && selected.available > 0 && selected.available <= LOW_STOCK && (
               <p className="mt-3 text-sm text-sale">Only {selected.available} left in this size</p>
             )}
+            {stockAlerts && !soldOut && !preview && <BackInStock key={color ?? ""} options={soldOutSizes} />}
           </fieldset>
         )}
+        {stockAlerts && soldOut && !preview && <BackInStock key={`all-${color ?? ""}`} options={soldOutSizes} open />}
 
         <div className="mt-8 flex items-stretch gap-3">
           <div className="flex items-center border border-line bg-paper" role="group" aria-label="Quantity">

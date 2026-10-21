@@ -22,6 +22,7 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
 - [Payment providers](#payment-providers)
 - [Courier (Shiprocket)](#courier-shiprocket)
 - [WhatsApp updates](#whatsapp-updates)
+- [Reminders](#reminders)
 - [Email](#email)
 - [Testing](#testing)
 - [Running the store](#running-the-store)
@@ -39,7 +40,7 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
   category, tags and SKU.
 - Product pages: gallery with zoom and full-screen view, colour and size pickers with sold-out
   states, size guide, quantity, add to bag, buy now, PIN code delivery check with dates (and the
-  courier's own estimate when Shiprocket is connected), details,
+  courier's own estimate when Shiprocket is connected), "notify me" for sold-out sizes, details,
   fabric and care, shipping and returns, reviews (verified purchase badges), related products,
   structured data.
 - Bag with server-side pricing, discount codes, free-delivery progress. Guest bags are merged into
@@ -50,7 +51,7 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
   can opt in to order updates on WhatsApp.
 - Accounts: sign up with email verification, sign in, password reset, optional Google, profile,
   address book, order history and tracking (courier status, expected date and scan history),
-  wishlist, cancellation and return requests. Guests
+  wishlist (with optional price-drop emails), cancellation and return requests. Guests
   get a private link to their order, and can look it up by number and email.
 - Policy pages, FAQ, contact form, maintenance page, sitemap and robots.
 
@@ -403,6 +404,28 @@ and from the scheduled job), with retries; each order's page in the admin lists 
 Replies from customers go to your WhatsApp inbox (for example the WhatsApp Business app or
 Meta Business Suite); the store doesn't read them.
 
+## Reminders
+
+Three kinds, set in **Admin › Settings › Emails › Reminders** (their text is editable below them):
+
+- **Back in stock (on by default).** Product pages offer "Notify me" for sold-out sizes. When the
+  size comes back (a restock, a cancellation, a return, or an unpaid order releasing it), everyone
+  waiting gets one email. The Reminders card shows how many requests are waiting.
+- **Bag left behind (off by default).** One email to signed-in customers, or to guests who
+  reached checkout and entered their email, when the bag has sat untouched for the hours you
+  choose (and at most a week). Its "Return to your bag" link adds the items to the bag on any
+  device, as far as stock allows. Checkout tells guests that a reminder may follow.
+- **Wishlist price drops (on by default, customers opt in).** Customers switch them on on their
+  wishlist page; they get at most one email every three days listing saved products that are now
+  at least 5% cheaper.
+
+Bag and price emails carry an unsubscribe link and the one-click `List-Unsubscribe` header; an
+address that unsubscribes gets no more reminders (order emails and back-in-stock requests it made
+still arrive). The database queues reminders every five minutes (pg_cron); they are sent whenever
+the outbox runs: after any order action, from webhooks, and from `/api/cron/housekeeping`. On
+Vercel's Hobby plan that cron runs daily, so for timely bag reminders call it every 15 to 30
+minutes from any scheduler (or use a paid Vercel plan).
+
 ## Email
 
 Orders, shipping, delivery, cancellations, refunds and return updates send emails from editable
@@ -425,7 +448,9 @@ pointing at it with the mock payment settings shown above, plus the courier mock
 `SHIPROCKET_EMAIL=api@shiprocket.test`, `SHIPROCKET_PASSWORD=mock-password`,
 `SHIPROCKET_WEBHOOK_TOKEN=` any value and `SHIPROCKET_API_BASE=http://localhost:4011`, and the
 WhatsApp mock: `WHATSAPP_TOKEN=mock_whatsapp_token`, `WHATSAPP_PHONE_NUMBER_ID=1234567890`,
-`WHATSAPP_API_BASE=http://localhost:4012`. Playwright starts the mocks itself. The end-to-end setup creates test accounts with an owner role, so it
+`WHATSAPP_API_BASE=http://localhost:4012`, and the email mock: `RESEND_API_KEY=re_mock_key`,
+`EMAIL_FROM="Taana <orders@taana.test>"`, `RESEND_API_BASE=http://localhost:4013`. Playwright starts
+the mocks itself. The end-to-end setup creates test accounts with an owner role, so it
 refuses to run against any non-local database.
 
 **Integration tests (33)** cover access control for anonymous users, customers, staff, admins and
@@ -446,6 +471,14 @@ parcels, blocking and unblocking (staff only), confirmation holding packing unti
 staff confirm, cancellation and restocking when time runs out, the WhatsApp confirmation request,
 and the browser flow: a shopper confirms from their order page, then staff block the customer and
 the next checkout only offers online payment.
+
+**Reminder tests (8 database, 3 Playwright)** cover back-in-stock requests (sold-out sizes only,
+once per email, one email when the size returns, even after unsubscribing from reminders), one bag
+reminder only after the bag sat long enough and never to unsubscribed addresses, restoring a bag
+elsewhere within the stock left, price drops of at least 5% for customers who opted in (once per
+drop), unsubscribing, and server-only access; in the browser, "notify me" through to the email,
+the bag reminder's restore and unsubscribe links (a forged one is refused, one-click works), and
+the wishlist switch.
 
 **WhatsApp tests (4 unit, 5 database, 1 Playwright)** cover number formatting and template values,
 queueing only for customers who opted in and only for events with a template, customers turning

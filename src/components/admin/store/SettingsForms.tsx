@@ -365,14 +365,58 @@ const TEMPLATES: { key: string; label: string; vars: string }[] = [
   { key: "order_cancelled", label: "Order cancelled", vars: "{{customer_name}}, {{order_number}}, {{order_url}}" },
   { key: "refund_processed", label: "Refund processed", vars: "{{customer_name}}, {{order_number}}, {{refund_amount}}, {{order_url}}" },
   { key: "return_update", label: "Return update", vars: "{{customer_name}}, {{order_number}}, {{return_status}}, {{order_url}}" },
+  { key: "back_in_stock", label: "Back in stock", vars: "{{product_title}}, {{variant}} (\" in Black, size M\"), {{product_url}}, {{store_name}}" },
+  { key: "cart_reminder", label: "Bag reminder", vars: "{{store_name}}, {{cart_url}}" },
+  { key: "price_drop", label: "Wishlist price drop", vars: "{{store_name}}, {{wishlist_url}}" },
 ];
+
+export function RemindersForm({ s, waiting }: { s: StoreSettings; waiting: number }) {
+  const { pending, error, save } = useSave("reminders");
+  const [v, setV] = useState({ stock: s.stock_alerts_enabled, cart: s.cart_reminders_enabled, hours: String(s.cart_reminder_hours), price: s.price_alerts_enabled });
+  return (
+    <Form
+      onSubmit={() => save({ stock_alerts_enabled: v.stock, cart_reminders_enabled: v.cart, cart_reminder_hours: Number(v.hours) || 3, price_alerts_enabled: v.price })}
+      pending={pending}
+      error={error}
+      note="Bag and price emails include an unsubscribe link; back-in-stock emails go once to people who asked."
+    >
+      <Card title="Reminders">
+        <div className="grid gap-4">
+          <Toggle
+            label="Back-in-stock alerts"
+            hint={`Product pages offer "Notify me" for sold-out sizes; one email goes out when the size is back. ${waiting} ${waiting === 1 ? "request is" : "requests are"} waiting.`}
+            checked={v.stock}
+            onChange={(x) => setV({ ...v, stock: x })}
+          />
+          <Toggle
+            label="Remind shoppers about a bag left behind"
+            hint="One email to signed-in customers, or guests who reached checkout, with a link that restores the bag on any device."
+            checked={v.cart}
+            onChange={(x) => setV({ ...v, cart: x })}
+          />
+          {v.cart && (
+            <div className="pl-6 sm:w-64">
+              <TextField label="Send after (hours without changes)" value={v.hours} onChange={(e) => setV({ ...v, hours: e.target.value })} inputMode="numeric" />
+            </div>
+          )}
+          <Toggle
+            label="Wishlist price-drop emails"
+            hint="For customers who turn them on on their wishlist page: products at least 5% cheaper, at most one email every three days."
+            checked={v.price}
+            onChange={(x) => setV({ ...v, price: x })}
+          />
+        </div>
+      </Card>
+    </Form>
+  );
+}
 
 export function EmailsForm({ s, emailReady }: { s: StoreSettings; emailReady: boolean }) {
   const { pending, error, save } = useSave("emails");
   const [t, setT] = useState(((s.email_templates ?? {}) as Record<string, { subject: string; body: string }>));
   const set = (key: string, p: Partial<{ subject: string; body: string }>) => setT({ ...t, [key]: { subject: t[key]?.subject ?? "", body: t[key]?.body ?? "", ...p } });
   return (
-    <Form onSubmit={() => save({ email_templates: Object.fromEntries(Object.entries(t).filter(([, x]) => x.subject.trim())) })} pending={pending} error={error} note="A button to the order page is added to every email; the confirmation also lists the items.">
+    <Form onSubmit={() => save({ email_templates: Object.fromEntries(Object.entries(t).filter(([, x]) => x.subject.trim())) })} pending={pending} error={error} note="Order emails get a button to the order page (the confirmation also lists the items); reminders list their products.">
       {!emailReady && <p className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900">Emails are queued but not sent until RESEND_API_KEY and EMAIL_FROM are set on the server (see the README).</p>}
       {TEMPLATES.map((x) => (
         <Card key={x.key} title={x.label}>

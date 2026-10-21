@@ -10,7 +10,7 @@ import { LockIcon, MinusIcon, PlusIcon, ShieldIcon, TruckIcon } from "../../ui/i
 import RecentlyViewed from "../RecentlyViewed";
 import { useStore } from "../StoreProvider";
 
-export default function CartView({ initial }: { initial: CartQuote }) {
+export default function CartView({ initial, restored }: { initial: CartQuote; restored?: boolean }) {
   const { toast } = useStore();
   const [quote, setQuote] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
@@ -52,6 +52,7 @@ export default function CartView({ initial }: { initial: CartQuote }) {
 
   return (
     <div className="container-page py-10 md:py-14">
+      {restored && <Notice tone="success" className="mb-6">We&apos;ve put the items from your reminder email back in your bag.</Notice>}
       <h1 className="font-serif text-4xl md:text-5xl">Your bag <span className="text-2xl text-stone">({quote.item_count})</span></h1>
       <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div>

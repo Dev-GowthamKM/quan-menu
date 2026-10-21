@@ -87,7 +87,7 @@ export default function ProductLayout({
         />
         <div className="mt-6">
           <Suspense>
-            <ProductView product={product} currency={settings.currency} preview={preview} />
+            <ProductView product={product} currency={settings.currency} preview={preview} stockAlerts={settings.stock_alerts_enabled} />
           </Suspense>
         </div>
         <div className="mt-16 grid gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-14 xl:gap-20">

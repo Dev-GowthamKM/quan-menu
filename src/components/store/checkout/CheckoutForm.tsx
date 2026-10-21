@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { applyCoupon, getCart } from "@/server/cart";
 import { placeOrder, reportPaymentFailure, verifyRazorpayPayment, type NextStep } from "@/server/checkout";
+import { rememberCheckoutEmail } from "@/server/reminders";
 import { deliveryWindow, formatDay } from "@/lib/format";
 import { INDIAN_STATES } from "@/lib/india";
 import { formatMoney } from "@/lib/money";
@@ -20,7 +21,7 @@ interface Props {
   initialQuote: CartQuote;
   user: { email: string; name: string; phone: string } | null;
   addresses: SavedAddress[];
-  config: { storeName: string; razorpay: boolean; stripe: boolean; reservationMinutes: number; whatsapp: boolean };
+  config: { storeName: string; razorpay: boolean; stripe: boolean; reservationMinutes: number; whatsapp: boolean; cartReminders: boolean };
 }
 
 const EMPTY: Address = { full_name: "", phone: "", line1: "", line2: "", landmark: "", city: "", state: "", postal_code: "", country: "IN" };
@@ -106,6 +107,7 @@ export default function CheckoutForm({ initialQuote, user, addresses, config }: 
   const continueContact = () => {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact.email.trim())) return setError("Enter a valid email address.");
     if (!/^\+?[0-9][0-9 ()-]{6,19}$/.test(contact.phone.trim())) return setError("Enter a valid mobile number for delivery updates.");
+    if (!user) rememberCheckoutEmail(contact.email.trim()).catch(() => {});
     goto(1);
   };
 
@@ -261,6 +263,9 @@ export default function CheckoutForm({ initialQuote, user, addresses, config }: 
               <input type="checkbox" checked={contact.whatsapp} onChange={(e) => setContact({ ...contact, whatsapp: e.target.checked })} className="mt-0.5 size-4 accent-ink" />
               <span>Send my order updates on WhatsApp <span className="block text-xs text-taupe">From {config.storeName}, to this mobile number. You can turn them off any time on your order page.</span></span>
             </label>
+          )}
+          {!user && config.cartReminders && (
+            <p className="mt-4 text-xs text-stone">If you don&apos;t finish checking out, we&apos;ll email you one reminder about your bag. Every reminder has an unsubscribe link.</p>
           )}
           {!user && (
             <p className="mt-4 text-sm text-taupe">

@@ -35,6 +35,12 @@ export default async function globalSetup(config: FullConfig) {
     { onConflict: "code" },
   );
 
+  // Messages queued by earlier runs (and by the database tests) would otherwise be sent ahead
+  // of this run's, and tests read the mocks' inboxes.
+  const stale = { status: "skipped", last_error: "Left over from an earlier test run." };
+  await sb.from("email_outbox").update(stale).in("status", ["queued", "failed", "sending"]);
+  await sb.from("whatsapp_outbox").update(stale).in("status", ["queued", "failed", "sending"]);
+
   mkdirSync("tests/e2e/.auth", { recursive: true });
   const baseURL = (config.projects[0]?.use?.baseURL as string) ?? "http://localhost:3000";
   const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined });
