@@ -1,22 +1,13 @@
 // Automated accessibility checks (axe-core, WCAG 2.1 A/AA rules) on the main storefront
 // and admin pages. Automated checks catch roughly a third of issues; keyboard and screen
 // reader testing is still needed before launch.
-import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { test, type Page } from "@playwright/test";
 import { OWNER } from "./support/env";
-import { db } from "./support/helpers";
+import { db, expectAccessible } from "./support/helpers";
 
 async function audit(page: Page, path: string) {
   await page.goto(path);
-  await page.waitForLoadState("networkidle");
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    // Next.js's development overlay isn't part of the app.
-    .exclude("nextjs-portal")
-    .analyze();
-  const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
-  const report = serious.map((v) => `${v.id} (${v.impact}): ${v.help} → ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(" | ")}`);
-  expect(report, `${path}\n${report.join("\n")}`).toEqual([]);
+  await expectAccessible(page, path);
 }
 
 test.describe("storefront", () => {

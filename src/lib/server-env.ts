@@ -40,6 +40,27 @@ export const WHATSAPP_API_BASE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/
   ? process.env.WHATSAPP_API_BASE!.replace(/\/$/, "")
   : "https://graph.facebook.com";
 
+/**
+ * MSG91 sends sign-in codes by SMS: an auth key and the id of the MSG91 SMS template (linked
+ * to the store's DLT-approved template) whose code variable is named ##otp##.
+ */
+export const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY || "";
+export const MSG91_TEMPLATE_ID = process.env.MSG91_TEMPLATE_ID || "";
+/** Only for tests: a local mock. Any other host is ignored so the key only ever goes to MSG91. */
+export const MSG91_API_BASE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(process.env.MSG91_API_BASE || "")
+  ? process.env.MSG91_API_BASE!.replace(/\/$/, "")
+  : "https://control.msg91.com";
+
+/**
+ * Supabase signs its calls to the Send SMS hook with this ("v1,whsec_..." from Authentication
+ * > Hooks). The secret in supabase/config.toml is public, so it is only accepted while the
+ * app uses a local Supabase.
+ */
+const LOCAL_SMS_HOOK_SECRET = "v1,whsec_dGFhbmEtbG9jYWwtZGV2ZWxvcG1lbnQtc21zLWhvb2s=";
+const LOCAL_SUPABASE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(process.env.NEXT_PUBLIC_SUPABASE_URL || "");
+export const SMS_HOOK_SECRET =
+  process.env.SUPABASE_SMS_HOOK_SECRET === LOCAL_SMS_HOOK_SECRET && !LOCAL_SUPABASE ? "" : process.env.SUPABASE_SMS_HOOK_SECRET || "";
+
 /** Signs guest order links and the guest cart cookie. Falls back to the service key. */
 export const LINK_SECRET = process.env.ORDER_LINK_SECRET || SUPABASE_SERVICE_ROLE_KEY;
 

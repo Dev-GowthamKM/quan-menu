@@ -1,6 +1,7 @@
 import { createHmac, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { deflateSync } from "node:zlib";
+import AxeBuilder from "@axe-core/playwright";
 import { expect, type BrowserContext, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { loadEnv } from "./env";
@@ -142,4 +143,17 @@ export function pngBuffer(width = 400, height = 500, rgb: [number, number, numbe
     chunk("IDAT", deflateSync(raw)),
     chunk("IEND", Buffer.alloc(0)),
   ]);
+}
+
+/** Fails on serious or critical axe-core findings (WCAG 2.1 A and AA rules) on the page as it is now. */
+export async function expectAccessible(page: Page, label = page.url()) {
+  await page.waitForLoadState("networkidle");
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    // Next.js's development overlay isn't part of the app.
+    .exclude("nextjs-portal")
+    .analyze();
+  const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+  const report = serious.map((v) => `${v.id} (${v.impact}): ${v.help} → ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(" | ")}`);
+  expect(report, `${label}\n${report.join("\n")}`).toEqual([]);
 }

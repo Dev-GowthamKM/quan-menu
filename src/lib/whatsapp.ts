@@ -18,8 +18,9 @@ export class WhatsAppError extends Error {
   }
 }
 
-/** Sends one template message. Returns WhatsApp's message id. */
-export async function sendTemplate(to: string, template: TemplateSetting, params: string[]) {
+type Component = { type: string; sub_type?: string; index?: string; parameters: { type: "text"; text: string }[] };
+
+async function postTemplate(to: string, template: TemplateSetting, components: Component[], timeoutMs: number) {
   const res = await fetch(`${WHATSAPP_API_BASE}/${WHATSAPP_API_VERSION}/${encodeURIComponent(WHATSAPP_PHONE_NUMBER_ID)}/messages`, {
     method: "POST",
     headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}`, "Content-Type": "application/json" },
@@ -27,14 +28,10 @@ export async function sendTemplate(to: string, template: TemplateSetting, params
       messaging_product: "whatsapp",
       to,
       type: "template",
-      template: {
-        name: template.name,
-        language: { code: template.language || "en" },
-        ...(params.length ? { components: [{ type: "body", parameters: params.map((text) => ({ type: "text", text })) }] } : {}),
-      },
+      template: { name: template.name, language: { code: template.language || "en" }, ...(components.length ? { components } : {}) },
     }),
     cache: "no-store",
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const body = (await res.json().catch(() => ({}))) as { messages?: { id: string }[]; error?: { message?: string; code?: number; error_data?: { details?: string } } };
   if (!res.ok || !body.messages?.[0]?.id) {
@@ -42,6 +39,28 @@ export async function sendTemplate(to: string, template: TemplateSetting, params
     throw new WhatsAppError(e?.error_data?.details || e?.message || `WhatsApp returned ${res.status}`, e?.code);
   }
   return body.messages[0].id;
+}
+
+/** Sends one template message. Returns WhatsApp's message id. */
+export async function sendTemplate(to: string, template: TemplateSetting, params: string[]) {
+  const components: Component[] = params.length ? [{ type: "body", parameters: params.map((text) => ({ type: "text", text })) }] : [];
+  return postTemplate(to, template, components, 10_000);
+}
+
+/**
+ * Sends a one-time code with an Authentication template that has a copy-code button.
+ * WhatsApp needs the code twice: in the text and behind the button.
+ */
+export async function sendAuthCode(to: string, template: TemplateSetting, code: string) {
+  return postTemplate(
+    to,
+    template,
+    [
+      { type: "body", parameters: [{ type: "text", text: code }] },
+      { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: code }] },
+    ],
+    3_500,
+  );
 }
 
 function values(detail: OrderDetail, data: Record<string, unknown>) {

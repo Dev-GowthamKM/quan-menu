@@ -9,7 +9,7 @@ export const CART_COOKIE = "taana_cart";
 export async function cartIdentity() {
   const user = await getUser();
   const token = (await cookies()).get(CART_COOKIE)?.value ?? null;
-  return { userId: user?.id ?? null, email: user?.email ?? null, token: user ? null : token, guestToken: token };
+  return { userId: user?.id ?? null, email: user?.email || null, token: user ? null : token, guestToken: token };
 }
 
 /** Creates the guest cart cookie if there isn't one (only from Server Actions). */

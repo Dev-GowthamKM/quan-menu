@@ -18,7 +18,7 @@ export default async function WishlistPage() {
   return (
     <div>
       <h2 className="font-serif text-2xl">Wishlist</h2>
-      {settings.price_alerts_enabled && <PriceAlertsToggle initial={!!profile.data?.price_alerts} />}
+      {settings.price_alerts_enabled && <PriceAlertsToggle initial={!!profile.data?.price_alerts} hasEmail={!!user?.email} />}
       {products.length ? (
         <div className="mt-6"><ProductGrid products={products} /></div>
       ) : (

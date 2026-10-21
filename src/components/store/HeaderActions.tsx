@@ -19,7 +19,7 @@ export default function HeaderActions() {
         href={signedIn ? "/account" : "/login"}
         className="hidden size-10 place-items-center hover:text-accent sm:grid"
         aria-label={signedIn ? "Your account" : "Sign in"}
-        title={signedIn ? session?.user?.email : "Sign in"}
+        title={signedIn ? session?.user?.email || session?.user?.name || "Your account" : "Sign in"}
       >
         <UserIcon />
       </Link>

@@ -41,7 +41,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           <tbody>
             {rows.map((c) => (
               <tr key={c.id}>
-                <Td><Link href={`/admin/customers/${c.id}`} className="font-medium hover:underline">{c.full_name || c.email}</Link>{c.full_name && <span className="block text-xs text-stone">{c.email}</span>}</Td>
+                <Td><Link href={`/admin/customers/${c.id}`} className="font-medium hover:underline">{c.full_name || c.email || c.phone || "Customer"}</Link>{c.full_name && c.email && <span className="block text-xs text-stone">{c.email}</span>}</Td>
                 <Td className="text-taupe">{c.phone || "—"}</Td>
                 <Td className="text-right tabular-nums">{c.orders_count}</Td>
                 <Td className="text-right tabular-nums">{formatMoney(c.lifetime_spend)}</Td>

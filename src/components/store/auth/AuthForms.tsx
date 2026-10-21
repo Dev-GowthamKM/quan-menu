@@ -6,6 +6,7 @@ import { mergeGuestCart } from "@/server/cart";
 import { GOOGLE_SIGN_IN } from "@/lib/env";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { Button, Checkbox, Field, Input, Notice } from "../../ui/controls";
+import PhoneSignIn, { type CodeChannel } from "./PhoneSignIn";
 
 function authMessage(message: string) {
   if (/invalid login credentials/i.test(message)) return "That email and password don't match. Try again or reset your password.";
@@ -16,23 +17,33 @@ function authMessage(message: string) {
   return "Something went wrong. Please try again.";
 }
 
-function GoogleButton({ next }: { next: string }) {
-  if (!GOOGLE_SIGN_IN) return null;
+/** "Continue with Google" and "Continue with mobile number", when the store offers them. */
+function OtherWays({ next, phone, onPhone }: { next: string; phone?: CodeChannel | null; onPhone: () => void }) {
+  if (!GOOGLE_SIGN_IN && !phone) return null;
   return (
     <>
-      <Button
-        variant="secondary"
-        size="lg"
-        className="w-full"
-        onClick={() =>
-          supabaseBrowser().auth.signInWithOAuth({
-            provider: "google",
-            options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
-          })
-        }
-      >
-        Continue with Google
-      </Button>
+      <div className="grid gap-3">
+        {GOOGLE_SIGN_IN && (
+          <Button
+            variant="secondary"
+            size="lg"
+            className="w-full"
+            onClick={() =>
+              supabaseBrowser().auth.signInWithOAuth({
+                provider: "google",
+                options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+              })
+            }
+          >
+            Continue with Google
+          </Button>
+        )}
+        {phone && (
+          <Button variant="secondary" size="lg" className="w-full" onClick={onPhone}>
+            Continue with mobile number
+          </Button>
+        )}
+      </div>
       <div className="my-6 flex items-center gap-4 text-xs text-stone">
         <span className="h-px flex-1 bg-line" /> or <span className="h-px flex-1 bg-line" />
       </div>
@@ -40,7 +51,20 @@ function GoogleButton({ next }: { next: string }) {
   );
 }
 
-export function LoginForm({ next = "/account", notice, admin }: { next?: string; notice?: string | null; admin?: boolean }) {
+export function LoginForm({
+  next = "/account",
+  notice,
+  admin,
+  phone,
+  method = "email",
+}: {
+  next?: string;
+  notice?: string | null;
+  admin?: boolean;
+  /** How sign-in codes are sent, when the store offers signing in with a mobile number. */
+  phone?: CodeChannel | null;
+  method?: "email" | "phone";
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,11 +72,22 @@ export function LoginForm({ next = "/account", notice, admin }: { next?: string;
   const [error, setError] = useState<string | null>(null);
   const [unconfirmed, setUnconfirmed] = useState(false);
   const [resent, setResent] = useState(false);
+  const [usePhone, setUsePhone] = useState(!admin && !!phone && method === "phone");
+
+  if (usePhone && phone) {
+    return (
+      <div>
+        {notice && <Notice className="mb-6">{notice}</Notice>}
+        <PhoneSignIn channel={phone} next={next} onCancel={() => setUsePhone(false)} />
+        <p className="mt-8 text-center text-sm text-taupe">New here? Your account is created when you enter the code.</p>
+      </div>
+    );
+  }
 
   return (
     <div>
       {notice && <Notice className="mb-6">{notice}</Notice>}
-      {!admin && <GoogleButton next={next} />}
+      {!admin && <OtherWays next={next} phone={phone} onPhone={() => setUsePhone(true)} />}
       <form
         className="grid gap-5"
         onSubmit={async (e) => {
@@ -106,11 +141,23 @@ export function LoginForm({ next = "/account", notice, admin }: { next?: string;
   );
 }
 
-export function SignupForm({ next = "/account" }: { next?: string }) {
+export function SignupForm({ next = "/account", phone }: { next?: string; phone?: CodeChannel | null }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", marketing: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [usePhone, setUsePhone] = useState(false);
+
+  if (usePhone && phone) {
+    return (
+      <div>
+        <PhoneSignIn channel={phone} next={next} onCancel={() => setUsePhone(false)} />
+        <p className="mt-8 text-xs leading-relaxed text-stone">
+          By creating an account you agree to our <Link href="/pages/terms" className="underline">terms</Link> and <Link href="/pages/privacy" className="underline">privacy policy</Link>.
+        </p>
+      </div>
+    );
+  }
 
   if (sent) {
     return (
@@ -126,7 +173,7 @@ export function SignupForm({ next = "/account" }: { next?: string }) {
 
   return (
     <div>
-      <GoogleButton next={next} />
+      <OtherWays next={next} phone={phone} onPhone={() => setUsePhone(true)} />
       <form
         className="grid gap-5"
         onSubmit={async (e) => {

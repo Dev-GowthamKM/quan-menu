@@ -31,7 +31,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
 
   return (
     <>
-      <PageHeader title={profile.full_name || profile.email || "Customer"} back={{ href: "/admin/customers", label: "Customers" }} description={`Joined ${formatDate(profile.created_at)}`} />
+      <PageHeader title={profile.full_name || profile.email || profile.phone || "Customer"} back={{ href: "/admin/customers", label: "Customers" }} description={`Joined ${formatDate(profile.created_at)}`} />
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Lifetime spend" value={formatMoney(spend)} hint="Paid orders minus refunds" />
         <Stat label="Orders" value={list.filter((o) => o.status !== "cancelled").length} hint={`${list.filter((o) => o.status === "cancelled").length} cancelled`} />
@@ -63,7 +63,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         </div>
         <div className="grid min-w-0 content-start gap-5">
           <Card title="Contact">
-            <p className="text-sm"><a href={`mailto:${profile.email}`} className="underline">{profile.email}</a></p>
+            {profile.email ? <p className="text-sm"><a href={`mailto:${profile.email}`} className="underline">{profile.email}</a></p> : <p className="text-sm text-stone">No email (signs in with a mobile number)</p>}
             {profile.phone && <p className="text-sm"><a href={`tel:${profile.phone}`} className="underline">{profile.phone}</a></p>}
             <p className="mt-2 text-xs text-stone">{profile.marketing_opt_in ? "Agreed to marketing emails" : "No marketing emails"}</p>
             {role.data?.role && <Badge tone="violet" className="mt-2">Staff: {role.data.role}</Badge>}

@@ -34,7 +34,7 @@ export async function GET() {
 
   return NextResponse.json(
     {
-      user: user ? { email: user.email, name: (user.user_metadata?.full_name as string) || "" } : null,
+      user: user ? { email: user.email || "", name: (user.user_metadata?.full_name as string) || "" } : null,
       role,
       cartCount,
       wishlist,

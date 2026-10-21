@@ -60,6 +60,10 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   package_defaults: { length_cm: 30, breadth_cm: 25, height_cm: 5, item_weight_grams: 400 },
   whatsapp_enabled: false,
   whatsapp_templates: {},
+  phone_login_enabled: false,
+  phone_login_channel: "sms",
+  whatsapp_login_template: "",
+  whatsapp_login_language: "en",
   updated_at: new Date(0).toISOString(),
   updated_by: null,
 };

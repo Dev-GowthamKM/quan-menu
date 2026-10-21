@@ -23,6 +23,7 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
 - [Courier (Shiprocket)](#courier-shiprocket)
 - [WhatsApp updates](#whatsapp-updates)
 - [Reminders](#reminders)
+- [Mobile sign-in](#mobile-sign-in)
 - [Email](#email)
 - [Testing](#testing)
 - [Running the store](#running-the-store)
@@ -49,7 +50,8 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
   (Razorpay: UPI, cards, netbanking, wallets; cash on delivery where allowed; Stripe optional) →
   review → confirmation. Orders can't be placed twice by double-clicking or refreshing. Shoppers
   can opt in to order updates on WhatsApp.
-- Accounts: sign up with email verification, sign in, password reset, optional Google, profile,
+- Accounts: sign up with email verification, or with a mobile number and a one-time code (SMS
+  through MSG91, or WhatsApp), sign in, password reset, optional Google, profile,
   address book, order history and tracking (courier status, expected date and scan history),
   wishlist (with optional price-drop emails), cancellation and return requests. Guests
   get a private link to their order, and can look it up by number and email.
@@ -84,8 +86,9 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
   codes, customers with lifetime spend and notes (CSV export), review moderation, contact inbox.
 - Shipping zones and rates (by state or PIN prefix), blocked PIN codes, couriers with tracking
   links. Settings for store details, appearance, homepage, tax (GST slabs, GSTIN), payment methods
-  and COD limits, returns, reviews, policies, FAQ, SEO, email templates, WhatsApp templates, maintenance mode and sample
-  data removal. Staff and roles. Audit log.
+  and COD limits, returns, reviews, policies, FAQ, SEO, email templates, WhatsApp templates,
+  customer sign-in with mobile numbers, maintenance mode and sample data removal. Staff and
+  roles. Audit log.
 
 ## Architecture
 
@@ -151,6 +154,11 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
   `src/lib/server-env.ts`, which can't be imported into browser code.
 - **Guest access** to an order uses an HMAC-signed link; guest carts use a random token stored
   hashed in the database.
+- **Mobile sign-in:** Supabase Auth makes and checks the codes, and only the store's Send SMS
+  hook, which verifies Supabase's signature, can get one delivered. The hook sends only to Indian
+  mobile numbers, at most 5 an hour and 10 a day per number, never to staff accounts, and not at
+  all while Supabase lets numbers be registered unconfirmed. Profiles exist only for verified
+  accounts.
 - **Other:** rate limits on checkout, coupons, PIN checks, reviews and forms (stored in Postgres,
   shared across instances); storage policies that let only staff upload or delete; a CSP that
   forbids framing, HSTS and other security headers; `noindex` and `no-store` on the admin;
@@ -262,9 +270,11 @@ which settings are present (yes/no only) and whether the database answers.
 | `SHIPROCKET_EMAIL`, `SHIPROCKET_PASSWORD` | Optional | Courier bookings through Shiprocket's API |
 | `SHIPROCKET_WEBHOOK_TOKEN` | With Shiprocket | Verifies `/api/webhooks/courier` |
 | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` | Optional | WhatsApp order updates (Cloud API); `WHATSAPP_API_VERSION` defaults to `v23.0` |
+| `SUPABASE_SMS_HOOK_SECRET` | For mobile sign-in | Verifies Supabase's calls to `/api/auth/sms` (the Send SMS hook) |
+| `MSG91_AUTH_KEY`, `MSG91_TEMPLATE_ID` | For codes by SMS | Sends sign-in codes through MSG91 with your DLT-approved template |
 | `CRON_SECRET` | Recommended | Authorises `/api/cron/housekeeping` |
 | `NEXT_PUBLIC_GOOGLE_SIGN_IN` | Optional | Shows "Continue with Google" (`1`) |
-| `RAZORPAY_API_BASE`, `STRIPE_API_BASE`, `RESEND_API_BASE`, `SHIPROCKET_API_BASE`, `WHATSAPP_API_BASE` | Tests only | Point at local mocks (ignored with live payment keys; Shiprocket and WhatsApp only accept localhost) |
+| `RAZORPAY_API_BASE`, `STRIPE_API_BASE`, `RESEND_API_BASE`, `SHIPROCKET_API_BASE`, `WHATSAPP_API_BASE`, `MSG91_API_BASE` | Tests only | Point at local mocks (ignored with live payment keys; Shiprocket, WhatsApp and MSG91 only accept localhost) |
 
 ## Deploy
 
@@ -426,6 +436,58 @@ the outbox runs: after any order action, from webhooks, and from `/api/cron/hous
 Vercel's Hobby plan that cron runs daily, so for timely bag reminders call it every 15 to 30
 minutes from any scheduler (or use a paid Vercel plan).
 
+## Mobile sign-in
+
+Optional. Shoppers can sign in, or create an account, with their mobile number and a 6-digit
+code instead of a password ("Continue with mobile number" on the sign-in and sign-up pages); a new
+account is asked for a name once, and a bag they filled as a guest comes with them. Customers with
+an email account can add their number under **My account › Signing in** and then use either;
+mobile-only accounts can add an email there (confirmed by a link) to get order emails at it and to
+set a password. Staff always sign in with email and password.
+
+Supabase Auth creates and checks the codes and hands each one to the store's **Send SMS hook**
+(`/api/auth/sms`), which sends it by SMS through **MSG91**, or on **WhatsApp**. India's SMS rules
+(DLT) require a registered sender ID and message template before any SMS is delivered, so allow
+a few days for step 2.
+
+1. **Send SMS hook.** In Supabase, **Authentication › Hooks › Add hook › Send SMS hook**: type
+   **HTTPS**, URL `https://YOUR-SITE/api/auth/sms`, then **Generate secret**. Put the secret (it
+   starts `v1,whsec_`) in `SUPABASE_SMS_HOOK_SECRET` on Vercel and redeploy. The URL must be
+   reachable without Vercel's deployment protection, as your production domain is.
+2. **MSG91 (SMS).** Create an MSG91 account and complete DLT registration (MSG91's dashboard
+   guides you): your business as the principal entity, a 6-letter sender ID, MSG91 declared as
+   your telemarketer, and a content template in the *Service Implicit* category, for example
+   `Your Taana sign-in code is {#var#}. It is valid for 5 minutes. Do not share it with anyone.`
+   Add the approved template in MSG91 with the code written `##otp##` (the variable must be named
+   `otp`) and its DLT template ID, then set `MSG91_TEMPLATE_ID` to MSG91's template ID and
+   `MSG91_AUTH_KEY` to an auth key from MSG91's API settings (leave the key's IP whitelist off:
+   Vercel's addresses change). Optional: a last line `@your-domain.com #<the code>` lets Android
+   Chrome fill the code in by itself.
+   **Or WhatsApp:** with WhatsApp connected (see [WhatsApp updates](#whatsapp-updates)), create a
+   template in the *Authentication* category with a **Copy code** button and a 5-minute expiry
+   note. Codes then go on WhatsApp only, so customers need WhatsApp on that number.
+3. **Phone provider.** In Supabase, **Authentication › Sign In / Providers › Phone**: turn the
+   provider on and keep **Confirm phone** (phone confirmations) on; set the code length to 6 and
+   the SMS OTP expiry to 300 seconds. The hook sends every code, so no SMS provider credentials
+   are used. Under **Authentication › Rate Limits**, raise *SMS sent per hour* from 30 to what
+   your busiest hour needs.
+4. **Turn it on.** **Admin › Settings › Customer sign-in** shows each step as done or not, chooses
+   SMS or WhatsApp, sends a test code, and turns "Continue with mobile number" on.
+
+Safeguards: codes go only to Indian mobile numbers; at most 5 an hour and 10 a day per number
+(Supabase also spaces codes to one number a minute apart, and limits requests per IP address);
+never to staff accounts, without saying why; and none while the store's switch is off or while
+Supabase's **Confirm phone** is off (without it, anyone could register someone else's number with
+a password, and its owner would later be signed in to that account). Accounts appear under
+**Customers** once their email or number is verified, so mistyped numbers and abandoned codes
+leave no trace.
+
+Locally, `supabase/config.toml` turns phone sign-in on and points the hook at
+`http://host.docker.internal:3000/api/auth/sms` with a development secret (the app refuses that
+secret when it talks to a hosted Supabase). With the MSG91 mock (`node
+tests/e2e/support/mock-msg91.mjs`, port 4014) and the settings under [Testing](#testing), codes
+can be read at `http://localhost:4014/__test/messages`.
+
 ## Email
 
 Orders, shipping, delivery, cancellations, refunds and return updates send emails from editable
@@ -440,7 +502,7 @@ Account emails (verification, password reset) are sent by Supabase Auth with the
 npm run typecheck          # TypeScript
 npm test                   # unit tests (src/**/*.test.ts)
 npm run test:integration   # database tests against the local Supabase
-npm run test:e2e           # Playwright tests (local Supabase + Razorpay, Shiprocket and WhatsApp mocks)
+npm run test:e2e           # Playwright tests (local Supabase + Razorpay, Shiprocket, WhatsApp, Resend and MSG91 mocks)
 ```
 
 The integration and end-to-end tests need the local stack (`npm run db:start`) and `.env.local`
@@ -449,8 +511,10 @@ pointing at it with the mock payment settings shown above, plus the courier mock
 `SHIPROCKET_WEBHOOK_TOKEN=` any value and `SHIPROCKET_API_BASE=http://localhost:4011`, and the
 WhatsApp mock: `WHATSAPP_TOKEN=mock_whatsapp_token`, `WHATSAPP_PHONE_NUMBER_ID=1234567890`,
 `WHATSAPP_API_BASE=http://localhost:4012`, and the email mock: `RESEND_API_KEY=re_mock_key`,
-`EMAIL_FROM="Taana <orders@taana.test>"`, `RESEND_API_BASE=http://localhost:4013`. Playwright starts
-the mocks itself. The end-to-end setup creates test accounts with an owner role, so it
+`EMAIL_FROM="Taana <orders@taana.test>"`, `RESEND_API_BASE=http://localhost:4013`, and for mobile
+sign-in: `SUPABASE_SMS_HOOK_SECRET` set to the development secret in `supabase/config.toml`,
+`MSG91_AUTH_KEY=mock_msg91_key`, `MSG91_TEMPLATE_ID=mock_login_template`,
+`MSG91_API_BASE=http://localhost:4014`. Playwright starts the mocks itself. The end-to-end setup creates test accounts with an owner role, so it
 refuses to run against any non-local database.
 
 **Integration tests (33)** cover access control for anonymous users, customers, staff, admins and
@@ -486,6 +550,15 @@ updates off (waiting messages are dropped), one sender per message, server-only 
 full flow: an admin maps templates and sends a test, a shopper opts in at checkout and receives
 the confirmation and shipping messages, then turns them off.
 
+**Mobile sign-in tests (8 unit, 8 database, 6 Playwright)** cover number formats and the hook's
+signatures (rotated secrets, tampering, replays outside five minutes); Supabase's phone settings
+(confirmations required); profiles only for verified accounts, with the verified number as the
+contact number; customer search by number however it's typed; who may change the settings; and,
+through Supabase and the hook to the mocks: the owner's checklist, test code and switch, a new
+shopper signing up (name asked once, guest bag kept), a returning customer (a wrong code refused),
+an email customer adding a number and signing in with it, codes on WhatsApp with the copy-code
+template, and refusals (other countries, staff accounts, unsigned hook calls, the switch off).
+
 **Acceptance tests (7, Playwright)** follow the brief:
 
 1. An admin creates a product with an uploaded image and size/colour variants and publishes it;
@@ -503,12 +576,13 @@ the confirmation and shipping messages, then turns them off.
 7. Carts, products and orders are stored on the server and survive a fresh browser.
 
 **Accessibility checks (2, Playwright + axe-core)** scan 13 storefront pages (including the
-checkout) and 14 admin pages for WCAG 2.1 A/AA problems and fail on anything serious or critical.
+checkout) and 14 admin pages for WCAG 2.1 A/AA problems and fail on anything serious or critical;
+the mobile sign-in tests run the same check on the number and code forms and the settings tab.
 Automated checks don't replace testing with a keyboard and a screen reader.
 
-Latest local run: typecheck clean, unit 4/4, integration 33/33, Playwright 9/9 (acceptance 7/7,
-accessibility 2/2), every page checked at 390 px wide without horizontal scrolling, and the
-production build (`next build`) succeeds.
+Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 23/23,
+integration 72/72, Playwright 22/22 against the production build (`next build`), and every page
+checked at 390 px wide without horizontal scrolling.
 
 ## Running the store
 
@@ -543,6 +617,11 @@ production build (`next build`) succeeds.
 - Emails need Resend; there is no in-app email log beyond the outbox table.
 - Images uploaded in the editor are resized in the browser; HEIC photos must be exported as JPEG
   first.
+- Mobile sign-in is for Indian numbers only. Supabase limits how often codes can be checked per IP
+  address, not per code, so keep the code expiry short (5 minutes). Numbers in India are reassigned
+  after long disuse; customers who change numbers should update it (or add an email) under
+  **My account**. The MSG91 connection was built against MSG91's documented Flow API and tested
+  with the bundled mock: send a real test code before turning it on.
 - The Vercel cron runs daily on the Hobby plan; pg_cron handles the 5-minute stock release. If
   pg_cron isn't available, use a paid Vercel plan or another scheduler calling
   `/api/cron/housekeeping` every few minutes with the `CRON_SECRET` bearer token.

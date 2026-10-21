@@ -252,7 +252,7 @@ export default function CheckoutForm({ initialQuote, user, addresses, config }: 
         <Section index={0} step={step} title="Contact details" summary={`${contact.email} · ${contact.phone}`} onEdit={() => goto(0)}>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Email" htmlFor="co-email" hint={user ? "Order updates go to your account email." : "We'll send your order confirmation here."}>
-              <Input id="co-email" type="email" autoComplete="email" value={contact.email} readOnly={!!user} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+              <Input id="co-email" type="email" autoComplete="email" value={contact.email} readOnly={!!user?.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
             </Field>
             <Field label="Mobile number" htmlFor="co-phone" hint="For delivery updates from the courier.">
               <Input id="co-phone" type="tel" autoComplete="tel" placeholder="+91 98765 43210" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} />

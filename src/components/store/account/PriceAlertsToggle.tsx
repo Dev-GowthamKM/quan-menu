@@ -1,12 +1,20 @@
 "use client";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { setPriceAlerts } from "@/server/reminders";
 
 /** Wishlist page: price-drop emails on or off. */
-export default function PriceAlertsToggle({ initial }: { initial: boolean }) {
+export default function PriceAlertsToggle({ initial, hasEmail = true }: { initial: boolean; hasEmail?: boolean }) {
   const [on, setOn] = useState(initial);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  if (!hasEmail) {
+    return (
+      <p className="mt-4 border border-line bg-paper px-4 py-3 text-sm text-taupe">
+        Want an email when something here drops in price? <Link href="/account" className="text-ink underline underline-offset-4">Add an email address</Link> to your account first.
+      </p>
+    );
+  }
   return (
     <div className="mt-4 border border-line bg-paper px-4 py-3 text-sm">
       <label className="flex items-start gap-3">

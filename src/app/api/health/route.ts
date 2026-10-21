@@ -34,6 +34,8 @@ export async function GET() {
     shiprocket: !!(env.SHIPROCKET_EMAIL && env.SHIPROCKET_PASSWORD),
     shiprocket_webhook: !!env.SHIPROCKET_WEBHOOK_TOKEN,
     whatsapp: !!(env.WHATSAPP_TOKEN && env.WHATSAPP_PHONE_NUMBER_ID),
+    sms_hook: !!env.SMS_HOOK_SECRET,
+    msg91: !!(env.MSG91_AUTH_KEY && env.MSG91_TEMPLATE_ID),
   };
   const ok = database === "ok" && Object.values(required).every(Boolean);
   return NextResponse.json({ ok, site: SITE_URL, database, required, payments, optional }, { status: ok ? 200 : 503 });

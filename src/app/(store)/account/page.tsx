@@ -1,18 +1,23 @@
 import Link from "next/link";
 import ProfileForm from "@/components/store/account/ProfileForm";
+import SignInMethods from "@/components/store/account/SignInMethods";
 import { Badge } from "@/components/ui/controls";
-import { getUser } from "@/lib/auth";
+import { getRole, getUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
+import { phoneSignInChannel } from "@/lib/login-codes";
 import { formatMoney } from "@/lib/money";
+import { getSettings } from "@/lib/settings";
 import { supabaseServer } from "@/lib/supabase/server";
 import { ORDER_STATUS } from "@/lib/types-ui";
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ password?: string }> }) {
   const user = (await getUser())!;
   const sb = await supabaseServer();
-  const [{ data: profile }, { data: orders }] = await Promise.all([
-    sb.from("profiles").select("full_name, phone, marketing_opt_in, email").eq("id", user.id).single(),
+  const [{ data: profile }, { data: orders }, settings, role] = await Promise.all([
+    sb.from("profiles").select("full_name, phone, marketing_opt_in").eq("id", user.id).single(),
     sb.from("orders").select("id, order_number, placed_at, status, grand_total, currency").eq("user_id", user.id).order("placed_at", { ascending: false }).limit(3),
+    getSettings(),
+    getRole(),
   ]);
   const { password } = await searchParams;
   return (
@@ -41,8 +46,17 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         )}
       </section>
       <section>
-        <h2 className="font-serif text-2xl">Profile & security</h2>
-        <ProfileForm email={profile?.email ?? user.email ?? ""} initial={{ full_name: profile?.full_name ?? "", phone: profile?.phone ?? "", marketing_opt_in: profile?.marketing_opt_in ?? false }} />
+        <h2 className="font-serif text-2xl">Profile</h2>
+        <ProfileForm key={`${profile?.phone}-${profile?.full_name}`} hasEmail={!!user.email} initial={{ full_name: profile?.full_name ?? "", phone: profile?.phone ?? "", marketing_opt_in: profile?.marketing_opt_in ?? false }} />
+      </section>
+      <section>
+        <h2 className="font-serif text-2xl">Signing in</h2>
+        <SignInMethods
+          email={user.email || ""}
+          pendingEmail={user.new_email || ""}
+          phone={user.phone_confirmed_at ? user.phone || "" : ""}
+          phoneSignIn={role ? null : phoneSignInChannel(settings)}
+        />
       </section>
     </div>
   );

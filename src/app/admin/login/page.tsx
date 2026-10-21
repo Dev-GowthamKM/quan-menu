@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/store/auth/AuthForms";
 import { getRole, getUser } from "@/lib/auth";
 import { safeNext } from "@/lib/order-link";
+import { formatIndianMobile } from "@/lib/phone";
 import { signOut } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export default async function AdminLogin({ searchParams }: { searchParams: Promi
         <div className="mt-8 rounded-lg border border-black/10 bg-white p-6 shadow-sm">
           {user && !role ? (
             <div className="grid gap-4 text-sm">
-              <p>You&apos;re signed in as <b>{user.email}</b>, which doesn&apos;t have staff access.</p>
+              <p>You&apos;re signed in as <b>{user.email || formatIndianMobile(user.phone)}</b>, which doesn&apos;t have staff access.</p>
               <p className="text-taupe">Ask the store owner to add you under Admin › Staff, then sign in again.</p>
               <form action={signOut}><button className="underline">Sign out</button></form>
             </div>

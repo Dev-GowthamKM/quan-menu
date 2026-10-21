@@ -193,5 +193,5 @@ export async function orderStatus(orderNumber: string, key: string | null): Prom
 }
 
 export async function signedInEmail() {
-  return (await getUser())?.email ?? null;
+  return (await getUser())?.email || null;
 }

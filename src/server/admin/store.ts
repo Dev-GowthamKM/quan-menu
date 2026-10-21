@@ -3,7 +3,10 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { AccessError, requireRole } from "@/lib/auth";
 import { fail, friendlyError, ok, type ActionResult } from "@/lib/errors";
+import { authProviderStatus, msg91Configured } from "@/lib/login-codes";
+import { SMS_HOOK_SECRET } from "@/lib/server-env";
 import type { AppRole } from "@/lib/types";
+import { whatsappConfigured } from "@/lib/whatsapp";
 import { WHATSAPP_EVENTS, type WhatsAppEvent } from "@/lib/whatsapp-format";
 
 // Store configuration: shipping, settings, staff roles. Admins only (owners for roles);
@@ -203,6 +206,12 @@ const SECTIONS = {
       }),
     ),
   }),
+  signin: z.object({
+    phone_login_enabled: z.boolean(),
+    phone_login_channel: z.enum(["sms", "whatsapp"]),
+    whatsapp_login_template: z.string().trim().max(512).regex(/^$|^[a-z0-9_]+$/, "Template names use lowercase letters, numbers and underscores."),
+    whatsapp_login_language: z.string().trim().regex(/^[a-z]{2,3}(_[A-Z]{2})?$/, "Use a language code such as en, en_US or hi."),
+  }),
   reminders: z.object({
     stock_alerts_enabled: z.boolean(),
     cart_reminders_enabled: z.boolean(),
@@ -239,6 +248,10 @@ export async function saveSettings(section: SettingsSection, values: unknown): P
   if (section === "courier" && data.shiprocket_enabled && !data.shiprocket_pickup_postcode) {
     return fail("Add the pickup PIN code to turn on Shiprocket.");
   }
+  if (section === "signin" && data.phone_login_enabled) {
+    const problem = await phoneSignInProblem(data as { phone_login_channel: string; whatsapp_login_template: string });
+    if (problem) return fail(problem);
+  }
   if (section === "checkout") {
     const slabs = (data.tax_slabs as { up_to: number | null }[]) ?? [];
     if (slabs[slabs.length - 1]?.up_to !== null) return fail("The last tax slab must have no upper limit.");
@@ -249,6 +262,22 @@ export async function saveSettings(section: SettingsSection, values: unknown): P
   revalidateTag("settings");
   revalidatePath("/", "layout");
   return ok(null, "Settings saved.");
+}
+
+/** What still stops customers from signing in with a mobile number, if anything. */
+async function phoneSignInProblem(s: { phone_login_channel: string; whatsapp_login_template: string }) {
+  if (!SMS_HOOK_SECRET) return "Connect the Send SMS hook first: set SUPABASE_SMS_HOOK_SECRET on the server (README › Mobile sign-in).";
+  if (s.phone_login_channel === "whatsapp") {
+    if (!whatsappConfigured()) return "Connect WhatsApp first (WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID), or send codes by SMS.";
+    if (!s.whatsapp_login_template) return "Enter the name of your approved WhatsApp authentication template.";
+  } else if (!msg91Configured()) {
+    return "Connect MSG91 first: set MSG91_AUTH_KEY and MSG91_TEMPLATE_ID on the server, or send codes on WhatsApp.";
+  }
+  const auth = await authProviderStatus(true);
+  if (!auth) return "Couldn't read Supabase's sign-in settings. Try again in a minute.";
+  if (!auth.phone) return "Turn on the Phone provider in Supabase first (Authentication › Sign In / Providers › Phone).";
+  if (!auth.confirmations) return "Turn on phone confirmations in Supabase first (Authentication › Sign In / Providers › Phone › Confirm phone).";
+  return null;
 }
 
 export async function deleteSampleData(): Promise<ActionResult<{ deleted: number; archived: number }>> {

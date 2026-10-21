@@ -199,7 +199,8 @@ password_requirements = ""
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
 email_sent = 1000
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
-sms_sent = 30
+# Raised for local test runs; hosted projects start at 30 an hour (README › Mobile sign-in).
+sms_sent = 1000
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
 anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
@@ -274,15 +275,18 @@ content_path = "./supabase/templates/magic_link.html"
 # subject = "Your password has been changed"
 # content_path = "./supabase/templates/password_changed_notification.html"
 
+# Sign-in with a mobile number and a one-time code. The codes are sent by the store's
+# Send SMS hook (below), through MSG91 or WhatsApp; see README › Mobile sign-in.
 [auth.sms]
-# Allow/disallow new user signups via SMS to your project.
-enable_signup = false
-# If enabled, users need to confirm their phone number before signing in.
-enable_confirmations = false
-# Template for sending OTP to users
+# Turns on the phone provider (sign-in and sign-up with a mobile number).
+enable_signup = true
+# Must stay on. With it off, anyone could register someone else's number with a
+# password, and its owner would later sign in to that account with their code.
+enable_confirmations = true
+# Not used: the hook sends the code (the SMS text is the store's DLT-approved template).
 template = "Your code is {{ .Code }}"
 # Controls the minimum amount of time that must pass before sending another sms otp.
-max_frequency = "5s"
+max_frequency = "60s"
 
 # Use pre-defined map of phone number to OTP for testing.
 # [auth.sms.test_otp]
@@ -305,13 +309,22 @@ max_frequency = "5s"
 # enabled = true
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
+# Sends sign-in codes through the store (src/app/api/auth/sms/route.ts). The secret is for
+# local development only (the app refuses it with a hosted project); a hosted project gets
+# its own from Authentication > Hooks, kept in SUPABASE_SMS_HOOK_SECRET.
+[auth.hook.send_sms]
+enabled = true
+uri = "http://host.docker.internal:3000/api/auth/sms"
+secrets = "v1,whsec_dGFhbmEtbG9jYWwtZGV2ZWxvcG1lbnQtc21zLWhvb2s="
+
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
+# Placeholder only: the Supabase CLI turns phone sign-in off unless a provider is enabled,
+# but with the Send SMS hook enabled every code goes through the hook and this is never used.
 [auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
-# DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
-auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
+enabled = true
+account_sid = "unused-the-send-sms-hook-sends-codes"
+message_service_sid = "unused"
+auth_token = "unused"
 
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]
