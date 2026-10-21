@@ -19,20 +19,24 @@ const load = cache(async (slug: string): Promise<MenuData | null> => {
   if (slug === "demo-cafe") return EXAMPLE_CAFE;
   if (DEMO) return null;
   const supabase = supabasePublic();
-  const { data: stall } = await supabase
+  const { data: stall, error } = await supabase
     .from("stalls")
     .select("*")
     .eq("slug", slug)
     .eq("published", true)
     .maybeSingle();
+  // A database hiccup must not look like a missing or empty menu: throwing keeps serving the last
+  // good copy of this page (or shows "try again" if there is none) instead of caching "not found".
+  if (error) throw new Error(`Menu ${slug} could not be loaded: ${error.message}`);
   if (!stall) return null;
-  const { data: rows } = await supabase.from("dishes").select("*").eq("stall_id", stall.id).order("position");
+  const { data: rows, error: dishError } = await supabase.from("dishes").select("*").eq("stall_id", stall.id).order("position");
+  if (dishError) throw new Error(`Dishes for ${slug} could not be loaded: ${dishError.message}`);
   return {
     name: stall.name,
     area: stall.area,
     slug: stall.slug,
     published: true,
-    dishes: (rows ?? []).map(cleanDish).filter((d): d is Dish => !!d),
+    dishes: rows.map(cleanDish).filter((d): d is Dish => !!d),
     kind: cleanKind(stall.kind),
     toppings: cleanToppings(stall.toppings),
     pay: cleanPay(stall.pay),

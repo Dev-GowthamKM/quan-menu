@@ -28,10 +28,12 @@ export default async function Dashboard({ searchParams }: Search) {
   // One account can run several stalls: ?s=<address> opens one, ?new=1 starts another.
   const sp = await searchParams;
   const want = typeof sp.s === "string" ? sp.s : "";
-  const [{ data: list }, version] = await Promise.all([
+  const [{ data: list, error: listError }, version] = await Promise.all([
     supabase.from("stalls").select("id, slug, name, published, updated_at").eq("owner_id", auth.user.id).order("updated_at", { ascending: false }),
     supabase.rpc("schema_version"),
   ]);
+  // Never show an empty editor because the database didn't answer: saving it would replace the real menu.
+  if (listError) throw new Error(`Stalls could not be loaded: ${listError.message}`);
   const rows = list ?? [];
   const pick = sp.new === "1" ? undefined : rows.find((r) => r.slug === want) ?? rows[0];
   const stalls: StallRef[] = rows
@@ -47,12 +49,13 @@ export default async function Dashboard({ searchParams }: Search) {
     // Views from the last 7 days (Vietnam time), for the counter in the editor.
     const today = vnToday();
     const since = new Date(Date.parse(today) - 6 * 86400_000).toISOString().slice(0, 10);
-    const [{ data: stall }, { data: dishRows }, { data: vrows }, { data: key }] = await Promise.all([
+    const [{ data: stall, error: stallError }, { data: dishRows, error: dishError }, { data: vrows }, { data: key }] = await Promise.all([
       supabase.from("stalls").select("*").eq("id", pick.id).single(),
       supabase.from("dishes").select("*").eq("stall_id", pick.id).order("position"),
       supabase.from("menu_views").select("day, views").eq("stall_id", pick.id).gte("day", since),
       supabase.from("stall_keys").select("token").eq("stall_id", pick.id).maybeSingle(),
     ]);
+    if (stallError || dishError) throw new Error(`Stall ${pick.slug} could not be loaded: ${(stallError ?? dishError)!.message}`);
     if (vrows) {
       views = {
         today: vrows.filter((r) => r.day === today).reduce((a, r) => a + r.views, 0),

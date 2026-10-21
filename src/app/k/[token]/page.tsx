@@ -30,8 +30,9 @@ const list = (v: unknown) => (Array.isArray(v) ? v : []);
 async function load(token: string): Promise<QuickData | null> {
   if (DEMO || !/^[0-9a-f]{32}$/.test(token)) return null;
   const { data, error } = await supabasePublic().rpc("quick_menu", { p_token: token });
-  if (error) console.error("[quick] load", error.code, error.message);
-  if (error || !data || typeof data !== "object") return null;
+  // A database error isn't a bad link: show "try again" rather than "this link doesn't work".
+  if (error) throw new Error(`Owner page could not be loaded: ${error.code} ${error.message}`);
+  if (!data || typeof data !== "object") return null;
   const d = obj(data);
   const s = obj(d.stall);
   return {
