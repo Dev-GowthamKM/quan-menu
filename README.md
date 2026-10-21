@@ -278,15 +278,23 @@ which settings are present (yes/no only) and whether the database answers.
 
 ## Deploy
 
-**1. Supabase project.** Create a project at supabase.com (region: Mumbai, `ap-south-1`), then:
+**1. Supabase project.** Create a project at supabase.com (region: Mumbai, `ap-south-1`) and
+keep its database password. Then load the database, either in the browser or with the CLI:
 
-```bash
-npx supabase login
-npx supabase link --project-ref YOUR_PROJECT_REF
-npx supabase db push                     # applies supabase/migrations
-# optional, to start with the sample catalog (or paste seed.sql into the SQL editor):
-psql "postgresql://postgres:YOUR_DB_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres" -f supabase/seed.sql
-```
+- **In the browser (nothing to install):** `npm run db:bundle` writes two files to
+  `supabase/setup/`. In Supabase open **SQL Editor › New query**, paste all of `1-database.sql`
+  and click **Run** (every migration, as one transaction, recorded so the CLI knows they're
+  applied); then do the same with `2-sample-data.sql` for the sample catalog. Later updates:
+  `npm run db:bundle -- --since <last version you applied>` writes just the new migrations.
+- **With the Supabase CLI:**
+
+  ```bash
+  npx supabase login
+  npx supabase link --project-ref YOUR_PROJECT_REF
+  npx supabase db push                     # applies supabase/migrations
+  # optional, to start with the sample catalog:
+  psql "postgresql://postgres:YOUR_DB_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:5432/postgres" -f supabase/seed.sql
+  ```
 
 - **Database › Extensions:** enable `pg_cron` before pushing (the migration schedules the stock
   release job when it's available; otherwise rely on the Vercel cron below).
@@ -300,13 +308,16 @@ psql "postgresql://postgres:YOUR_DB_PASSWORD@db.YOUR_PROJECT_REF.supabase.co:543
   `NEXT_PUBLIC_GOOGLE_SIGN_IN=1`.
 
 **2. Vercel.** In Vercel choose **Add New › Project** and import this repository (framework
-preset Next.js; the build settings need no changes). Add the environment variables above for
+preset Next.js; the build settings need no changes; `vercel.json` runs the server code in Mumbai,
+next to the database). Add the environment variables above for
 Production and Preview, then deploy. Every push to `main` updates the live store and every other
 branch gets its own preview URL. `vercel.json` schedules `/api/cron/housekeeping` daily (Hobby plan
 limit); stock holds are also released every 5 minutes by pg_cron, and emails are sent as events
 happen.
 
-**3. After the first deploy:** open `/api/health`, create the owner (above), add the Razorpay
+**3. After the first deploy:** open `/api/health`, create the owner (above; or in Supabase,
+**Authentication › Users › Add user** with "Auto Confirm User", then run
+`select public.bootstrap_owner('you@example.com');` in the SQL editor), add the Razorpay
 webhook, and work through **Admin › Settings** (store details, tax and GSTIN, shipping, policies,
 emails). Delete the sample data before launch.
 

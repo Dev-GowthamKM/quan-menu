@@ -12,6 +12,7 @@
     "db:start": "supabase start -x studio,realtime,edge-runtime,logflare,vector,imgproxy,supavisor,postgres-meta",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local --schema public > src/lib/database.types.ts",
+    "db:bundle": "node scripts/sql-bundle.mjs",
     "make-owner": "node scripts/make-owner.mjs",
     "test:integration": "vitest run tests/integration --no-file-parallelism"
   },

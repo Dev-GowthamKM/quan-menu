@@ -10,3 +10,6 @@ next-env.d.ts
 /tests/e2e/.auth/
 /tests/e2e/report/
 /test-results/
+
+# SQL editor bundles (npm run db:bundle)
+/supabase/setup/
