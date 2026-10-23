@@ -271,6 +271,14 @@ const en = {
   payOn: "✓ Customers will see a transfer QR with the exact total when they order. Save the menu to apply.",
   mapsOn: "✓ Customers will see a review button. Save the menu to apply.",
 
+  // QR codes per table
+  tablesLink: "🪑 QR codes for each table",
+  tablesTitle: "QR codes for each table",
+  tablesHint: "Each table gets its own code. Orders then show the table number, and it's added to the bank transfer note.",
+  tablesCount: "Number of tables",
+  tablesPrint: "Print codes",
+  tablesNeedLive: "Turn on “Menu is live” and save to print codes for each table.",
+
   // Owner link
   ownerTitle: "Link for the stall owner",
   ownerHint: "The owner opens this on their phone to mark dishes sold out and change prices, with no account. Anyone with the link can do this, so only send it to the owner.",
@@ -597,6 +605,13 @@ const vi: Strings = {
   payNeedAcct: "Nhập số tài khoản để bật chuyển khoản.",
   payOn: "✓ Khách gọi món sẽ thấy mã chuyển khoản đúng số tiền. Bấm Lưu thực đơn để áp dụng.",
   mapsOn: "✓ Khách sẽ thấy nút đánh giá quán. Bấm Lưu thực đơn để áp dụng.",
+
+  tablesLink: "🪑 In mã QR cho từng bàn",
+  tablesTitle: "Mã QR cho từng bàn",
+  tablesHint: "Mỗi bàn một mã. Đơn của khách sẽ hiện số bàn, và số bàn có trong nội dung chuyển khoản.",
+  tablesCount: "Số bàn",
+  tablesPrint: "In mã",
+  tablesNeedLive: "Bật “Mở thực đơn” rồi lưu để in mã cho từng bàn.",
 
   ownerTitle: "Link cho chủ quán",
   ownerHint: "Chủ quán mở link này trên điện thoại để tự báo hết món và đổi giá, không cần tài khoản. Ai có link đều sửa được, nên chỉ gửi cho chủ quán.",

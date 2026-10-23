@@ -37,5 +37,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/dashboard/:path*", "/api/:path*", "/auth/:path*"],
+  // /api/say (menu voice) needs no login, and must stay cacheable: no session cookies on it.
+  matcher: ["/", "/login", "/dashboard/:path*", "/api/((?!say).*)", "/auth/:path*"],
 };

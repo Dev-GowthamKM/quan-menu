@@ -679,6 +679,11 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
                 <p className="status">{t.saveFirst}</p>
               )}
               {savedSlug && liveSlug !== savedSlug && !demo && <p className="status err">{t.slugChanged}</p>}
+              {!demo && stallId && savedSlug && (
+                published && !dirty
+                  ? <div className="row"><a className="btn" href={`/in-ma/${savedSlug}`} target="_blank" rel="noreferrer">{t.tablesLink}</a></div>
+                  : <p className="status">{t.tablesNeedLive}</p>
+              )}
               {!demo && stallId && savedSlug && <OwnerLink stallId={stallId} base={base} initial={ownerKey} onToken={(tok) => setLive((l) => ({ ...l, owner: !!tok }))} />}
             </section>
           </div>

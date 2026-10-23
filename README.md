@@ -58,6 +58,8 @@ Supabase's free plan pauses a project after a week with too little database acti
 | `src/app/login`, `src/app/auth/callback` | Email magic-link sign-in |
 | `src/app/dashboard` | Vendor editor: photo → AI → edit dishes and allergens → publish → QR sticker. One account can run several stalls (`?s=<address>` picks one, **+ Add a stall** starts another), for a helper setting up menus for many vendors. `actions.ts` saves through the `save_menu` database function, which refuses to overwrite a menu changed elsewhere since the editor opened it. |
 | `src/app/k/[token]` | The owner's page: a secret link (and QR) the helper hands to the stall owner, who can then mark dishes sold out and change prices on their phone with no account. Checked by the `quick_*` database functions; the helper can replace or turn off the link. |
+| `src/app/in-ma/[slug]` | Printable QR codes, one per table (`?n=` sets how many). Each opens the menu with `?b=<table>`, so the order screen, the spoken order and the bank-transfer note carry the table number. |
+| `src/app/api/say` | Vietnamese speech for the menu's 🔊 buttons (see Free services). |
 | `src/app/to-roi` | Printable Vietnamese flyer for walking up to stalls, with QR codes to the sample menus and the helper's name and Zalo number. |
 | `src/app/m/[slug]` | Public customer menu (what the QR code opens). Cached and served to every scanner, rebuilt at most once a minute, and refreshed immediately when the vendor saves. |
 | `src/app/api/extract` | Photo → dishes, using Claude vision. Signed-in vendors only. |
@@ -86,13 +88,14 @@ Everything below works with no API key and no bill:
 - **Translating dishes that aren't on the built-in list:** MyMemory's free API (`src/lib/free-translate.ts`), about 5,000 characters a day per server. Set `MYMEMORY_EMAIL` in Vercel to raise that to 50,000. Uses the same login and daily allowance as the AI routes.
 - **Exchange rates:** ExchangeRate-API's open endpoint (`src/lib/rates.ts`), refreshed twice a day, credited under each menu. Falls back to the fixed rates in `src/lib/i18n.ts`.
 - **Menu view counter:** a `menu_views` table and `count_view()` function in Supabase (free plan). Each visit to a published menu counts once; the editor shows today and the last 7 days.
+- **Vietnamese voice:** the 🔊 buttons play a recording of Google Translate's Vietnamese voice (a woman's), fetched by `/api/say` and cached by Vercel for a year, so each dish name is fetched once. It works on phones with no Vietnamese voice of their own; customers can also have the whole order read aloud to the vendor. The endpoint is free but unofficial: if Google refuses it, the menu falls back to the phone's own voice. `SAY_URL` overrides the host (for tests).
 - **Install as an app:** `src/app/manifest.ts` and icons, so vendors can add Quán to their home screen.
 
 With a Claude key, photo reading and translation switch to Claude automatically, and the built-in list is still used first.
 
 ## Known limits / next steps
 
-- **Pronunciation** uses the phone's built-in voice. Some phones have no Vietnamese voice, and then customers fall back to reading the spelling guide. A cloud text-to-speech service (for example Google TTS) would fix this.
+- **The voice** depends on Google Translate's unofficial speech endpoint. If Google ever blocks it, phones without a Vietnamese voice go quiet again; a paid service (Google Cloud or Azure text-to-speech) would be the dependable replacement.
 - **Customers pay vendors** by VietQR bank transfer, but Quán doesn't see or confirm payments: the vendor checks their banking app (the order code is in the transfer note). MoMo and ZaloPay wallets aren't supported yet.
 - **A vendor plan** (charging stalls monthly) isn't built yet. VietQR to your own account, or PayOS, would be the simplest start.
 - An owner link can be passed on by the owner. If it leaks, make a new one from the editor; the old one stops working at once.

@@ -30,17 +30,38 @@ interface Props {
   hints?: { pay: string; review: string; lang: string };
 }
 
+/** The phone's own Vietnamese voice, a woman's where there is a choice. Only used when the recorded voice can't load. */
 function useViVoice() {
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null);
   useEffect(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const pick = () => setVoice(speechSynthesis.getVoices().find((v) => /^vi/i.test(v.lang)) ?? null);
+    const pick = () => {
+      const vi = speechSynthesis.getVoices().filter((v) => /^vi/i.test(v.lang));
+      setVoice(vi.find((v) => /hoaimy|hoài my|linh|female|nữ/i.test(v.name)) ?? vi[0] ?? null);
+    };
     pick();
     speechSynthesis.addEventListener("voiceschanged", pick);
     return () => speechSynthesis.removeEventListener("voiceschanged", pick);
   }, []);
   return voice;
 }
+
+/** An order line as speech: "Trà sữa (L) · 50% đường · + Trân châu" → "Trà sữa size L, 50% đường, thêm Trân châu". */
+const spoken = (line: string) => line.replace(/ \((S|M|L)\)/, " size $1").replace(/ · \+ /g, ", thêm ").replace(/ · /g, ", ");
+
+/** Joins short sentences into parts of at most `max` characters. Each part is one recording. */
+function pack(sentences: string[], max = 120): string[] {
+  const out: string[] = [];
+  for (const s of sentences) {
+    const last = out[out.length - 1];
+    if (last && last.length + s.length + 2 <= max) out[out.length - 1] = `${last}. ${s}`;
+    else out.push(s.slice(0, 150));
+  }
+  return out;
+}
+
+/** For search: lower case, no tone marks, so "pho" finds "Phở". */
+const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase();
 
 export default function MenuView({ name, area, dishes, full, toppings = [], rates = {}, countSlug, soldOut, pay, maps, hints }: Props) {
   const [lang, setLang] = useState<Lang>("en");
@@ -59,7 +80,21 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
   const out = useMemo(() => new Set(soldToday(soldOut, today)), [soldOut, today]);
   const closeRef = useRef<HTMLButtonElement>(null);
   const voice = useViVoice();
+  // What is being read aloud ("d3" for dish 3, "order"), and the player, so a new tap stops the last one.
+  const [saying, setSaying] = useState("");
+  const player = useRef<{ audio: HTMLAudioElement | null; run: number }>({ audio: null, run: 0 });
+  // The table this menu was opened at (its QR code adds ?b=3), shown to the vendor with the order.
+  const [table, setTable] = useState("");
+  const [find, setFind] = useState("");
   const L = LANGS[lang];
+
+  useEffect(() => {
+    if (!full) return;
+    const b = new URLSearchParams(window.location.search).get("b") ?? "";
+    if (/^[0-9A-Za-z]{1,4}$/.test(b)) setTable(b.toUpperCase());
+  }, [full]);
+
+  useEffect(() => () => { player.current.run++; player.current.audio?.pause(); }, []);
 
   useEffect(() => {
     if (full) setLang(guessLang());
@@ -133,16 +168,59 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
       return c[k].q > 1 ? c.map((l, j) => (j === k ? { ...l, q: l.q - 1 } : l)) : c.filter((_, j) => j !== k);
     });
 
-  const speak = (text: string) => {
+  /** The phone's own voice, for when the recording can't load. Gives up quietly if the phone can't speak. */
+  const deviceSay = (text: string, done: () => void) => {
+    const stop = setTimeout(done, Math.min(20_000, 2000 + text.length * 120));
     try {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "vi-VN";
-      u.rate = 0.8;
+      u.rate = 0.85;
       if (voice) u.voice = voice;
-      speechSynthesis.cancel();
+      u.onend = u.onerror = () => { clearTimeout(stop); done(); };
       speechSynthesis.speak(u);
-    } catch {}
+    } catch {
+      clearTimeout(stop);
+      done();
+    }
   };
+
+  /**
+   * Reads Vietnamese aloud in a recorded woman's voice (/api/say), part after part. One audio element
+   * is reused, so phones that only allow sound after a tap keep playing the later parts too.
+   */
+  const say = (parts: string[], key: string) => {
+    const run = ++player.current.run;
+    player.current.audio?.pause();
+    try { speechSynthesis.cancel(); } catch {}
+    const live = () => player.current.run === run;
+    const done = () => { if (live()) setSaying(""); };
+    const a = new Audio();
+    a.defaultPlaybackRate = a.playbackRate = 0.9;
+    player.current.audio = a;
+    setSaying(key);
+    let k = 0;
+    let failed = false;
+    const fail = () => {
+      if (failed || !live()) return;
+      failed = true;
+      deviceSay(parts.slice(k).join(". "), done);
+    };
+    const next = () => {
+      if (!live()) return;
+      if (k >= parts.length) return done();
+      a.src = `/api/say?t=${encodeURIComponent(parts[k])}`;
+      a.play().catch(fail);
+    };
+    a.onended = () => { k++; next(); };
+    a.onerror = fail;
+    next();
+  };
+
+  const orderParts = () => pack([
+    (table ? `Bàn ${table}. ` : "") + "Cho tôi",
+    ...cart.flatMap((l) => (dishes[l.i] ? [`${l.q} ${spoken(lineVi(dishes[l.i], l, toppings))}`] : [])),
+    `Tổng ${total} đồng`,
+  ]);
 
   return (
     <div className={"menu" + (full ? " full" : "")} lang={lang}>
@@ -150,6 +228,7 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
         <div>
           <h1 className="stall">{name || "Your stall"}</h1>
           {area && <div className="meta">{area}</div>}
+          {table && <div className="meta tbl">🪑 {L.table(table)}</div>}
         </div>
         <div className="langbar" role="group" aria-label="Language">
           {LANG_KEYS.map((k) => (
@@ -158,13 +237,21 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
             </button>
           ))}
         </div>
+        {dishes.length >= 10 && (
+          <input className="find" type="search" value={find} placeholder={`🔎 ${L.search}`} aria-label={L.search}
+            onChange={(e) => setFind(e.target.value)} />
+        )}
       </div>
 
       <div className="m-list">
         {!dishes.length && <div className="empty">{L.empty}</div>}
+        {!!find.trim() && !dishes.some((d) => [d.vi, d.name?.[lang], d.name?.en].some((x) => x && fold(x).includes(fold(find.trim())))) && (
+          <div className="empty">{L.noMatch}</div>
+        )}
         {dishes.map((d, i) => {
           const done = isTranslated(d);
           const title = done ? d.name![lang] || d.name!.en : d.vi;
+          if (find.trim() && ![d.vi, title, d.name?.en].some((x) => x && fold(x).includes(fold(find.trim())))) return null;
           const desc = d.desc ? d.desc[lang] || d.desc.en : "";
           const q = qtyOf(i);
           const gone = out.has(d.vi);
@@ -190,10 +277,9 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
               <div className="vn" lang="vi">
                 {done && <span>{d.vi}</span>}
                 <button
-                  className="say"
-                  onClick={() => speak(d.vi)}
+                  className={"say" + (saying === "d" + i ? " on" : "")}
+                  onClick={() => say([d.vi], "d" + i)}
                   aria-label={`${L.say}: ${d.vi}`}
-                  title={voice ? undefined : "No Vietnamese voice on this device. Read the guide aloud."}
                 >
                   🔊 {L.say} {d.pron && <i>“{d.pron}”</i>}
                 </button>
@@ -331,6 +417,7 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
       {showOrder && (
         <div className="order" role="dialog" aria-modal="true" aria-label={L.head} lang="vi">
           <h3 lang={lang}>{L.head}</h3>
+          {table && <div className="tno">Bàn {table} <span lang={lang}>· {L.table(table)}</span></div>}
           <div className="big">Cho tôi:</div>
           <ul>
             {cart.map((l, k) => {
@@ -339,12 +426,13 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
               return <li key={k}>{l.q} × {lineVi(d, l, toppings)}</li>;
             })}
           </ul>
-          <div className="tot">Tổng: {vnd(total)}</div>
+          <div className="tot">Tổng: {vnd(total)} <small lang={lang}>{foreign(total, lang, rates[lang])}</small></div>
+          <button className={"btn readout" + (saying === "order" ? " on" : "")} onClick={() => say(orderParts(), "order")} lang={lang}>🔊 {L.readOrder}</button>
           <div className="ono">Mã đơn #{orderNo} <span lang={lang}>· {L.order} #{orderNo}</span></div>
           {pay && total > 0 && (
             showPay ? (
               <div className="paybox" lang={lang}>
-                <QrImage text={vietQr({ bank: pay.bank, acct: pay.acct, amount: total, note: `QUAN ${orderNo}` })} size={220} label={`VietQR ${vnd(total)}`} />
+                <QrImage text={vietQr({ bank: pay.bank, acct: pay.acct, amount: total, note: `QUAN ${table ? `B${table} ` : ""}${orderNo}` })} size={220} label={`VietQR ${vnd(total)}`} />
                 <div className="paywho">
                   <b>{vnd(total)}</b>
                   <span>{bankName(pay.bank)} · {pay.acct}</span>
