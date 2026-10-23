@@ -23,7 +23,7 @@ export default function Header({ settings, departments, announcement }: { settin
   return (
     <>
       {announcement && (
-        <div className="bg-ink px-4 py-2 text-center text-[11px] tracking-[0.16em] text-ivory uppercase">{announcement}</div>
+        <div className="bg-brand px-4 py-2 text-center text-[11px] tracking-[0.16em] text-on-brand uppercase">{announcement}</div>
       )}
       <header className="sticky top-0 z-40 border-b border-line bg-ivory/95 backdrop-blur supports-[backdrop-filter]:bg-ivory/85">
         <div className="container-page grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-4 lg:h-[4.5rem]">

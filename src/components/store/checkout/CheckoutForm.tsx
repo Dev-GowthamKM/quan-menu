@@ -238,7 +238,7 @@ export default function CheckoutForm({ initialQuote, user, addresses, config }: 
         <ol className="flex flex-wrap gap-x-5 gap-y-2 text-[11px] tracking-[0.14em] uppercase" aria-label="Checkout steps">
           {STEPS.map((s, i) => (
             <li key={s} className={cx("flex items-center gap-2", i === step ? "text-ink" : i < step ? "text-taupe" : "text-stone/60")} aria-current={i === step ? "step" : undefined}>
-              <span className={cx("grid size-5 place-items-center rounded-full text-[10px]", i < step ? "bg-ink text-ivory" : i === step ? "border border-ink" : "border border-line")}>
+              <span className={cx("grid size-5 place-items-center rounded-full text-[10px]", i < step ? "bg-brand text-on-brand" : i === step ? "border border-ink" : "border border-line")}>
                 {i < step ? <CheckIcon size={11} /> : i + 1}
               </span>
               {s}
@@ -464,7 +464,7 @@ function OrderSummary({ quote, coupon, setCoupon, onApply, applying }: { quote: 
           <li key={l.variant_id} className="flex gap-3 text-sm">
             <span className="relative aspect-[4/5] w-14 shrink-0 overflow-hidden bg-bone">
               <CatalogImage src={l.image_url} alt="" fill sizes="56px" className="object-cover" />
-              <span className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-ink text-[10px] text-ivory">{l.quantity}</span>
+              <span className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-brand text-[10px] text-on-brand">{l.quantity}</span>
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate">{l.title}</span>

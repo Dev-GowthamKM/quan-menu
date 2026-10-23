@@ -65,7 +65,7 @@ function Pagination({ page, total, basePath, query }: { page: number; total: num
           <Link
             href={href(p)}
             aria-current={p === page ? "page" : undefined}
-            className={p === page ? "grid size-10 place-items-center bg-ink text-sm text-ivory" : "grid size-10 place-items-center border border-line text-sm hover:border-ink"}
+            className={p === page ? "grid size-10 place-items-center bg-brand text-sm text-on-brand" : "grid size-10 place-items-center border border-line text-sm hover:border-ink"}
           >
             {p}
           </Link>

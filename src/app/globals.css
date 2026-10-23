@@ -1,12 +1,17 @@
 @import "tailwindcss";
 
 /*
- * Design tokens. The storefront is editorial: ivory paper, near-black ink, a muted
- * bronze accent, serif display type and generous space. Store settings can override
- * --color-ink, --color-accent and --color-ivory at runtime (see (store)/layout.tsx).
+ * Design tokens. The storefront is editorial: paper-toned backgrounds, serif display
+ * type and generous space. The values here are the admin's neutral look; the storefront
+ * replaces every colour at runtime with the store's theme (src/lib/theme.ts, applied in
+ * (store)/layout.tsx): ink is text, brand fills buttons and bands, on-brand is the text
+ * on them, and paper, bone, sand, line, taupe and stone are derived from those.
  */
 @theme {
   --color-ink: #111111;
+  --color-brand: #111111;
+  --color-on-brand: #f7f3ec;
+  --color-on-brand-soft: #c9c5bf;
   --color-ivory: #f7f3ec;
   --color-paper: #fbf9f5;
   --color-bone: #efe8dc;
@@ -47,8 +52,13 @@
     @apply bg-ivory text-ink font-sans;
   }
   ::selection {
-    background: var(--color-ink);
-    color: var(--color-ivory);
+    background: var(--color-brand);
+    color: var(--color-on-brand);
+  }
+  /* Headings: the store's heading style (italic or upright) and a weight that suits the face. */
+  .font-serif {
+    font-style: var(--heading-style, normal);
+    font-weight: var(--heading-weight, 400);
   }
   :focus-visible {
     outline: 2px solid var(--color-ink);
@@ -96,9 +106,15 @@
   margin-bottom: 0;
 }
 
+/* Keyboard focus stays visible on brand-coloured bands such as the footer. */
+.on-brand :focus-visible {
+  outline-color: var(--color-on-brand);
+}
+
 /* Admin: a quieter, denser look on white. */
 .admin-surface {
   --color-ivory: #f6f6f4;
+  --color-on-brand: #f6f6f4;
 }
 
 @media print {

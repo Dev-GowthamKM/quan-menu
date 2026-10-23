@@ -170,7 +170,7 @@ export default function StoreProvider({ currency, children }: { currency: string
             key={t.id}
             className={cx(
               "pointer-events-auto max-w-md animate-fade-in px-5 py-3 text-sm shadow-lg",
-              t.tone === "error" ? "bg-sale text-white" : "bg-ink text-ivory",
+              t.tone === "error" ? "bg-sale text-white" : "bg-brand text-on-brand",
             )}
             role={t.tone === "error" ? "alert" : "status"}
           >

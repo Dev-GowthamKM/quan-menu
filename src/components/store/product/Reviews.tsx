@@ -37,7 +37,7 @@ export default function Reviews({ productId, reviews, enabled }: { productId: st
                   <li key={d.star} className="flex items-center gap-3 text-xs text-taupe">
                     <span className="w-10">{d.star} star</span>
                     <span className="h-1 flex-1 bg-line">
-                      <span className="block h-1 bg-ink" style={{ width: `${count ? (d.n / count) * 100 : 0}%` }} />
+                      <span className="block h-1 bg-brand" style={{ width: `${count ? (d.n / count) * 100 : 0}%` }} />
                     </span>
                     <span className="w-6 text-right tabular-nums">{d.n}</span>
                   </li>

@@ -68,14 +68,14 @@ export default async function Home() {
       <BrandStrip brands={data.brands} />
       {campaign && <CampaignBand slide={campaign} />}
       <RecentlyViewed title="Recommended for you" mode="recommend" />
-      <section className="mt-20 bg-ink text-ivory md:mt-28">
+      <section className="mt-20 bg-sand md:mt-28">
         <div className="container-page grid gap-8 py-16 md:grid-cols-2 md:items-center md:py-20">
           <div>
-            <p className="label-caps opacity-70">Newsletter</p>
+            <p className="label-caps text-accent">Newsletter</p>
             <h2 className="mt-3 font-serif text-4xl leading-tight md:text-5xl">First to know, first to wear</h2>
-            <p className="mt-4 max-w-md text-sm leading-relaxed opacity-80">Early access to new collections and the sale, and stories from the people who make them.</p>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-taupe">Early access to new collections and the sale, and stories from the people who make them.</p>
           </div>
-          <NewsletterForm source="home" dark />
+          <NewsletterForm source="home" />
         </div>
       </section>
     </>

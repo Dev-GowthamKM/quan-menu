@@ -7,7 +7,8 @@ on delivery. Everything the store sells, every order and every stock count lives
 and every price, tax and discount is worked out on the server.
 
 "Taana" (the warp threads on a loom) is a placeholder name with its own simple mark. The store
-name, logo, colours, fonts, homepage, policies and emails are all set in **Admin › Settings**.
+name, logo, colours, fonts, homepage, policies and emails are all set in **Admin › Settings**,
+where [Appearance](#appearance) restyles the whole store with one-click themes.
 
 ## Contents
 
@@ -24,6 +25,7 @@ name, logo, colours, fonts, homepage, policies and emails are all set in **Admin
 - [WhatsApp updates](#whatsapp-updates)
 - [Reminders](#reminders)
 - [Mobile sign-in](#mobile-sign-in)
+- [Appearance](#appearance)
 - [Email](#email)
 - [Testing](#testing)
 - [Running the store](#running-the-store)
@@ -500,6 +502,25 @@ secret when it talks to a hosted Supabase). With the MSG91 mock (`node
 tests/e2e/support/mock-msg91.mjs`, port 4014) and the settings under [Testing](#testing), codes
 can be read at `http://localhost:4014/__test/messages`.
 
+## Appearance
+
+**Admin › Settings › Appearance** sets the look of the whole storefront:
+
+- **Themes:** six starting points, picked with one click and previewed before saving: wine and
+  gold (the default), indigo and saffron, emerald and brass, rose and copper, black and white,
+  and classic ivory.
+- **Colours:** text; buttons and bands (buttons, the announcement bar, the footer); accent
+  (section labels and highlights); background. Everything else the store paints with (panels,
+  borders, secondary text, the words on buttons) is derived from those four in
+  `src/lib/theme.ts`, keeping every pairing readable to WCAG AA. Accent text is deepened where
+  it needs to be, and the form warns about combinations that would be hard to read.
+- **Typography:** heading and body fonts, and italic headings.
+
+A store set up before `20261023000100_theme.sql` needs that migration (in the browser:
+`npm run db:bundle -- --since 20261022000100`, then run the file it writes in the SQL Editor).
+Until it runs, a store on the original palette already shows the new default look, and the
+Appearance page asks for the update before it saves.
+
 ## Email
 
 Orders, shipping, delivery, cancellations, refunds and return updates send emails from editable
@@ -571,6 +592,11 @@ shopper signing up (name asked once, guest bag kept), a returning customer (a wr
 an email customer adding a number and signing in with it, codes on WhatsApp with the copy-code
 template, and refusals (other countries, staff accounts, unsigned hook calls, the switch off).
 
+**Theme tests (14 unit, 1 Playwright)** cover the colour arithmetic, that every theme keeps text,
+labels, secondary text and the words on buttons readable on every surface, the look shown before
+the theme migration runs, and an owner switching themes in the admin: the saved settings, the
+storefront's colours and its italic or upright headings.
+
 **Acceptance tests (7, Playwright)** follow the brief:
 
 1. An admin creates a product with an uploaded image and size/colour variants and publishes it;
@@ -592,8 +618,8 @@ checkout) and 14 admin pages for WCAG 2.1 A/AA problems and fail on anything ser
 the mobile sign-in tests run the same check on the number and code forms and the settings tab.
 Automated checks don't replace testing with a keyboard and a screen reader.
 
-Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 23/23,
-integration 72/72, Playwright 22/22 against the production build (`next build`), and every page
+Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 37/37,
+integration 72/72, Playwright 23/23 against the production build (`next build`), and every page
 checked at 390 px wide without horizontal scrolling.
 
 ## Running the store

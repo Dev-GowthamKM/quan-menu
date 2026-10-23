@@ -29,13 +29,13 @@ export default function HeaderActions() {
       <button type="button" onClick={openCart} className="relative grid size-10 place-items-center hover:text-accent" aria-label={`Bag, ${cartCount} items`}>
         <BagIcon />
         {cartCount > 0 && (
-          <span className="absolute top-1 right-0.5 grid min-w-4 place-items-center rounded-full bg-ink px-1 text-[10px] leading-4 text-ivory tabular-nums">
+          <span className="absolute top-1 right-0.5 grid min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] leading-4 text-on-brand tabular-nums">
             {cartCount}
           </span>
         )}
       </button>
       {session?.role && (
-        <Link href="/admin" className="ml-2 hidden border border-ink px-2.5 py-1 text-[11px] tracking-wider uppercase hover:bg-ink hover:text-ivory xl:inline-block">
+        <Link href="/admin" className="ml-2 hidden border border-ink px-2.5 py-1 text-[11px] tracking-wider uppercase hover:border-brand hover:bg-brand hover:text-on-brand xl:inline-block">
           Admin
         </Link>
       )}

@@ -71,7 +71,7 @@ export default function OrderView({ detail, accessKey, justPlaced, stripeSession
         <ol className="mt-10 grid grid-cols-5 gap-2" aria-label="Order progress">
           {STAGES.map((s, i) => (
             <li key={s.key} className="text-center">
-              <div className={cx("h-1", i <= stage ? "bg-ink" : "bg-line")} />
+              <div className={cx("h-1", i <= stage ? "bg-brand" : "bg-line")} />
               <p className={cx("mt-2 text-[11px] tracking-[0.1em] uppercase", i <= stage ? "text-ink" : "text-stone")} aria-current={i === stage ? "step" : undefined}>
                 {s.label}
               </p>
@@ -159,7 +159,7 @@ export default function OrderView({ detail, accessKey, justPlaced, stripeSession
               <ol className="mt-4 grid gap-4 border-l border-line pl-5">
                 {[...detail.events].reverse().map((e, n) => (
                   <li key={n} className="relative text-sm">
-                    <span className="absolute top-1.5 -left-[1.4rem] size-2 rounded-full bg-ink" aria-hidden />
+                    <span className="absolute top-1.5 -left-[1.4rem] size-2 rounded-full bg-brand" aria-hidden />
                     <p>{e.message}</p>
                     <p className="text-xs text-stone">{formatDateTime(e.created_at)}</p>
                   </li>

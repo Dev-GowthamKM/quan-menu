@@ -18,7 +18,7 @@ export default function AccountNav() {
       {LINKS.map((l) => {
         const active = l.href === "/account" ? pathname === "/account" : pathname.startsWith(l.href);
         return (
-          <Link key={l.href} href={l.href} aria-current={active ? "page" : undefined} className={cx("shrink-0 px-3 py-2 text-sm whitespace-nowrap", active ? "bg-ink text-ivory" : "hover:bg-bone")}>
+          <Link key={l.href} href={l.href} aria-current={active ? "page" : undefined} className={cx("shrink-0 px-3 py-2 text-sm whitespace-nowrap", active ? "bg-brand text-on-brand" : "hover:bg-bone")}>
             {l.label}
           </Link>
         );

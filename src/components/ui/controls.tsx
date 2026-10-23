@@ -13,8 +13,8 @@ type Size = "sm" | "md" | "lg";
 const base =
   "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2";
 const variants: Record<Variant, string> = {
-  primary: "bg-ink text-ivory hover:bg-ink/85 border border-ink",
-  secondary: "border border-ink text-ink bg-transparent hover:bg-ink hover:text-ivory",
+  primary: "bg-brand text-on-brand hover:bg-brand/85 border border-brand",
+  secondary: "border border-ink text-ink bg-transparent hover:border-brand hover:bg-brand hover:text-on-brand",
   ghost: "text-ink hover:bg-ink/5 border border-transparent",
   danger: "bg-sale text-white hover:bg-sale/90 border border-sale",
   link: "text-ink underline underline-offset-4 decoration-ink/30 hover:decoration-ink px-0! h-auto!",
@@ -130,7 +130,7 @@ export function Field({
 export function Checkbox({ label, className, ...rest }: ComponentProps<"input"> & { label: ReactNode }) {
   return (
     <label className={cx("inline-flex cursor-pointer items-center gap-2.5 text-sm", className)}>
-      <input type="checkbox" className="size-4 shrink-0 accent-ink" {...rest} />
+      <input type="checkbox" className="size-4 shrink-0 accent-brand" {...rest} />
       <span>{label}</span>
     </label>
   );
@@ -138,7 +138,7 @@ export function Checkbox({ label, className, ...rest }: ComponentProps<"input"> 
 
 const tones = {
   neutral: "bg-bone text-taupe",
-  dark: "bg-ink text-ivory",
+  dark: "bg-brand text-on-brand",
   green: "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200",
   amber: "bg-amber-50 text-amber-800 ring-1 ring-amber-200",
   red: "bg-red-50 text-red-800 ring-1 ring-red-200",

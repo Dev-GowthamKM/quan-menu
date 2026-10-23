@@ -57,7 +57,7 @@ export default function Gallery({ images, title, color }: { images: PageImage[];
         {ordered.length > 1 && (
           <div className="mt-3 flex justify-center gap-1.5" aria-hidden>
             {ordered.map((img, i) => (
-              <span key={img.id} className={cx("h-1 rounded-full transition-all", i === active ? "w-6 bg-ink" : "w-2 bg-ink/25")} />
+              <span key={img.id} className={cx("h-1 rounded-full transition-all", i === active ? "w-6 bg-brand" : "w-2 bg-ink/25")} />
             ))}
           </div>
         )}

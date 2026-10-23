@@ -114,7 +114,7 @@ export default function CartView({ initial, restored }: { initial: CartQuote; re
                 {freeLeft > 0 ? <>You&apos;re {formatMoney(freeLeft, c)} away from free delivery.</> : <span className="text-ok">You&apos;ve unlocked free delivery.</span>}
               </p>
               <div className="mt-2 h-1 bg-line" aria-hidden>
-                <div className="h-1 bg-ink transition-all" style={{ width: `${Math.min(100, ((threshold - freeLeft) / threshold) * 100)}%` }} />
+                <div className="h-1 bg-brand transition-all" style={{ width: `${Math.min(100, ((threshold - freeLeft) / threshold) * 100)}%` }} />
               </div>
             </div>
           )}

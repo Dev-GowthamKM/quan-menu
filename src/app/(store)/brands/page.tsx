@@ -27,7 +27,7 @@ export default async function BrandsPage() {
       <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {brands.map((b) => (
           <Link key={b.id} href={`/brands/${b.slug}`} className="group block">
-            <div className="relative aspect-[16/10] overflow-hidden bg-ink">
+            <div className="relative aspect-[16/10] overflow-hidden bg-brand">
               {b.banner_url && (
                 <CatalogImage src={b.banner_url} alt="" fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover opacity-75 transition duration-700 group-hover:scale-105 group-hover:opacity-65" />
               )}

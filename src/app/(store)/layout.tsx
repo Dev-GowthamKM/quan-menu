@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Footer from "@/components/store/Footer";
 import Header from "@/components/store/Header";
 import StoreProvider from "@/components/store/StoreProvider";
 import { getDepartments } from "@/lib/catalog";
 import { getSettings, homepageOf } from "@/lib/settings";
+import { HEADING_WEIGHT, themeOf, themeTokens, type HeadingFont } from "@/lib/theme";
 import { BODY_FONTS, HEADING_FONTS } from "../fonts";
 import SetupNotice from "@/components/store/SetupNotice";
 
@@ -17,21 +18,28 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+export async function generateViewport(): Promise<Viewport> {
+  const s = await getSettings();
+  return { themeColor: s.background_color };
+}
+
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const [settings, departments] = await Promise.all([getSettings(), getDepartments()]);
   const home = homepageOf(settings);
-  const heading = HEADING_FONTS[settings.heading_font as keyof typeof HEADING_FONTS]?.css ?? HEADING_FONTS.cormorant.css;
+  const { colors, italic } = themeOf(settings);
+  const headingKey = (settings.heading_font in HEADING_FONTS ? settings.heading_font : "cormorant") as HeadingFont;
+  const heading = HEADING_FONTS[headingKey];
   const body = BODY_FONTS[settings.body_font as keyof typeof BODY_FONTS]?.css ?? BODY_FONTS.jost.css;
-  // Custom properties resolve where they are declared, so the font stacks themselves are
-  // redeclared here (setting only --font-heading would not reach .font-serif).
+  // Custom properties resolve where they are declared, so every colour and the font stacks
+  // themselves are declared here (setting only --font-heading would not reach .font-serif).
   const theme = {
-    "--color-ink": settings.primary_color,
-    "--color-accent": settings.accent_color,
-    "--color-ivory": settings.background_color,
-    "--font-heading": heading,
+    ...themeTokens(colors),
+    "--font-heading": heading.css,
     "--font-body": body,
-    "--font-serif": `${heading}, Georgia, "Times New Roman", serif`,
+    "--font-serif": `${heading.css}, Georgia, "Times New Roman", serif`,
     "--font-sans": `${body}, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`,
+    "--heading-style": italic ? "italic" : "normal",
+    "--heading-weight": String(HEADING_WEIGHT[headingKey]),
   } as React.CSSProperties;
 
   return (

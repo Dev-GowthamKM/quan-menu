@@ -4,7 +4,8 @@ import { useState, useTransition, type ReactNode } from "react";
 import { deleteSampleData, saveSettings, type SettingsSection } from "@/server/admin/store";
 import { formatMoney, fromMinor, toMinor } from "@/lib/money";
 import type { ContactInfo, FaqItem, HeroSlide, Homepage, Policies, Promo, SocialLinks, StoreSettings } from "@/lib/types";
-import { Button, cx } from "../../ui/controls";
+import { HEADING_WEIGHT, isHexColor, THEME_PRESETS, themeOf, themeTokens, themeWarnings, type BodyFont, type HeadingFont, type ThemePreset } from "@/lib/theme";
+import { Button, buttonClass, cx, Notice } from "../../ui/controls";
 import { CloseIcon, PlusIcon } from "../../ui/icons";
 import { SelectField, TextArea, TextField, Toggle } from "../fields";
 import { SingleImageField } from "../ImageManager";
@@ -86,53 +87,176 @@ export function GeneralForm({ s }: { s: StoreSettings }) {
   );
 }
 
-const HEADING = { cormorant: "Cormorant Garamond", playfair: "Playfair Display", bodoni: "Bodoni Moda", "dm-serif": "DM Serif Display" };
-const BODY = { jost: "Jost", inter: "Inter", manrope: "Manrope", "dm-sans": "DM Sans" };
+const HEADING: Record<HeadingFont, string> = { cormorant: "Cormorant Garamond", playfair: "Playfair Display", bodoni: "Bodoni Moda", "dm-serif": "DM Serif Display" };
+const BODY: Record<BodyFont, string> = { jost: "Jost", inter: "Inter", manrope: "Manrope", "dm-sans": "DM Sans" };
 const FONT_VAR: Record<string, string> = {
   cormorant: "var(--font-cormorant)", playfair: "var(--font-playfair)", bodoni: "var(--font-bodoni)", "dm-serif": "var(--font-dm-serif)",
   jost: "var(--font-jost)", inter: "var(--font-inter)", manrope: "var(--font-manrope)", "dm-sans": "var(--font-dm-sans)",
 };
 
+interface Look {
+  primary_color: string;
+  brand_color: string;
+  accent_color: string;
+  background_color: string;
+  heading_font: HeadingFont;
+  heading_italic: boolean;
+  body_font: BodyFont;
+}
+
+const lookOf = (p: ThemePreset): Look => ({
+  primary_color: p.colors.text,
+  brand_color: p.colors.brand,
+  accent_color: p.colors.accent,
+  background_color: p.colors.background,
+  heading_font: p.heading_font,
+  heading_italic: p.heading_italic,
+  body_font: p.body_font,
+});
+
+const sameLook = (a: Look, b: Look) =>
+  (Object.keys(a) as (keyof Look)[]).every((k) => String(a[k]).toLowerCase() === String(b[k]).toLowerCase());
+
 export function AppearanceForm({ s }: { s: StoreSettings }) {
   const { pending, error, save } = useSave("appearance");
-  const [v, setV] = useState({ primary_color: s.primary_color, accent_color: s.accent_color, background_color: s.background_color, heading_font: s.heading_font, body_font: s.body_font });
-  const color = (k: "primary_color" | "accent_color" | "background_color", label: string, hint: string) => (
-    <div className="grid gap-1.5">
+  // brand_color and heading_italic arrive with the theme database update; until then the
+  // form starts from what the store shows (themeOf).
+  const updated = s.brand_color != null && s.heading_italic != null;
+  const current = themeOf(s);
+  const [v, setV] = useState<Look>({
+    primary_color: current.colors.text,
+    brand_color: current.colors.brand,
+    accent_color: current.colors.accent,
+    background_color: current.colors.background,
+    heading_font: s.heading_font as HeadingFont,
+    heading_italic: current.italic,
+    body_font: s.body_font as BodyFont,
+  });
+  const colors = { text: v.primary_color, brand: v.brand_color, accent: v.accent_color, background: v.background_color };
+  const valid = Object.values(colors).every(isHexColor);
+  const warnings = valid ? themeWarnings(colors) : [];
+  const accentShown = valid ? themeTokens(colors)["--color-accent"] : v.accent_color;
+  const color = (k: "primary_color" | "brand_color" | "accent_color" | "background_color", label: string, hint: string) => (
+    <div className="grid content-start gap-1.5">
       <span className="text-xs font-medium text-taupe">{label}</span>
       <div className="flex items-center gap-2">
-        <input type="color" value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} aria-label={label} className="size-9 cursor-pointer rounded border border-black/15 bg-white p-0.5" />
-        <input value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} aria-label={`${label} hex`} className={cx(adminInput, "w-28 font-mono")} maxLength={7} />
+        <input type="color" value={isHexColor(v[k]) ? v[k] : "#000000"} onChange={(e) => setV({ ...v, [k]: e.target.value })} aria-label={label} className="size-9 cursor-pointer rounded border border-black/15 bg-white p-0.5" />
+        <input value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value.trim() })} aria-label={`${label} hex`} className={cx(adminInput, "w-28 font-mono")} maxLength={7} />
       </div>
       <span className="text-xs text-stone">{hint}</span>
     </div>
   );
   return (
-    <Form onSubmit={() => save(v)} pending={pending} error={error}>
+    <Form onSubmit={() => save(v)} pending={pending} error={error} note={!updated ? "Saving needs the database update below." : undefined}>
+      {!updated && (
+        <Notice tone="warning">
+          One more step before these can be saved: run the latest database update (the file <code className="font-mono text-xs">update-after-20261022000100.sql</code>) in Supabase › SQL Editor. Until then the store shows italic headings with your current colours.
+        </Notice>
+      )}
+      <Card title="Themes">
+        <p className="mb-3 text-sm text-taupe">Start from a theme, then adjust anything below. Nothing changes on the store until you save.</p>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {THEME_PRESETS.map((p) => {
+            const look = lookOf(p);
+            const active = sameLook(look, v);
+            return (
+              <button
+                key={p.key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setV(look)}
+                className={cx("rounded-md border p-2.5 text-left transition", active ? "border-ink ring-1 ring-ink" : "border-black/10 hover:border-black/30")}
+              >
+                <span className="flex h-16 overflow-hidden rounded-sm border border-black/5" style={{ background: p.colors.background }}>
+                  <span className="w-[30%]" style={{ background: p.colors.brand }} />
+                  <span
+                    className="grid flex-1 place-items-center text-3xl leading-none"
+                    style={{ color: p.colors.text, fontFamily: FONT_VAR[p.heading_font], fontStyle: p.heading_italic ? "italic" : "normal", fontWeight: HEADING_WEIGHT[p.heading_font] }}
+                  >
+                    Aa
+                  </span>
+                  <span className="w-2.5" style={{ background: p.colors.accent }} />
+                </span>
+                <span className="mt-2 block text-sm font-medium">{p.name}</span>
+                <span className="block text-xs text-stone">{HEADING[p.heading_font]}{p.heading_italic ? " italic" : ""} · {BODY[p.body_font]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </Card>
       <Card title="Colours">
-        <div className="grid gap-5 md:grid-cols-3">
-          {color("primary_color", "Text and buttons", "Keep it dark for readable text.")}
-          {color("accent_color", "Accent", "Small highlights and links.")}
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          {color("primary_color", "Text", "Words and outlines. Keep it dark.")}
+          {color("brand_color", "Buttons and bands", "Buttons, the announcement bar and the footer.")}
+          {color("accent_color", "Accent", "Section labels and highlights.")}
           {color("background_color", "Background", "A light paper tone suits photography.")}
         </div>
+        {valid && accentShown !== v.accent_color.toLowerCase() && (
+          <p className="mt-4 flex items-center gap-2 text-xs text-stone">
+            <span className="size-3 shrink-0 rounded-sm" style={{ background: accentShown }} aria-hidden />
+            Accent text is shown a little deeper ({accentShown}) so it stays readable on the background.
+          </p>
+        )}
+        {!valid && <p className="mt-4 text-xs text-sale">Colours are hex codes like #6b1d2e.</p>}
+        {warnings.length > 0 && (
+          <Notice tone="warning" className="mt-4">
+            {warnings.map((w) => <span key={w} className="block">{w}</span>)}
+          </Notice>
+        )}
       </Card>
       <Card title="Typography">
         <div className="grid gap-4 md:grid-cols-2">
-          <SelectField label="Headings" value={v.heading_font} onChange={(e) => setV({ ...v, heading_font: e.target.value })}>
+          <SelectField label="Headings" value={v.heading_font} onChange={(e) => setV({ ...v, heading_font: e.target.value as HeadingFont })}>
             {Object.entries(HEADING).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
           </SelectField>
-          <SelectField label="Body text" value={v.body_font} onChange={(e) => setV({ ...v, body_font: e.target.value })}>
+          <SelectField label="Body text" value={v.body_font} onChange={(e) => setV({ ...v, body_font: e.target.value as BodyFont })}>
             {Object.entries(BODY).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
           </SelectField>
+          <Toggle label="Italic headings" hint="Page titles, section headings and banners in the italic of the heading font." checked={v.heading_italic} onChange={(heading_italic) => setV({ ...v, heading_italic })} />
         </div>
       </Card>
       <Card title="Preview">
-        <div className="rounded-md p-6" style={{ background: v.background_color, color: v.primary_color }}>
-          <p className="text-3xl" style={{ fontFamily: FONT_VAR[v.heading_font] }}>The Autumn Edit</p>
-          <p className="mt-2 max-w-md text-sm" style={{ fontFamily: FONT_VAR[v.body_font] }}>Wool, cashmere and soft tailoring for cooler days. <span style={{ color: v.accent_color }} className="underline">Shop the collection</span></p>
-          <span className="mt-4 inline-block px-5 py-2.5 text-xs tracking-widest uppercase" style={{ background: v.primary_color, color: v.background_color, fontFamily: FONT_VAR[v.body_font] }}>Add to bag</span>
-        </div>
+        <ThemePreview look={v} storeName={s.store_name} />
       </Card>
     </Form>
+  );
+}
+
+/** A small storefront in the chosen look, built from the same tokens as the real one. */
+function ThemePreview({ look, storeName }: { look: Look; storeName: string }) {
+  const colors = { text: look.primary_color, brand: look.brand_color, accent: look.accent_color, background: look.background_color };
+  if (!Object.values(colors).every(isHexColor)) return <p className="text-sm text-stone">Enter every colour as a hex code to see the preview.</p>;
+  const style = {
+    ...themeTokens(colors),
+    "--font-serif": `${FONT_VAR[look.heading_font]}, Georgia, serif`,
+    "--font-sans": `${FONT_VAR[look.body_font]}, ui-sans-serif, system-ui, sans-serif`,
+    "--heading-style": look.heading_italic ? "italic" : "normal",
+    "--heading-weight": String(HEADING_WEIGHT[look.heading_font]),
+  } as React.CSSProperties;
+  return (
+    <div style={style} className="overflow-hidden rounded-md border border-black/10 bg-ivory font-sans text-ink" aria-label="Preview of the store">
+      <p className="bg-brand px-4 py-1.5 text-center text-[10px] tracking-[0.16em] text-on-brand uppercase">Free delivery on orders over ₹2,999</p>
+      <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-3">
+        <span className="font-serif text-xl leading-none tracking-[0.28em] uppercase">{storeName}</span>
+        <span className="hidden text-[11px] tracking-[0.12em] uppercase sm:inline">New in · Women · Men · <span className="text-sale">Sale</span></span>
+      </div>
+      <div className="grid sm:grid-cols-[1fr_10rem]">
+        <div className="bg-bone px-6 py-8">
+          <p className="label-caps text-accent">The autumn edit</p>
+          <p className="mt-3 font-serif text-4xl leading-none">The quiet season</p>
+          <p className="mt-3 max-w-xs text-sm leading-relaxed text-taupe">Wool, cashmere and soft tailoring for cooler days.</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className={buttonClass("primary", "sm")}>Add to bag</span>
+            <span className={buttonClass("secondary", "sm")}>Explore</span>
+          </div>
+        </div>
+        <div className="hidden bg-sand sm:block" aria-hidden />
+      </div>
+      <div className="grid gap-1 bg-brand px-6 py-5 text-on-brand">
+        <p className="font-serif text-xl">Join the {storeName} list</p>
+        <p className="text-xs text-on-brand-soft">The footer: links, contact details and the newsletter.</p>
+      </div>
+    </div>
   );
 }
 

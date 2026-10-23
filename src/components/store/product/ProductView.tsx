@@ -208,7 +208,7 @@ export default function ProductView({ product, currency, preview, stockAlerts }:
                     }}
                     className={cx(
                       "relative h-11 border text-sm transition",
-                      size === s ? "border-ink bg-ink text-ivory" : "border-line bg-paper hover:border-ink",
+                      size === s ? "border-brand bg-brand text-on-brand" : "border-line bg-paper hover:border-ink",
                       out && "cursor-not-allowed text-stone/60 line-through hover:border-line",
                     )}
                   >

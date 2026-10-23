@@ -12,7 +12,7 @@ export function SectionHeader({ eyebrow, title, href, linkLabel = "View all", cl
   return (
     <div className={cx("mb-8 flex items-end justify-between gap-6", className)}>
       <div>
-        {eyebrow && <p className="label-caps text-stone">{eyebrow}</p>}
+        {eyebrow && <p className="label-caps text-accent">{eyebrow}</p>}
         <h2 className="mt-2 font-serif text-3xl leading-tight md:text-4xl">{title}</h2>
       </div>
       {href && (
@@ -28,7 +28,7 @@ export function Hero({ slide, storeName, tagline }: { slide?: HeroSlide; storeNa
   if (!slide) {
     return (
       <section className="container-page py-24 text-center md:py-36">
-        <p className="label-caps text-stone">New season</p>
+        <p className="label-caps text-accent">New season</p>
         <h1 className="mx-auto mt-6 max-w-4xl font-serif text-5xl leading-[1.05] md:text-7xl">{tagline || storeName}</h1>
         <div className="mt-10 flex justify-center gap-3">
           <Link href="/shop?sort=newest" className={buttonClass("primary", "lg")}>Shop new arrivals</Link>
@@ -42,9 +42,9 @@ export function Hero({ slide, storeName, tagline }: { slide?: HeroSlide; storeNa
         <div className="relative order-1 aspect-[4/5] overflow-hidden bg-bone md:order-2 md:aspect-auto md:min-h-[min(88vh,56rem)]">
           <CatalogImage src={slide.image_url} alt={slide.image_alt || ""} fill priority sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
         </div>
-        <div className="order-2 flex items-center bg-ivory md:order-1">
+        <div className="order-2 flex items-center bg-bone md:order-1">
           <div className="w-full px-6 py-14 md:px-12 lg:px-20 xl:px-28">
-            {slide.eyebrow && <p className="label-caps animate-fade-in text-stone">{slide.eyebrow}</p>}
+            {slide.eyebrow && <p className="label-caps animate-fade-in text-accent">{slide.eyebrow}</p>}
             <h1 className="mt-5 animate-fade-in font-serif text-5xl leading-[1.02] [animation-delay:80ms] md:text-6xl xl:text-[5.5rem]">{slide.heading}</h1>
             {slide.subheading && <p className="mt-6 max-w-md animate-fade-in leading-relaxed text-taupe [animation-delay:160ms]">{slide.subheading}</p>}
             <div className="mt-10 flex animate-fade-in flex-wrap gap-3 [animation-delay:240ms]">
@@ -179,7 +179,7 @@ export function BrandStrip({ brands }: { brands: Brand[] }) {
       <SectionHeader eyebrow="Featured brands" title="The makers" href="/brands" linkLabel="All brands" />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-5">
         {brands.slice(0, 5).map((b) => (
-          <Link key={b.id} href={`/brands/${b.slug}`} className="group relative block aspect-[4/5] overflow-hidden bg-ink">
+          <Link key={b.id} href={`/brands/${b.slug}`} className="group relative block aspect-[4/5] overflow-hidden bg-brand">
             <CatalogImage src={b.banner_url} alt="" fill sizes="(min-width: 1024px) 20vw, (min-width: 768px) 33vw, 50vw" className="object-cover opacity-70 transition duration-700 ease-out group-hover:scale-105 group-hover:opacity-60" />
             <div className="absolute inset-0 grid place-items-center p-4 text-center">
               <span className="font-serif text-2xl text-white md:text-3xl">{b.name}</span>
@@ -194,12 +194,12 @@ export function BrandStrip({ brands }: { brands: Brand[] }) {
 export function CampaignBand({ slide }: { slide: HeroSlide }) {
   return (
     <section className="container-page mt-20 md:mt-28">
-      <div className="grid items-center gap-8 bg-paper md:grid-cols-2 md:gap-0">
+      <div className="grid items-center gap-8 bg-bone md:grid-cols-2 md:gap-0">
         <div className="relative aspect-[4/5] overflow-hidden bg-bone">
           <CatalogImage src={slide.image_url} alt={slide.image_alt || ""} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
         </div>
         <div className="px-6 pb-10 md:px-16 md:py-16">
-          {slide.eyebrow && <p className="label-caps text-stone">{slide.eyebrow}</p>}
+          {slide.eyebrow && <p className="label-caps text-accent">{slide.eyebrow}</p>}
           <h2 className="mt-4 font-serif text-4xl leading-tight md:text-6xl">{slide.heading}</h2>
           {slide.subheading && <p className="mt-5 max-w-md leading-relaxed text-taupe">{slide.subheading}</p>}
           {safeHref(slide.cta_href) && <Link href={safeHref(slide.cta_href)!} className={buttonClass("secondary", "lg", "mt-8")}>{slide.cta_label || "Discover"}</Link>}

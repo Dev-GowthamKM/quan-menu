@@ -117,7 +117,7 @@ export function FilterPanel({ facets, hide = [], categories }: Omit<Props, "tota
                 onClick={() => toggle("size", s.value)}
                 className={cx(
                   "min-w-11 border px-2.5 py-2 text-xs transition",
-                  sizes.includes(s.value) ? "border-ink bg-ink text-ivory" : "border-line hover:border-ink",
+                  sizes.includes(s.value) ? "border-brand bg-brand text-on-brand" : "border-line hover:border-ink",
                 )}
               >
                 {s.value}
@@ -178,7 +178,7 @@ export function FilterPanel({ facets, hide = [], categories }: Omit<Props, "tota
           <span className="text-stone">–</span>
           <label className="sr-only" htmlFor="price-max">Maximum price</label>
           <input id="price-max" inputMode="numeric" placeholder={facets?.price.max ? `₹${Math.ceil(facets.price.max / 100)}` : "Max"} value={max} onChange={(e) => setMax(e.target.value)} className="h-9 w-full min-w-0 border border-line bg-white px-2 text-sm" />
-          <button type="submit" className="h-9 shrink-0 border border-ink px-3 text-xs hover:bg-ink hover:text-ivory">Go</button>
+          <button type="submit" className="h-9 shrink-0 border border-ink px-3 text-xs hover:border-brand hover:bg-brand hover:text-on-brand">Go</button>
         </form>
       </Section>
 

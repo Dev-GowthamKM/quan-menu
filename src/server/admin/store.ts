@@ -5,6 +5,7 @@ import { AccessError, requireRole } from "@/lib/auth";
 import { fail, friendlyError, ok, type ActionResult } from "@/lib/errors";
 import { authProviderStatus, msg91Configured } from "@/lib/login-codes";
 import { SMS_HOOK_SECRET } from "@/lib/server-env";
+import { BODY_FONT_KEYS, HEADING_FONT_KEYS } from "@/lib/theme";
 import type { AppRole } from "@/lib/types";
 import { whatsappConfigured } from "@/lib/whatsapp";
 import { WHATSAPP_EVENTS, type WhatsAppEvent } from "@/lib/whatsapp-format";
@@ -142,10 +143,12 @@ const SECTIONS = {
   }),
   appearance: z.object({
     primary_color: hex,
+    brand_color: hex,
     accent_color: hex,
     background_color: hex,
-    heading_font: z.enum(["cormorant", "playfair", "bodoni", "dm-serif"]),
-    body_font: z.enum(["jost", "inter", "manrope", "dm-sans"]),
+    heading_font: z.enum(HEADING_FONT_KEYS),
+    heading_italic: z.boolean(),
+    body_font: z.enum(BODY_FONT_KEYS),
   }),
   homepage: z.object({
     homepage: z.object({
