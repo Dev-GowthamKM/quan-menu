@@ -259,6 +259,18 @@ const en = {
   mapsHint: "In Google Maps, open your stall, tap Share and paste the link here. Customers get a button to review you.",
   mapsBad: "That isn't a Google Maps link. Use Share in Google Maps and paste it here.",
 
+  // Setup checklist and preview notes (only the vendor sees these)
+  todoTitle: "To give customers every feature:",
+  todoPay: "💳 Add a bank account: customers scan a QR to pay the exact total",
+  todoMaps: "⭐ Add your Google Maps link: customers get a button to review you",
+  todoOwner: "🔑 Make the owner link: the owner marks sold out and changes prices",
+  hintPay: "The bank transfer (VietQR) button appears here once you add a bank account in step 3. Only you see this note.",
+  hintReview: "A “Review us on Google Maps” button appears here once you add your Google Maps link in step 3. Only you see this note.",
+  payNeedBank: "Choose the bank for this account.",
+  payNeedAcct: "Type the account number to turn on bank transfer.",
+  payOn: "✓ Customers will see a transfer QR with the exact total when they order. Save the menu to apply.",
+  mapsOn: "✓ Customers will see a review button. Save the menu to apply.",
+
   // Owner link
   ownerTitle: "Link for the stall owner",
   ownerHint: "The owner opens this on their phone to mark dishes sold out and change prices, with no account. Anyone with the link can do this, so only send it to the owner.",
@@ -574,6 +586,17 @@ const vi: Strings = {
   mapsTitle: "Link Google Maps của quán",
   mapsHint: "Trong Google Maps, mở quán của bạn, bấm Chia sẻ rồi dán link vào đây. Khách sẽ có nút đánh giá quán.",
   mapsBad: "Đây không phải link Google Maps. Hãy bấm Chia sẻ trong Google Maps rồi dán vào đây.",
+
+  todoTitle: "Để khách dùng hết tính năng:",
+  todoPay: "💳 Thêm tài khoản ngân hàng: khách quét mã trả đúng số tiền",
+  todoMaps: "⭐ Thêm link Google Maps: khách có nút đánh giá quán",
+  todoOwner: "🔑 Tạo link cho chủ quán: chủ quán tự báo hết món, đổi giá",
+  hintPay: "Nút chuyển khoản (VietQR) sẽ hiện ở đây khi bạn thêm tài khoản ngân hàng ở bước 3. Chỉ bạn thấy dòng này.",
+  hintReview: "Nút “Đánh giá trên Google Maps” sẽ hiện ở đây khi bạn thêm link Google Maps ở bước 3. Chỉ bạn thấy dòng này.",
+  payNeedBank: "Hãy chọn ngân hàng của tài khoản này.",
+  payNeedAcct: "Nhập số tài khoản để bật chuyển khoản.",
+  payOn: "✓ Khách gọi món sẽ thấy mã chuyển khoản đúng số tiền. Bấm Lưu thực đơn để áp dụng.",
+  mapsOn: "✓ Khách sẽ thấy nút đánh giá quán. Bấm Lưu thực đơn để áp dụng.",
 
   ownerTitle: "Link cho chủ quán",
   ownerHint: "Chủ quán mở link này trên điện thoại để tự báo hết món và đổi giá, không cần tài khoản. Ai có link đều sửa được, nên chỉ gửi cho chủ quán.",

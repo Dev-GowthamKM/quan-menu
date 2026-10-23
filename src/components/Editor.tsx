@@ -76,7 +76,7 @@ const key = (vi: string) => vi.trim().toLowerCase();
 
 export default function Editor({ initial, demo, ai, siteUrl, email, rates, views, stalls = [], ownerKey = null, schemaOld }: Props) {
   const router = useRouter();
-  const { t } = useUi();
+  const { t, lang: uiLang } = useUi();
   const start: MenuData = initial ?? { name: "", area: "", slug: "", published: false, dishes: [] };
   const [stallId, setStallId] = useState<string | null>(start.id ?? null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(start.updatedAt ?? null);
@@ -86,6 +86,8 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
   const [todayMsg, setTodayMsg] = useState("");
   const [stale, setStale] = useState(false);
   const soldReq = useRef(0);
+  // What the saved menu offers customers, for the setup checklist (unsaved edits don't count yet).
+  const [live, setLive] = useState({ pay: !!cleanPay(start.pay), maps: !!cleanMaps(start.maps), owner: !!ownerKey });
   const [name, setName] = useState(start.name);
   const [area, setArea] = useState(start.area);
   const [slug, setSlug] = useState(start.slug);
@@ -379,6 +381,7 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
         setSavedSlug(r.slug!);
         setSlug(r.slug!);
         setUpdatedAt(r.updatedAt ?? null);
+        setLive((l) => ({ ...l, pay: !!cleanPay(pay), maps: !!cleanMaps(maps) }));
         setDirty(false);
         const now = new Set(clean.flatMap((d) => d.media ?? []).map((m) => m.url));
         const gone = [...savedMedia.current].filter((u) => !now.has(u) && u.startsWith(MEDIA_PREFIX)).map((u) => u.slice(MEDIA_PREFIX.length));
@@ -405,6 +408,13 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
       setBusy("");
     }
   }
+
+  /** Scrolls a setup field into view and puts the cursor in it. */
+  const goTo = (id: string) => {
+    const el = document.getElementById(id);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => el?.focus({ preventScroll: true }), 350);
+  };
 
   /** Sold out today, or back on: saved at once and shown to customers straight away. */
   async function toggleSold(vi: string) {
@@ -483,6 +493,14 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
                   </div>
                 </div>
                 {todayMsg && <p className="status err" aria-live="polite">{todayMsg}</p>}
+                {(!live.pay || !live.maps || !live.owner) && (
+                  <div className="todo">
+                    <span className="f">{t.todoTitle}</span>
+                    {!live.pay && <button type="button" onClick={() => goTo("bank-pick")}>{t.todoPay}</button>}
+                    {!live.maps && <button type="button" onClick={() => goTo("maps-link")}>{t.todoMaps}</button>}
+                    {!live.owner && <button type="button" onClick={() => goTo("owner-make")}>{t.todoOwner}</button>}
+                  </div>
+                )}
               </section>
             )}
 
@@ -661,7 +679,7 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
                 <p className="status">{t.saveFirst}</p>
               )}
               {savedSlug && liveSlug !== savedSlug && !demo && <p className="status err">{t.slugChanged}</p>}
-              {!demo && stallId && savedSlug && <OwnerLink stallId={stallId} base={base} initial={ownerKey} />}
+              {!demo && stallId && savedSlug && <OwnerLink stallId={stallId} base={base} initial={ownerKey} onToken={(tok) => setLive((l) => ({ ...l, owner: !!tok }))} />}
             </section>
           </div>
 
@@ -669,7 +687,7 @@ export default function Editor({ initial, demo, ai, siteUrl, email, rates, views
             <div className="phone-cap"><span>{t.customersSee}</span><span>{t.dishCount(dishes.length)}</span></div>
             <div className="phone">
               <MenuView name={name} area={area} dishes={dishes.filter((d) => d.vi)} toppings={toppings.filter((tp) => tp.vi.trim())} rates={rates}
-                soldOut={previewSold} pay={cleanPay(pay)} maps={cleanMaps(maps)} />
+                soldOut={previewSold} pay={cleanPay(pay)} maps={cleanMaps(maps)} hints={{ pay: t.hintPay, review: t.hintReview, lang: uiLang }} />
             </div>
           </aside>
         </div>

@@ -10,10 +10,12 @@ interface Props {
   /** Site address the link starts with. */
   base: string;
   initial: string | null;
+  /** Told when the link is made or turned off, for the editor's setup checklist. */
+  onToken?: (token: string | null) => void;
 }
 
 /** The secret link a stall owner opens to mark dishes sold out and change prices without an account. */
-export default function OwnerLink({ stallId, base, initial }: Props) {
+export default function OwnerLink({ stallId, base, initial, onToken }: Props) {
   const { t } = useUi();
   const [token, setToken] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -27,7 +29,7 @@ export default function OwnerLink({ stallId, base, initial }: Props) {
     setMsg("");
     const r = await makeOwnerKey(stallId).catch(() => ({ ok: false, token: undefined, error: t.ownerFailed }));
     setBusy(false);
-    if (r.ok && r.token) setToken(r.token);
+    if (r.ok && r.token) { setToken(r.token); onToken?.(r.token); }
     else setMsg(r.error || t.ownerFailed);
   }
 
@@ -36,7 +38,7 @@ export default function OwnerLink({ stallId, base, initial }: Props) {
     setBusy(true);
     const r = await removeOwnerKey(stallId).catch(() => ({ ok: false }));
     setBusy(false);
-    if (r.ok) setToken(null);
+    if (r.ok) { setToken(null); onToken?.(null); }
     else setMsg(t.ownerFailed);
   }
 
@@ -49,7 +51,7 @@ export default function OwnerLink({ stallId, base, initial }: Props) {
   }
 
   return (
-    <div className="owner-link">
+    <div className="owner-link" id="owner-link">
       <div><b>{t.ownerTitle}</b><small className="status">{t.ownerHint}</small></div>
       {url ? (
         <div className="sticker-wrap">
@@ -70,7 +72,7 @@ export default function OwnerLink({ stallId, base, initial }: Props) {
           </div>
         </div>
       ) : (
-        <div className="row"><button className="btn" type="button" disabled={busy} onClick={() => make(false)}>🔑 {t.ownerMake}</button></div>
+        <div className="row"><button id="owner-make" className="btn" type="button" disabled={busy} onClick={() => make(false)}>🔑 {t.ownerMake}</button></div>
       )}
       {msg && <p className="status err" aria-live="polite">{msg}</p>}
     </div>

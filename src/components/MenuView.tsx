@@ -26,6 +26,8 @@ interface Props {
   pay?: Pay | null;
   /** The stall's Google Maps link, for the review button. */
   maps?: string;
+  /** Editor preview only: notes for the vendor where the payment and review buttons will appear. */
+  hints?: { pay: string; review: string; lang: string };
 }
 
 function useViVoice() {
@@ -40,7 +42,7 @@ function useViVoice() {
   return voice;
 }
 
-export default function MenuView({ name, area, dishes, full, toppings = [], rates = {}, countSlug, soldOut, pay, maps }: Props) {
+export default function MenuView({ name, area, dishes, full, toppings = [], rates = {}, countSlug, soldOut, pay, maps, hints }: Props) {
   const [lang, setLang] = useState<Lang>("en");
   const [cart, setCart] = useState<Line[]>([]);
   // The drink whose options are being chosen, with the choices so far.
@@ -250,6 +252,7 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
             <a className="btn" href={maps} target="_blank" rel="noreferrer noopener">⭐ {L.review}</a>
           </div>
         )}
+        {!maps && hints && dishes.length > 0 && <p className="vhint" lang={hints.lang}>⭐ {hints.review}</p>}
       </div>
 
       <div className="m-foot">
@@ -356,6 +359,7 @@ export default function MenuView({ name, area, dishes, full, toppings = [], rate
               <button className="btn paybtn" onClick={() => setShowPay(true)} lang={lang}>💳 {L.pay}</button>
             )
           )}
+          {!pay && hints && <p className="vhint" lang={hints.lang}>💳 {hints.pay}</p>}
           {maps && <a className="btn" href={maps} target="_blank" rel="noreferrer noopener" lang={lang}>⭐ {L.review}</a>}
           <button ref={closeRef} className="btn" onClick={() => setShowOrder(false)} lang={lang}>
             {L.close}
