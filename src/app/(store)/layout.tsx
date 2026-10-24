@@ -77,9 +77,9 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         Skip to content
       </a>
       <StoreProvider currency={settings.currency}>
-        {settings.unavailable && <SetupNotice />}
+        {settings.unavailable && <div data-above-header><SetupNotice /></div>}
         {preview && (
-          <div className="relative z-50 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-amber-100 px-4 py-2 text-center text-xs text-amber-950">
+          <div data-above-header className="relative z-50 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-amber-100 px-4 py-2 text-center text-xs text-amber-950">
             <span>Preview of a look that isn&apos;t saved yet. Customers still see the store as it was.</span>
             {/* A full page load, so the cookie is cleared before the page is drawn again. */}
             <a href="/?look=exit" className="font-semibold underline underline-offset-2">End preview</a>
