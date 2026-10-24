@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getUser } from "@/lib/auth";
 import { fail, friendlyError, ok, type ActionResult } from "@/lib/errors";
 import { rateLimit } from "@/lib/rate-limit";
+import { contextStoreId, storeService } from "@/lib/store";
 import { supabaseService } from "@/lib/supabase/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -100,9 +101,13 @@ export async function subscribeNewsletter(email: string, source = "footer"): Pro
   const parsed = emailSchema.safeParse(email);
   if (!parsed.success) return fail("Enter a valid email address.");
   if (!(await rateLimit("newsletter", 5, 600))) return fail("Too many attempts. Please try again later.");
-  const { error } = await supabaseService()
+  const store = await contextStoreId();
+  const { error } = await supabaseService(store)
     .from("newsletter_subscribers")
-    .upsert({ email: parsed.data, source: source.slice(0, 40), unsubscribed_at: null }, { onConflict: "email" });
+    .upsert(
+      { ...(store ? { store_id: store } : {}), email: parsed.data, source: source.slice(0, 40), unsubscribed_at: null },
+      { onConflict: store ? "store_id,email" : "email" },
+    );
   if (error) {
     console.error("[newsletter]", error.message);
     return fail("We couldn't sign you up just now. Please try again.");
@@ -122,7 +127,7 @@ export async function sendContactMessage(input: z.input<typeof contactSchema>): 
   const parsed = contactSchema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the form.");
   if (!(await rateLimit("contact", 5, 3600))) return fail("You've sent several messages already. We'll be in touch soon.");
-  const { error } = await supabaseService().from("contact_messages").insert(parsed.data);
+  const { error } = await (await storeService()).from("contact_messages").insert(parsed.data);
   if (error) {
     console.error("[contact]", error.message);
     return fail("We couldn't send your message. Please email us instead.");

@@ -327,7 +327,7 @@ export function HomepageForm({ s }: { s: StoreSettings }) {
 
 interface Slab { up_to: number | null; rate_bps: number }
 
-export function CheckoutForm({ s, razorpayReady, stripeReady }: { s: StoreSettings; razorpayReady: boolean; stripeReady: boolean }) {
+export function CheckoutForm({ s, razorpayReady, stripeReady, home }: { s: StoreSettings; razorpayReady: boolean; stripeReady: boolean; home: boolean }) {
   const { pending, error, save } = useSave("checkout");
   const [v, setV] = useState({
     tax_mode: s.tax_mode, tax_label: s.tax_label, gstin: s.gstin,
@@ -380,8 +380,13 @@ export function CheckoutForm({ s, razorpayReady, stripeReady }: { s: StoreSettin
       </Card>
       <Card title="Payment methods">
         <div className="grid gap-3">
-          <Toggle label="Razorpay (UPI, cards, netbanking, wallets)" hint={razorpayReady ? "API keys are set." : "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET on the server to take online payments."} checked={v.razorpay} onChange={(x) => setV({ ...v, razorpay: x })} />
-          <Toggle label="Stripe (international cards)" hint={stripeReady ? "API keys are set." : "Optional. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET to enable."} checked={v.stripe} onChange={(x) => setV({ ...v, stripe: x })} />
+          <Toggle
+            label="Razorpay (UPI, cards, netbanking, wallets)"
+            hint={razorpayReady ? "API keys are set." : <>Add the store&apos;s Razorpay keys in <a href="/admin/settings?tab=payments" className="underline">Payment accounts</a> to take online payments.</>}
+            checked={v.razorpay}
+            onChange={(x) => setV({ ...v, razorpay: x })}
+          />
+          {home && <Toggle label="Stripe (international cards)" hint={stripeReady ? "API keys are set." : "Optional. Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET to enable."} checked={v.stripe} onChange={(x) => setV({ ...v, stripe: x })} />}
           <Toggle label="Cash on delivery" checked={v.cod} onChange={(x) => setV({ ...v, cod: x })} />
           {v.cod && (
             <div className="grid gap-4 pl-6">

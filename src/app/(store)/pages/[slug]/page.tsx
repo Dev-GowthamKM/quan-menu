@@ -8,8 +8,6 @@ import { excerpt } from "@/lib/seo";
 import { getSettings, policiesOf } from "@/lib/settings";
 import type { Policies } from "@/lib/types";
 
-export const revalidate = 300;
-
 const PAGES: Record<string, { key: keyof Policies; title: string }> = {
   about: { key: "about", title: "Our story" },
   shipping: { key: "shipping", title: "Shipping & delivery" },
@@ -19,10 +17,6 @@ const PAGES: Record<string, { key: keyof Policies; title: string }> = {
 };
 
 type Props = { params: Promise<{ slug: string }> };
-
-export function generateStaticParams() {
-  return Object.keys(PAGES).map((slug) => ({ slug }));
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

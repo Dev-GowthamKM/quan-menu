@@ -51,6 +51,7 @@ export async function sql<T = Record<string, unknown>>(text: string, params: unk
 export interface TestUser {
   id: string;
   email: string;
+  password: string;
   client: SupabaseClient;
 }
 
@@ -71,7 +72,29 @@ export async function makeUser(role?: "owner" | "admin" | "staff", name = "Test 
   const client = anon();
   const signIn = await client.auth.signInWithPassword({ email, password });
   if (signIn.error) throw signIn.error;
-  return { id, email, client };
+  return { id, email, password, client };
+}
+
+/** A client that works with one store (the app sends this header with every call). */
+export function storeClient(storeId: string, key: "anon" | "service" = "anon") {
+  const env = localEnv();
+  return createClient(env.API_URL, key === "service" ? env.SERVICE_ROLE_KEY : env.ANON_KEY, {
+    ...noSession,
+    global: { headers: { "x-store-id": storeId } },
+  });
+}
+
+/** The user signed in on a client that works with one store. */
+export async function signedInAt(user: TestUser, storeId: string) {
+  const client = storeClient(storeId);
+  const { error } = await client.auth.signInWithPassword({ email: user.email, password: user.password });
+  if (error) throw error;
+  return client;
+}
+
+export async function homeStoreId() {
+  const [row] = await sql<{ id: string }>("select public.home_store_id() as id");
+  return row.id;
 }
 
 /** A visible product variant with enough stock, plus its product id. */

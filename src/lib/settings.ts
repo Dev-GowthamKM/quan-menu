@@ -1,10 +1,12 @@
 import { unstable_cache } from "next/cache";
 import { SUPABASE_CONFIGURED } from "./env";
+import { contextStoreId } from "./store";
 import { supabasePublic } from "./supabase/public";
 import type { ContactInfo, FaqItem, Homepage, PackageDefaults, Policies, SocialLinks, StoreSettings } from "./types";
 
 export const DEFAULT_SETTINGS: StoreSettings = {
   id: 1,
+  store_id: "",
   store_name: "Taana",
   tagline: "Considered clothing, made to last.",
   logo_url: null,
@@ -75,11 +77,13 @@ export interface Settings extends StoreSettings {
   unavailable?: boolean;
 }
 
-/** Store settings, cached for every visitor and refreshed when an admin saves them. */
-export const getSettings = unstable_cache(
-  async (): Promise<Settings> => {
+/** A store's settings, cached for every visitor and refreshed when an admin saves them. */
+const loadSettings = unstable_cache(
+  async (storeId: string | null): Promise<Settings> => {
     if (!SUPABASE_CONFIGURED) return { ...DEFAULT_SETTINGS, unavailable: true };
-    const { data, error } = await supabasePublic().from("store_settings").select("*").eq("id", 1).maybeSingle();
+    // Without a store id (before the multi-store database update) there is one row, id 1.
+    const query = supabasePublic(storeId).from("store_settings").select("*");
+    const { data, error } = await (storeId ? query.eq("store_id", storeId) : query.eq("id", 1)).maybeSingle();
     if (error || !data) {
       console.error("[settings] could not load store settings:", error?.message);
       return { ...DEFAULT_SETTINGS, unavailable: true };
@@ -89,6 +93,11 @@ export const getSettings = unstable_cache(
   ["store-settings"],
   { tags: ["settings"], revalidate: 300 },
 );
+
+/** The settings of the given store, or of the store this request is for. */
+export async function getSettings(storeId?: string | null): Promise<Settings> {
+  return loadSettings(storeId === undefined ? await contextStoreId() : storeId);
+}
 
 export const homepageOf = (s: StoreSettings) => (s.homepage ?? {}) as Homepage;
 export const policiesOf = (s: StoreSettings) => (s.policies ?? {}) as Policies;

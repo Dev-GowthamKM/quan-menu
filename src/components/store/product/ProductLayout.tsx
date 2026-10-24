@@ -10,7 +10,7 @@ import ProductDetails from "./ProductDetails";
 import ProductView from "./ProductView";
 import Reviews from "./Reviews";
 
-function productJsonLd(product: ProductPage, currency: string) {
+function productJsonLd(origin: string, product: ProductPage, currency: string) {
   const offers = product.variants.map((v) => ({
     "@type": "Offer",
     sku: v.sku,
@@ -18,7 +18,7 @@ function productJsonLd(product: ProductPage, currency: string) {
     priceCurrency: currency,
     availability: v.available > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
     itemCondition: "https://schema.org/NewCondition",
-    url: absoluteUrl(`/products/${product.slug}${v.color ? `?color=${encodeURIComponent(v.color)}` : ""}`),
+    url: absoluteUrl(origin, `/products/${product.slug}${v.color ? `?color=${encodeURIComponent(v.color)}` : ""}`),
   }));
   return [
     {
@@ -52,21 +52,24 @@ function productJsonLd(product: ProductPage, currency: string) {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
       itemListElement: [
-        { name: "Home", item: absoluteUrl("/") },
-        ...product.breadcrumbs.map((c) => ({ name: c.name, item: absoluteUrl(`/category/${c.slug}`) })),
-        { name: product.title, item: absoluteUrl(`/products/${product.slug}`) },
+        { name: "Home", item: absoluteUrl(origin, "/") },
+        ...product.breadcrumbs.map((c) => ({ name: c.name, item: absoluteUrl(origin, `/category/${c.slug}`) })),
+        { name: product.title, item: absoluteUrl(origin, `/products/${product.slug}`) },
       ].map((x, i) => ({ "@type": "ListItem", position: i + 1, ...x })),
     },
   ];
 }
 
 export default function ProductLayout({
+  origin,
   product,
   settings,
   related,
   reviews,
   preview,
 }: {
+  /** The store's address, for the structured data's links. */
+  origin: string;
   product: ProductPage;
   settings: Awaited<ReturnType<typeof getSettings>>;
   related: Awaited<ReturnType<typeof getRelatedProducts>>;
@@ -76,7 +79,7 @@ export default function ProductLayout({
   const shipping = policiesOf(settings).shipping?.split(/\n{2,}/).slice(0, 2).join("\n\n") ?? "";
   return (
     <>
-      {!preview && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(productJsonLd(product, settings.currency)) }} />}
+      {!preview && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(productJsonLd(origin, product, settings.currency)) }} />}
       <div className="container-page pt-6 md:pt-8">
         <Breadcrumbs
           items={[

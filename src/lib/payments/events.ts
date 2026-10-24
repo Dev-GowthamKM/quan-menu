@@ -8,8 +8,8 @@ import type { Json } from "../database.types";
  * event was already processed successfully, so retries and duplicates are ignored;
  * a delivery whose earlier processing failed is processed again.
  */
-export async function claimEvent(provider: "razorpay" | "stripe", eventId: string, type: string, payload: unknown) {
-  const sb = supabaseService();
+export async function claimEvent(storeId: string | null, provider: "razorpay" | "stripe", eventId: string, type: string, payload: unknown) {
+  const sb = supabaseService(storeId);
   const { error } = await sb.from("payment_events").insert({ provider, event_id: eventId, event_type: type, payload: (payload ?? {}) as NonNullable<Json> });
   if (!error) return true;
   if (error.code !== "23505") throw new Error(error.message);
@@ -17,8 +17,8 @@ export async function claimEvent(provider: "razorpay" | "stripe", eventId: strin
   return !data?.processed_at;
 }
 
-export async function finishEvent(provider: "razorpay" | "stripe", eventId: string, error?: string, orderId?: string | null) {
-  await supabaseService()
+export async function finishEvent(storeId: string | null, provider: "razorpay" | "stripe", eventId: string, error?: string, orderId?: string | null) {
+  await supabaseService(storeId)
     .from("payment_events")
     .update(error ? { error: error.slice(0, 500) } : { processed_at: new Date().toISOString(), error: null, ...(orderId ? { order_id: orderId } : {}) })
     .eq("provider", provider)

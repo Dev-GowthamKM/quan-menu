@@ -4,11 +4,10 @@
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px">
       <tr><td align="center">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #e4ddd1">
-          <tr><td style="padding:32px 32px 8px;font-family:Georgia,serif;font-size:26px;letter-spacing:.08em;text-transform:uppercase">Taana</td></tr>
-          <tr><td style="padding:8px 32px 0;font-size:20px;font-family:Georgia,serif">Your sign-in link</td></tr>
+          <tr><td style="padding:32px 32px 0;font-size:22px;font-family:Georgia,serif">Your sign-in link</td></tr>
           <tr><td style="padding:12px 32px 0;font-size:15px;line-height:1.6;color:#4a4540">Use the button below to sign in. The link works once and expires in an hour.</td></tr>
           <tr><td style="padding:24px 32px 8px">
-            <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email&amp;next=/account" style="display:inline-block;background:#111111;color:#ffffff;text-decoration:none;padding:14px 28px;font-size:13px;letter-spacing:.12em;text-transform:uppercase">Sign in</a>
+            <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&amp;type=email&amp;next=/account" style="display:inline-block;background:#111111;color:#ffffff;text-decoration:none;padding:14px 28px;font-size:13px;letter-spacing:.12em;text-transform:uppercase">Sign in</a>
           </td></tr>
           <tr><td style="padding:16px 32px 32px;font-size:12px;line-height:1.6;color:#8a8178">If you didn't ask for this, you can ignore this email.</td></tr>
         </table>

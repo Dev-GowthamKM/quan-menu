@@ -67,7 +67,9 @@ describe("customer search", () => {
   it("finds a number however it's typed, and leaves out accounts that were never verified", async () => {
     const staff = await makeUser("admin");
     const phone = mobile();
-    const { data } = await admin.auth.admin.createUser({ phone, phone_confirm: true, user_metadata: { full_name: "Meera Das" } });
+    // The app sends the store the account was made at (staff only see their store's customers).
+    const [{ id: store }] = await sql<{ id: string }>("select public.home_store_id() as id");
+    const { data } = await admin.auth.admin.createUser({ phone, phone_confirm: true, user_metadata: { full_name: "Meera Das", store_id: store } });
     const unverified = mobile();
     await admin.auth.admin.createUser({ phone: unverified });
     for (const q of [`${phone.slice(2, 7)} ${phone.slice(7)}`, `+${phone}`, phone.slice(2), `0${phone.slice(2, 7)} ${phone.slice(7)}`]) {

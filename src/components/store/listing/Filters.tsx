@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
-import { SORTS } from "@/lib/catalog";
+import { SORTS } from "@/lib/catalog-options";
 import { formatMoney } from "@/lib/money";
 import type { Facets } from "@/lib/types";
 import { Button, cx, Select } from "../../ui/controls";

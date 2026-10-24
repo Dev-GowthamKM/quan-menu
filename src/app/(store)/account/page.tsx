@@ -7,17 +7,19 @@ import { formatDate } from "@/lib/format";
 import { phoneSignInChannel } from "@/lib/login-codes";
 import { formatMoney } from "@/lib/money";
 import { getSettings } from "@/lib/settings";
+import { contextStore } from "@/lib/store";
 import { supabaseServer } from "@/lib/supabase/server";
 import { ORDER_STATUS } from "@/lib/types-ui";
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ password?: string }> }) {
   const user = (await getUser())!;
   const sb = await supabaseServer();
-  const [{ data: profile }, { data: orders }, settings, role] = await Promise.all([
+  const [{ data: profile }, { data: orders }, settings, role, store] = await Promise.all([
     sb.from("profiles").select("full_name, phone, marketing_opt_in").eq("id", user.id).single(),
     sb.from("orders").select("id, order_number, placed_at, status, grand_total, currency").eq("user_id", user.id).order("placed_at", { ascending: false }).limit(3),
     getSettings(),
     getRole(),
+    contextStore(),
   ]);
   const { password } = await searchParams;
   return (
@@ -55,7 +57,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           email={user.email || ""}
           pendingEmail={user.new_email || ""}
           phone={user.phone_confirmed_at ? user.phone || "" : ""}
-          phoneSignIn={role ? null : phoneSignInChannel(settings)}
+          phoneSignIn={role ? null : phoneSignInChannel(settings, store)}
         />
       </section>
     </div>

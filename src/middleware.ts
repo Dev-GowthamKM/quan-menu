@@ -4,20 +4,45 @@ import { NextResponse, type NextRequest } from "next/server";
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-// Maintenance mode is read from store settings at most every 30 seconds per instance.
-let maintenance: { on: boolean; at: number } | null = null;
+// Must match SCOPE_HEADER in lib/store.ts and STORE_HEADER in lib/supabase/store-header.ts
+// (this file runs on the edge and imports neither).
+const SCOPE_HEADER = "x-store-scope";
+const STORE_HEADER = "x-store-id";
 
-async function maintenanceOn() {
-  if (maintenance && Date.now() - maintenance.at < 30_000) return maintenance.on;
-  let on = false;
+interface HostStore {
+  id: string | null;
+  closed: boolean;
+}
+
+// Which store each web address belongs to, and whether its storefront is closed
+// (maintenance mode, or a suspended store), read at most every 30 seconds per instance.
+const hosts = new Map<string, { at: number; store: HostStore }>();
+
+async function storeFor(host: string): Promise<HostStore> {
+  const hit = hosts.get(host);
+  if (hit && Date.now() - hit.at < 30_000) return hit.store;
+  let store: HostStore = { id: null, closed: false };
   try {
-    const res = await fetch(`${URL_}/rest/v1/store_settings?select=maintenance_mode&id=eq.1`, { headers: { apikey: KEY }, signal: AbortSignal.timeout(2500) });
-    if (res.ok) on = !!(await res.json())?.[0]?.maintenance_mode;
+    const res = await fetch(`${URL_}/rest/v1/rpc/resolve_store`, {
+      method: "POST",
+      headers: { apikey: KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_host: host }),
+      signal: AbortSignal.timeout(2500),
+    });
+    if (res.ok) {
+      const s = (await res.json()) as { id?: string; status?: string; maintenance?: boolean } | null;
+      store = { id: s?.id ?? null, closed: !!s?.maintenance || s?.status === "suspended" };
+    } else if (res.status === 404) {
+      // Before the multi-store database update: the one store's maintenance switch.
+      const old = await fetch(`${URL_}/rest/v1/store_settings?select=maintenance_mode&id=eq.1`, { headers: { apikey: KEY }, signal: AbortSignal.timeout(2500) });
+      if (old.ok) store = { id: null, closed: !!(await old.json())?.[0]?.maintenance_mode };
+    }
   } catch {
-    on = false;
+    store = { id: null, closed: false };
   }
-  maintenance = { on, at: Date.now() };
-  return on;
+  if (hosts.size > 500) hosts.clear();
+  hosts.set(host, { at: Date.now(), store });
+  return store;
 }
 
 /** Storefront pages that maintenance mode hides (sign-in and API routes keep working). */
@@ -26,30 +51,49 @@ function isStorefront(path: string) {
 }
 
 /**
- * Keeps the Supabase session fresh and sends signed-out visitors away from account and
- * admin pages. This is a convenience, not the security boundary: admin pages, actions
- * and the database each check the user's role again.
+ * Keeps the Supabase session fresh, marks admin requests (so the app uses the admin
+ * panel's store rather than the web address's), closes storefronts in maintenance and
+ * sends signed-out visitors away from account and admin pages. This is a convenience,
+ * not the security boundary: admin pages, actions and the database each check the
+ * user's role again.
  */
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const path = request.nextUrl.pathname;
+  // Supabase sends email links to the site's main address when a store's address isn't
+  // in its Redirect URLs yet; finish them at /auth/confirm rather than dropping them.
+  if (request.nextUrl.searchParams.has("token_hash") && path !== "/auth/confirm") {
+    const confirm = request.nextUrl.clone();
+    confirm.pathname = "/auth/confirm";
+    return NextResponse.redirect(confirm);
+  }
+  const isAdmin = path === "/admin" || (path.startsWith("/admin/") && !path.startsWith("/admin/login"));
+  const scope = path === "/admin" || path.startsWith("/admin/") ? "admin" : "store";
+  // Always set here, so a value sent by the browser never reaches the app.
+  const forward = () => {
+    const headers = new Headers(request.headers);
+    headers.set(SCOPE_HEADER, scope);
+    return NextResponse.next({ request: { headers } });
+  };
+  let response = forward();
   if (!URL_ || !KEY) return response;
 
-  const path = request.nextUrl.pathname;
-  const isAdmin = path === "/admin" || (path.startsWith("/admin/") && !path.startsWith("/admin/login"));
   const isAccount = path === "/account" || path.startsWith("/account/");
   const hasSession = request.cookies.getAll().some((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"));
-  const closed = isStorefront(path) && (await maintenanceOn());
+  const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "").split(",")[0].trim().toLowerCase();
+  const store = isStorefront(path) ? await storeFor(host) : null;
+  const closed = !!store?.closed;
   if (closed && !hasSession) return NextResponse.rewrite(new URL("/maintenance", request.url), { status: 503 });
   if (!hasSession && !isAdmin && !isAccount) return response;
 
   const supabase = createServerClient(URL_, KEY, {
+    global: { headers: store?.id ? { [STORE_HEADER]: store.id } : {} },
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
       setAll(list) {
         list.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        response = forward();
         list.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },
@@ -69,9 +113,9 @@ export async function middleware(request: NextRequest) {
     return redirect;
   }
   if (closed) {
-    // Staff can still browse the store while it is closed to customers.
-    const { data } = user ? await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle() : { data: null };
-    if (!data) {
+    // The store's staff can still browse it while it is closed to customers.
+    const { data: role } = user ? await supabase.rpc("my_role") : { data: null };
+    if (!role) {
       const page = NextResponse.rewrite(new URL("/maintenance", request.url), { status: 503 });
       response.cookies.getAll().forEach((c) => page.cookies.set(c));
       return page;

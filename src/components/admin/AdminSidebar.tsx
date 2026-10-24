@@ -1,14 +1,16 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { signOut } from "@/server/auth";
+import { switchStore } from "@/server/admin/platform";
 import type { AppRole } from "@/lib/types";
 import { cx } from "../ui/controls";
 import {
   BoxIcon, CardIcon, ChartIcon, ClipboardIcon, CloseIcon, HistoryIcon, HomeIcon, ImageIcon, LayersIcon, MailIcon, MenuIcon,
   PercentIcon, ReturnIcon, RulerIcon, SettingsIcon, StarIcon, TagIcon, TruckIcon, UsersIcon, ExternalIcon, ShieldIcon,
 } from "../ui/icons";
+import { useToast } from "./Toaster";
 
 type Item = { href: string; label: string; icon: React.ComponentType<{ size?: number }>; count?: keyof Counts; min?: AppRole };
 type Counts = { orders: number; returns: number; messages: number; reviews: number };
@@ -52,15 +54,74 @@ const GROUPS: { title: string; items: Item[] }[] = [
 
 const RANK: Record<AppRole, number> = { staff: 1, admin: 2, owner: 3 };
 
-export default function AdminSidebar({ email, role, counts }: { email: string; role: AppRole; counts: Counts }) {
+interface StoreChoice {
+  id: string;
+  name: string;
+}
+
+/** Which store the panel is working on; people who work at several stores switch here. */
+function StorePicker({ store, stores }: { store: { id: string | null; name: string }; stores: StoreChoice[] }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [pending, start] = useTransition();
+  if (stores.length < 2 || !store.id) {
+    return <p className="truncate px-3 text-sm font-semibold tracking-[0.18em] uppercase" title={store.name}>{store.name || "Store admin"}</p>;
+  }
+  return (
+    <label className="grid gap-1 px-3">
+      <span className="text-[11px] font-medium tracking-wider text-stone uppercase">Store</span>
+      <select
+        value={store.id}
+        disabled={pending}
+        onChange={(e) => {
+          const id = e.target.value;
+          start(async () => {
+            const res = await switchStore(id);
+            if (!res.ok) return toast(res.error, "error");
+            router.push("/admin");
+            router.refresh();
+          });
+        }}
+        className="h-9 rounded-md border border-black/15 bg-white px-2 text-sm font-medium"
+      >
+        {stores.map((s) => (
+          <option key={s.id} value={s.id}>{s.name}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+export default function AdminSidebar({
+  email,
+  role,
+  counts,
+  store,
+  stores,
+  platform,
+}: {
+  email: string;
+  role: AppRole;
+  counts: Counts;
+  store: { id: string | null; name: string; origin: string | null; suspended: boolean };
+  stores: StoreChoice[];
+  /** The person runs the platform: show the Stores section. */
+  platform: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [pathname]);
+  const groups: { title: string; items: Item[] }[] = platform
+    ? [...GROUPS, { title: "Platform", items: [{ href: "/admin/stores", label: "All stores", icon: LayersIcon }] }]
+    : GROUPS;
 
   const nav = (
     <nav aria-label="Admin" className="flex h-full flex-col gap-6 overflow-y-auto px-3 py-5">
-      <Link href="/admin" className="px-3 text-sm font-semibold tracking-[0.22em] uppercase">Store admin</Link>
-      {GROUPS.map((g) => (
+      <div className="grid gap-1.5">
+        <StorePicker store={store} stores={stores} />
+        {store.suspended && <p className="px-3 text-xs text-red-700">Suspended: the storefront is closed.</p>}
+      </div>
+      {groups.map((g) => (
         <div key={g.title}>
           <p className="px-3 text-[11px] font-medium tracking-wider text-stone uppercase">{g.title}</p>
           <ul className="mt-1.5 grid gap-0.5">
@@ -88,7 +149,11 @@ export default function AdminSidebar({ email, role, counts }: { email: string; r
         </div>
       ))}
       <div className="mt-auto grid gap-2 border-t border-black/10 px-3 pt-4 text-xs">
-        <a href="/" target="_blank" className="inline-flex items-center gap-1.5 text-ink/80 hover:text-ink">View store <ExternalIcon size={12} /></a>
+        {store.origin ? (
+          <a href={`${store.origin}/`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-ink/80 hover:text-ink">View store <ExternalIcon size={12} /></a>
+        ) : (
+          <p className="text-stone">No web address yet</p>
+        )}
         <p className="truncate text-stone" title={email}>{email}</p>
         <p className="text-stone capitalize">Role: {role}</p>
         <form action={signOut}><button className="text-ink/80 underline hover:text-ink">Sign out</button></form>
@@ -100,7 +165,7 @@ export default function AdminSidebar({ email, role, counts }: { email: string; r
     <>
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-black/10 bg-white px-4 py-3 lg:hidden">
         <button type="button" onClick={() => setOpen(true)} aria-label="Open admin menu" className="-ml-1 p-1"><MenuIcon /></button>
-        <span className="text-sm font-semibold tracking-[0.2em] uppercase">Store admin</span>
+        <span className="truncate px-2 text-sm font-semibold tracking-[0.2em] uppercase">{store.name || "Store admin"}</span>
         <span className="w-6" />
       </div>
       <aside className="sticky top-0 hidden h-dvh border-r border-black/10 bg-white lg:block">{nav}</aside>

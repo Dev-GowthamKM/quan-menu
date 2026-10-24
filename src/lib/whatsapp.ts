@@ -2,15 +2,21 @@ import "server-only";
 import { formatMoney } from "./money";
 import { orderUrl } from "./order-link";
 import { WHATSAPP_API_BASE, WHATSAPP_API_VERSION, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_TOKEN } from "./server-env";
+import { homeStore, storeOrigin } from "./store";
 import { supabaseService } from "./supabase/admin";
 import type { OrderDetail, Tables } from "./types";
 import { isWhatsAppEvent, templateParams, waNumber, type TemplateSetting } from "./whatsapp-format";
 
 // Sends queued WhatsApp messages through the WhatsApp Business Platform (Cloud API). Order
 // updates are business-initiated, so each one uses a template the store had approved in
-// WhatsApp Manager; Settings › WhatsApp maps store events to those templates.
+// WhatsApp Manager; Settings › WhatsApp maps store events to those templates. The number
+// is the platform's own (environment variables), so for now only the home store uses it.
 
-export const whatsappConfigured = () => !!(WHATSAPP_TOKEN && WHATSAPP_PHONE_NUMBER_ID);
+/** Whether the platform's WhatsApp number is connected. */
+export const whatsappConnected = () => !!(WHATSAPP_TOKEN && WHATSAPP_PHONE_NUMBER_ID);
+
+/** Whether a store can send WhatsApp messages: the home store, once the number is connected. */
+export const whatsappConfigured = (store: { isHome: boolean }) => store.isHome && whatsappConnected();
 
 export class WhatsAppError extends Error {
   constructor(message: string, public code?: number) {
@@ -63,9 +69,9 @@ export async function sendAuthCode(to: string, template: TemplateSetting, code: 
   );
 }
 
-function values(detail: OrderDetail, data: Record<string, unknown>) {
+function values(origin: string, detail: OrderDetail, data: Record<string, unknown>) {
   const o = detail.order;
-  const link = orderUrl(o.order_number, o.id);
+  const link = orderUrl(origin, o.order_number, o.id);
   return {
     firstName: (o.customer_name || "there").split(" ")[0],
     orderNumber: o.order_number,
@@ -89,7 +95,9 @@ export async function processWhatsapp(limit = 20) {
   }
   const counts = { sent: 0, failed: 0, skipped: 0 };
   if (!rows?.length) return counts;
-  const { data: settings } = await sb.from("store_settings").select("whatsapp_enabled, whatsapp_templates").eq("id", 1).single();
+  const home = await homeStore();
+  const settingsQuery = sb.from("store_settings").select("whatsapp_enabled, whatsapp_templates");
+  const { data: settings } = await (home.id ? settingsQuery.eq("store_id", home.id) : settingsQuery.eq("id", 1)).single();
   const templates = (settings?.whatsapp_templates ?? {}) as unknown as Record<string, TemplateSetting>;
   const skip = async (id: string, reason: string) => {
     await sb.from("whatsapp_outbox").update({ status: "skipped", last_error: reason }).eq("id", id);
@@ -98,7 +106,11 @@ export async function processWhatsapp(limit = 20) {
   for (const row of rows as Tables<"whatsapp_outbox">[]) {
     try {
       const template = templates[row.template];
-      if (!whatsappConfigured()) {
+      if (home.id && row.store_id !== home.id) {
+        await skip(row.id, "WhatsApp messages are only available for the main store for now.");
+        continue;
+      }
+      if (!whatsappConnected()) {
         await skip(row.id, "WhatsApp isn't connected (WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID).");
         continue;
       }
@@ -119,7 +131,7 @@ export async function processWhatsapp(limit = 20) {
         await skip(row.id, "The customer turned WhatsApp updates off.");
         continue;
       }
-      const id = await sendTemplate(to, template, templateParams(row.template, values(d, (row.data ?? {}) as Record<string, unknown>)));
+      const id = await sendTemplate(to, template, templateParams(row.template, values(storeOrigin(home), d, (row.data ?? {}) as Record<string, unknown>)));
       await sb.from("whatsapp_outbox").update({ status: "sent", sent_at: new Date().toISOString(), provider_message_id: id, last_error: null }).eq("id", row.id);
       counts.sent++;
     } catch (e) {

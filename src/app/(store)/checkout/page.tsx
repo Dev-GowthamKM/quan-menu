@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import CheckoutForm from "@/components/store/checkout/CheckoutForm";
 import { getUser } from "@/lib/auth";
-import { razorpayConfigured } from "@/lib/payments/razorpay";
+import { razorpayKeys } from "@/lib/payments/razorpay";
 import { stripeConfigured } from "@/lib/payments/stripe";
 import { getSettings } from "@/lib/settings";
+import { contextStore } from "@/lib/store";
 import { whatsappConfigured } from "@/lib/whatsapp";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getCart } from "@/server/cart";
@@ -13,8 +14,9 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Checkout", robots: { index: false } };
 
 export default async function CheckoutPage() {
-  const [user, quote, settings] = await Promise.all([getUser(), getCart(), getSettings()]);
+  const [user, quote, settings, store] = await Promise.all([getUser(), getCart(), getSettings(), contextStore()]);
   if (!quote.line_count) redirect("/cart");
+  const razorpay = settings.razorpay_enabled && !!(await razorpayKeys(store));
 
   let addresses: Awaited<ReturnType<typeof loadAddresses>> = [];
   let profile = { full_name: "", phone: "" };
@@ -32,10 +34,10 @@ export default async function CheckoutPage() {
       addresses={addresses}
       config={{
         storeName: settings.store_name,
-        razorpay: settings.razorpay_enabled && razorpayConfigured(),
-        stripe: settings.stripe_enabled && stripeConfigured(),
+        razorpay,
+        stripe: settings.stripe_enabled && stripeConfigured(store),
         reservationMinutes: settings.reservation_minutes,
-        whatsapp: settings.whatsapp_enabled && whatsappConfigured(),
+        whatsapp: settings.whatsapp_enabled && whatsappConfigured(store),
         cartReminders: settings.cart_reminders_enabled,
       }}
     />

@@ -13,14 +13,12 @@ import {
   SeasonalFeature,
 } from "@/components/store/sections";
 import { getHomeData } from "@/lib/catalog";
-import { SITE_URL } from "@/lib/env";
 import { getSettings, homepageOf, socialOf } from "@/lib/settings";
 import { jsonLd } from "@/lib/seo";
-
-export const revalidate = 300;
+import { contextOrigin } from "@/lib/store";
 
 export default async function Home() {
-  const [settings, data] = await Promise.all([getSettings(), getHomeData()]);
+  const [settings, data, origin] = await Promise.all([getSettings(), getHomeData(), contextOrigin()]);
   const home = homepageOf(settings);
   const [hero, campaign] = home.hero ?? [];
 
@@ -29,7 +27,7 @@ export default async function Home() {
       "@context": "https://schema.org",
       "@type": "Organization",
       name: settings.store_name,
-      url: SITE_URL,
+      url: origin,
       logo: settings.logo_url || undefined,
       sameAs: Object.values(socialOf(settings)).filter(Boolean),
     },
@@ -37,10 +35,10 @@ export default async function Home() {
       "@context": "https://schema.org",
       "@type": "WebSite",
       name: settings.store_name,
-      url: SITE_URL,
+      url: origin,
       potentialAction: {
         "@type": "SearchAction",
-        target: `${SITE_URL}/shop?q={search_term_string}`,
+        target: `${origin}/shop?q={search_term_string}`,
         "query-input": "required name=search_term_string",
       },
     },

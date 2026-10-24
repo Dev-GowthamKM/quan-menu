@@ -6,7 +6,7 @@ import { Badge, cx, Notice } from "@/components/ui/controls";
 import { requireRole, requireStaffPage } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
-import { razorpayConfigured } from "@/lib/payments/razorpay";
+import { razorpayKeys } from "@/lib/payments/razorpay";
 import { stripeConfigured } from "@/lib/payments/stripe";
 
 export const metadata: Metadata = { title: "Payments" };
@@ -17,7 +17,8 @@ const TONE: Record<string, "green" | "amber" | "red" | "violet" | "neutral"> = {
 
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<Params> }) {
   await requireStaffPage("admin");
-  const { supabase } = await requireRole("admin");
+  const { supabase, store } = await requireRole("admin");
+  const razorpayReady = !!(await razorpayKeys(store));
   const params = await searchParams;
   const page = pageOf(params);
   const status = sp(params, "status");
@@ -49,14 +50,18 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       <PageHeader
         title="Payments"
         description="Money received through payment providers and cash on delivery. Payments are confirmed with the provider before an order is marked paid."
-        actions={<ReconcileButton disabled={!razorpayConfigured()} />}
+        actions={<ReconcileButton disabled={!razorpayReady} />}
       />
-      {!razorpayConfigured() && <Notice tone="warning" className="mb-4">Razorpay keys are not set, so online payments are switched off. See the README for setup.</Notice>}
+      {!razorpayReady && (
+        <Notice tone="warning" className="mb-4">
+          Razorpay keys are not set, so online payments are switched off. Add them in <Link href="/admin/settings?tab=payments" className="underline">Settings › Payment accounts</Link>.
+        </Notice>
+      )}
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Received this month" value={formatMoney(captured)} />
         <Stat label="Refunded this month" value={formatMoney(refunded)} />
         <Stat label="Refunds pending or failed" value={refunds.data?.length ?? 0} tone={refunds.data?.some((r) => r.status === "failed") ? "bad" : "default"} />
-        <Stat label="Providers" value={<span className="text-base">{["Razorpay", stripeConfigured() && "Stripe", "Cash on delivery"].filter(Boolean).join(" · ")}</span>} hint={razorpayConfigured() ? "Razorpay keys set" : "Razorpay not configured"} />
+        <Stat label="Providers" value={<span className="text-base">{["Razorpay", stripeConfigured(store) && "Stripe", "Cash on delivery"].filter(Boolean).join(" · ")}</span>} hint={razorpayReady ? "Razorpay keys set" : "Razorpay not configured"} />
       </div>
 
       {(refunds.data ?? []).length > 0 && (

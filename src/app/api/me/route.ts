@@ -3,7 +3,7 @@ import { getRole, getUser } from "@/lib/auth";
 import { cartIdentity } from "@/lib/cart-session";
 import { SUPABASE_CONFIGURED } from "@/lib/env";
 import { sqlNull } from "@/lib/db";
-import { supabaseService } from "@/lib/supabase/admin";
+import { storeService } from "@/lib/store";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export async function GET() {
 
   let cartCount = 0;
   if (id.userId || id.token) {
-    const sb = supabaseService();
+    const sb = await storeService();
     const cart = await sb.rpc("cart_find", { p_user_id: sqlNull(id.userId), p_token: sqlNull(id.token), p_create: false });
     if (cart.data) {
       const { data } = await sb.from("cart_items").select("quantity").eq("cart_id", cart.data as string);

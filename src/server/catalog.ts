@@ -5,6 +5,7 @@ import { deliveryWindow, formatDay } from "@/lib/format";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSettings } from "@/lib/settings";
 import { serviceability, shiprocketConfigured } from "@/lib/shipping/shiprocket";
+import { contextStore } from "@/lib/store";
 import { supabasePublic } from "@/lib/supabase/public";
 import type { PostcodeCheck, ProductCard } from "@/lib/types";
 
@@ -70,12 +71,13 @@ export async function checkDelivery(pin: string): Promise<DeliveryCheck> {
   const code = String(pin || "").replace(/\s/g, "");
   if (!/^[1-9][0-9]{5}$/.test(code)) return { ok: false, message: "Enter a valid 6-digit PIN code." };
   if (!(await rateLimit("pincode", 30, 60))) return { ok: false, message: "Too many checks. Please wait a moment." };
-  const { data, error } = await supabasePublic().rpc("check_postcode", { p_postal_code: code });
+  const store = await contextStore();
+  const { data, error } = await supabasePublic(store.id).rpc("check_postcode", { p_postal_code: code });
   if (error) return { ok: false, message: "We couldn't check that PIN code right now." };
   const res = data as unknown as PostcodeCheck;
   if (!res.serviceable) return { ok: false, message: res.message || "Sorry, we don't deliver to this PIN code yet." };
-  const settings = await getSettings();
-  const days = settings.shiprocket_enabled && settings.shiprocket_pickup_postcode && shiprocketConfigured()
+  const settings = await getSettings(store.id);
+  const days = shiprocketConfigured(store) && settings.shiprocket_enabled && settings.shiprocket_pickup_postcode
     ? await courierDays(settings.shiprocket_pickup_postcode, code)
     : null;
   return {

@@ -11,6 +11,7 @@ import { orderPath } from "@/lib/order-link";
 import * as rzp from "@/lib/payments/razorpay";
 import { razorpaySession, settleRazorpayPayment, settleStripeSession, stripeSession, type RazorpaySession } from "@/lib/payments/service";
 import { rateLimit } from "@/lib/rate-limit";
+import { contextStore } from "@/lib/store";
 import { supabaseService } from "@/lib/supabase/admin";
 import type { OrderBrief } from "@/lib/types";
 
@@ -52,10 +53,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<ActionResult<{
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check your details.");
   if (!(await rateLimit("checkout", 10, 600))) return fail("Too many checkout attempts. Please wait a few minutes and try again.");
   const p = parsed.data;
-  const id = await cartIdentity();
+  const [id, store] = await Promise.all([cartIdentity(), contextStore()]);
   // Signed-in customers' orders always use their account email.
   const email = id.email ?? p.email;
-  const sb = supabaseService();
+  const sb = supabaseService(store.id);
   // Choices that travel with the order (copied from the cart when it's placed).
   await sb.rpc("cart_set_contact", { p_user_id: sqlNull(id.userId), p_token: sqlNull(id.token), p_contact: { whatsapp_opt_in: p.whatsapp } });
 
@@ -86,10 +87,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<ActionResult<{
   if (order.status !== "pending_payment") return fail("This order can no longer be paid. Please start again.");
   try {
     if (order.payment_method === "stripe") {
-      const s = await stripeSession(order);
+      const s = await stripeSession(store, order);
       return ok({ order, next: { type: "stripe", url: s.url } });
     }
-    const session = await razorpaySession(order);
+    const session = await razorpaySession(store, order);
     return ok({
       order,
       next: { type: "razorpay", session, orderUrl: url, prefill: { name: order.customer_name, email: order.email, contact: order.phone } },
@@ -120,11 +121,13 @@ export async function verifyRazorpayPayment(input: z.input<typeof verifySchema>)
   if (!(await rateLimit("verify", 30, 300))) return fail("Too many requests. Please wait a moment.");
   const order = await findAccessibleOrder(p.orderNumber, p.key);
   if (!order) return fail("Order not found.");
-  if (!rzp.verifyCheckoutSignature(p.razorpay_order_id, p.razorpay_payment_id, p.razorpay_signature)) {
+  const store = await contextStore();
+  const keys = await rzp.razorpayKeys(store);
+  if (!keys || !rzp.verifyCheckoutSignature(keys, p.razorpay_order_id, p.razorpay_payment_id, p.razorpay_signature)) {
     return fail("We couldn't verify this payment. If money was taken, it will be confirmed or refunded automatically.");
   }
   try {
-    const res = await settleRazorpayPayment(p.razorpay_payment_id, order.id);
+    const res = await settleRazorpayPayment(store, p.razorpay_payment_id, order.id);
     after(() => processOutbox());
     return ok({ status: res.status, url: orderPath(order.order_number, order.id, "&placed=1") });
   } catch (e) {
@@ -140,7 +143,7 @@ export async function reportPaymentFailure(orderNumber: string, key: string, pay
   if (!order || !paymentId || !/^pay_[A-Za-z0-9]+$/.test(paymentId)) return ok(null);
   if (!(await rateLimit("payfail", 20, 300))) return ok(null);
   try {
-    await settleRazorpayPayment(paymentId, order.id);
+    await settleRazorpayPayment(await contextStore(), paymentId, order.id);
   } catch (e) {
     console.error("[checkout] failure report:", (e as Error).message);
   }
@@ -152,12 +155,13 @@ export async function retryPayment(orderNumber: string, key: string | null): Pro
   if (!(await rateLimit("retry", 10, 300))) return fail("Too many attempts. Please wait a moment.");
   const access = await findAccessibleOrder(orderNumber, key);
   if (!access) return fail("Order not found.");
-  const { data, error } = await supabaseService().rpc("prepare_order_payment", { p_order_id: access.id });
+  const store = await contextStore();
+  const { data, error } = await supabaseService(store.id).rpc("prepare_order_payment", { p_order_id: access.id });
   if (error) return fail(friendlyError(error, "This order can't be paid any more."));
   const order = data as unknown as OrderBrief;
   try {
-    if (order.payment_method === "stripe") return ok({ type: "stripe", url: (await stripeSession(order)).url });
-    const session = await razorpaySession(order);
+    if (order.payment_method === "stripe") return ok({ type: "stripe", url: (await stripeSession(store, order)).url });
+    const session = await razorpaySession(store, order);
     return ok({
       type: "razorpay",
       session,
@@ -175,7 +179,7 @@ export async function confirmStripeReturn(orderNumber: string, key: string, sess
   const order = await findAccessibleOrder(orderNumber, key);
   if (!order || !/^cs_[A-Za-z0-9_]+$/.test(sessionId)) return fail("Order not found.");
   try {
-    const res = await settleStripeSession(sessionId);
+    const res = await settleStripeSession(await contextStore(), sessionId);
     after(() => processOutbox());
     return ok({ status: res.status });
   } catch (e) {

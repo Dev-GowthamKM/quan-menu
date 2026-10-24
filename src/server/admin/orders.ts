@@ -81,8 +81,8 @@ export async function addOrderNote(orderId: string, orderNumber: string, note: s
   return ok(null, "Note added.");
 }
 
-async function startAndSendRefund(sb: NonNullable<Awaited<ReturnType<typeof role>>>["supabase"], orderId: string, amount: number, reason: string, returnRequestId?: string | null) {
-  const { data, error } = await sb.rpc("admin_begin_refund", {
+async function startAndSendRefund(ctx: NonNullable<Awaited<ReturnType<typeof role>>>, orderId: string, amount: number, reason: string, returnRequestId?: string | null) {
+  const { data, error } = await ctx.supabase.rpc("admin_begin_refund", {
     p_order_id: orderId,
     p_amount: amount,
     p_reason: reason.slice(0, 500),
@@ -90,7 +90,7 @@ async function startAndSendRefund(sb: NonNullable<Awaited<ReturnType<typeof role
     p_reference: sqlNull<string>(null),
   });
   if (error) return { ok: false, message: friendlyError(error, "The refund couldn't be started.") };
-  return executeRefund(data as unknown as RefundStart);
+  return executeRefund(ctx.store, data as unknown as RefundStart);
 }
 
 /** Cancels an order, returns its stock and, for paid orders, refunds the payment. */
@@ -105,7 +105,7 @@ export async function cancelOrderAdmin(input: { orderId: string; orderNumber: st
   if (refundable > 0 && input.refund) {
     if (ctx.role === "staff") message = "Order cancelled. An admin needs to issue the refund.";
     else {
-      const r = await startAndSendRefund(ctx.supabase, input.orderId, refundable, `Order cancelled: ${input.reason}`);
+      const r = await startAndSendRefund(ctx, input.orderId, refundable, `Order cancelled: ${input.reason}`);
       message = r.ok ? `Order cancelled. ${r.message}` : `Order cancelled, but the refund failed: ${r.message}`;
       if (!r.ok) {
         refresh(input.orderNumber);
@@ -124,7 +124,7 @@ export async function refundOrder(input: { orderId: string; orderNumber: string;
   if (!uuid.safeParse(input.orderId).success) return fail("Unknown order.");
   if (!Number.isInteger(input.amount) || input.amount <= 0) return fail("Enter an amount greater than zero.");
   if (!input.reason.trim()) return fail("Give a reason for the refund (the customer sees it).");
-  const r = await startAndSendRefund(ctx.supabase, input.orderId, input.amount, input.reason, input.returnRequestId);
+  const r = await startAndSendRefund(ctx, input.orderId, input.amount, input.reason, input.returnRequestId);
   refresh(input.orderNumber);
   return r.ok ? ok(null, r.message) : fail(r.message);
 }
@@ -164,7 +164,7 @@ export async function updateReturnRequest(input: {
     else {
       const { data: req } = await ctx.supabase.from("return_requests").select("order_id").eq("id", input.requestId).single();
       if (req) {
-        const r = await startAndSendRefund(ctx.supabase, req.order_id, input.refundAmount, "Return refund", input.requestId);
+        const r = await startAndSendRefund(ctx, req.order_id, input.refundAmount, "Return refund", input.requestId);
         message += r.ok ? ` ${r.message}` : ` The refund failed: ${r.message}`;
       }
     }
@@ -179,7 +179,7 @@ export async function updateReturnRequest(input: {
 export async function reconcilePayments(): Promise<ActionResult<{ checked: number; settled: number; errors: number }>> {
   const ctx = await role("admin");
   if (!ctx) return fail("Only admins can reconcile payments.");
-  const result = await reconcileRazorpay(100);
+  const result = await reconcileRazorpay(ctx.store, 100);
   await ctx.supabase.rpc("log_admin_action", { p_action: "reconcile", p_entity_type: "payments", p_entity_id: sqlNull<string>(null), p_details: result });
   revalidatePath("/admin/payments");
   return ok(result, `Checked ${result.checked} open payment${result.checked === 1 ? "" : "s"}: ${result.settled} settled${result.errors ? `, ${result.errors} errors` : ""}.`);

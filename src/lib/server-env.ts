@@ -5,12 +5,11 @@ import "server-only";
 
 export const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
+/** The home store's Razorpay account. Other stores save their own keys in Admin › Settings › Payments. */
 export const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
 export const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || "";
 /** Only for tests: point the Razorpay client at a local mock. Live keys always use Razorpay. */
-export const RAZORPAY_API_BASE = (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "").startsWith("rzp_live_")
-  ? "https://api.razorpay.com"
-  : (process.env.RAZORPAY_API_BASE || "https://api.razorpay.com").replace(/\/$/, "");
+export const RAZORPAY_TEST_API_BASE = (process.env.RAZORPAY_API_BASE || "https://api.razorpay.com").replace(/\/$/, "");
 
 export const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
@@ -60,6 +59,12 @@ const LOCAL_SMS_HOOK_SECRET = "v1,whsec_dGFhbmEtbG9jYWwtZGV2ZWxvcG1lbnQtc21zLWhv
 const LOCAL_SUPABASE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(process.env.NEXT_PUBLIC_SUPABASE_URL || "");
 export const SMS_HOOK_SECRET =
   process.env.SUPABASE_SMS_HOOK_SECRET === LOCAL_SMS_HOOK_SECRET && !LOCAL_SUPABASE ? "" : process.env.SUPABASE_SMS_HOOK_SECRET || "";
+
+/**
+ * Encrypts each store's own API keys (AES-256-GCM) before they are saved in the database:
+ * 32 random bytes, base64 (`openssl rand -base64 32`). Without it, stores can't save keys.
+ */
+export const STORE_SECRETS_KEY = process.env.STORE_SECRETS_KEY || "";
 
 /** Signs guest order links and the guest cart cookie. Falls back to the service key. */
 export const LINK_SECRET = process.env.ORDER_LINK_SECRET || SUPABASE_SERVICE_ROLE_KEY;

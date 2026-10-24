@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
-import { SITE_URL } from "@/lib/env";
+import { contextOrigin } from "@/lib/store";
 
-export default function robots(): MetadataRoute.Robots {
+/** Each store's robots.txt points at its own address and sitemap. */
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const origin = await contextOrigin();
   return {
     rules: [
       {
@@ -11,7 +13,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin", "/account", "/cart", "/checkout", "/orders", "/api/", "/login", "/unsubscribe", "/signup", "/auth/", "/*?*sort="],
       },
     ],
-    sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL,
+    sitemap: `${origin}/sitemap.xml`,
+    host: origin,
   };
 }

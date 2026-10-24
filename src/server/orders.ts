@@ -10,13 +10,13 @@ import { fail, friendlyError, ok, type ActionResult } from "@/lib/errors";
 import { findAccessibleOrder } from "@/lib/orders";
 import { orderPath } from "@/lib/order-link";
 import { rateLimit } from "@/lib/rate-limit";
-import { supabaseService } from "@/lib/supabase/admin";
+import { contextStoreId, storeService } from "@/lib/store";
 
 export async function cancelOrder(orderNumber: string, key: string | null, reason: string): Promise<ActionResult<{ result: string }>> {
   const access = await findAccessibleOrder(orderNumber, key);
   if (!access) return fail("Order not found.");
   const user = await getUser();
-  const { data, error } = await supabaseService().rpc("customer_cancel_order", {
+  const { data, error } = await (await storeService()).rpc("customer_cancel_order", {
     p_order_id: access.id,
     // Signed links act for the order's owner; account access is checked again in SQL.
     p_user_id: sqlNull(access.via === "account" ? user?.id : access.user_id),
@@ -46,7 +46,7 @@ export async function requestReturn(orderNumber: string, key: string | null, inp
   const access = await findAccessibleOrder(orderNumber, key);
   if (!access) return fail("Order not found.");
   const user = await getUser();
-  const { error } = await supabaseService().rpc("customer_request_return", {
+  const { error } = await (await storeService()).rpc("customer_request_return", {
     p_order_id: access.id,
     p_user_id: sqlNull(access.via === "account" ? user?.id : access.user_id),
     p_items: parsed.data.items,
@@ -68,11 +68,10 @@ export async function lookupOrder(_: unknown, form: FormData): Promise<{ error?:
   const parsed = lookupSchema.safeParse({ orderNumber: form.get("orderNumber"), email: form.get("email") });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   if (!(await rateLimit("lookup", 8, 600))) return { error: "Too many attempts. Please try again in a few minutes." };
-  const { data } = await supabaseService()
-    .from("orders")
-    .select("id, order_number, email")
-    .eq("order_number", parsed.data.orderNumber)
-    .maybeSingle();
+  const [sb, store] = await Promise.all([storeService(), contextStoreId()]);
+  let query = sb.from("orders").select("id, order_number, email").eq("order_number", parsed.data.orderNumber);
+  if (store) query = query.eq("store_id", store);
+  const { data } = await query.maybeSingle();
   if (!data || data.email.toLowerCase() !== parsed.data.email) {
     return { error: "We couldn't find an order with that number and email." };
   }
@@ -84,7 +83,7 @@ export async function setWhatsappUpdates(orderNumber: string, key: string | null
   const access = await findAccessibleOrder(orderNumber, key);
   if (!access) return fail("Order not found.");
   if (!(await rateLimit("wa-toggle", 20, 600))) return fail("Too many requests. Please wait a moment.");
-  const { error } = await supabaseService().rpc("set_order_whatsapp", { p_order_id: access.id, p_on: !!on });
+  const { error } = await (await storeService()).rpc("set_order_whatsapp", { p_order_id: access.id, p_on: !!on });
   if (error) return fail(friendlyError(error));
   revalidatePath(`/orders/${orderNumber}`);
   return ok(null, on ? "WhatsApp updates are on." : "WhatsApp updates are off for this order.");
@@ -95,7 +94,7 @@ export async function confirmCodOrder(orderNumber: string, key: string | null): 
   const access = await findAccessibleOrder(orderNumber, key);
   if (!access) return fail("Order not found.");
   if (!(await rateLimit("cod-confirm", 20, 600))) return fail("Too many requests. Please wait a moment.");
-  const { error } = await supabaseService().rpc("confirm_cod_order", { p_order_id: access.id });
+  const { error } = await (await storeService()).rpc("confirm_cod_order", { p_order_id: access.id });
   if (error) return fail(friendlyError(error, "We couldn't confirm this order."));
   revalidatePath(`/orders/${orderNumber}`);
   revalidatePath(`/account/orders/${orderNumber}`);

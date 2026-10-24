@@ -4,11 +4,13 @@ import { indianMobile, maskMobile } from "./phone";
 import { rateLimit } from "./rate-limit";
 import { MSG91_API_BASE, MSG91_AUTH_KEY, MSG91_TEMPLATE_ID, SMS_HOOK_SECRET } from "./server-env";
 import { supabaseService } from "./supabase/admin";
-import { sendAuthCode, whatsappConfigured } from "./whatsapp";
+import { sendAuthCode, whatsappConnected } from "./whatsapp";
 
 // Sign-in codes for "Continue with mobile number". Supabase Auth makes the code and checks
 // it; its Send SMS hook (/api/auth/sms) hands the code to deliverLoginCode, which sends it
 // by SMS through MSG91, or on WhatsApp when the store chose that in Settings › Sign-in.
+// The hook and the sending accounts belong to the platform, so for now only the home store
+// offers it (with the home store's settings).
 
 export type LoginCodeChannel = "sms" | "whatsapp";
 
@@ -37,13 +39,13 @@ interface ChannelSettings {
 
 /** The channel the store's settings pick, if it is set up; WhatsApp falls back to SMS. */
 export function chooseChannel(s: ChannelSettings): LoginCodeChannel | null {
-  if (s.phone_login_channel === "whatsapp" && whatsappConfigured() && s.whatsapp_login_template) return "whatsapp";
+  if (s.phone_login_channel === "whatsapp" && whatsappConnected() && s.whatsapp_login_template) return "whatsapp";
   return msg91Configured() ? "sms" : null;
 }
 
 /** How sign-in codes are sent when signing in with a mobile number is on and set up, else null. */
-export function phoneSignInChannel(s: ChannelSettings & { phone_login_enabled: boolean }): LoginCodeChannel | null {
-  return s.phone_login_enabled && SMS_HOOK_SECRET ? chooseChannel(s) : null;
+export function phoneSignInChannel(s: ChannelSettings & { phone_login_enabled: boolean }, store: { isHome: boolean }): LoginCodeChannel | null {
+  return store.isHome && s.phone_login_enabled && SMS_HOOK_SECRET ? chooseChannel(s) : null;
 }
 
 export async function sendCodeBy(channel: LoginCodeChannel, to: string, code: string, s: ChannelSettings) {
@@ -98,6 +100,7 @@ export async function deliverLoginCode(input: { phone: string; code: string; use
   if (!SMS_HOOK_SECRET) return unavailable("SUPABASE_SMS_HOOK_SECRET is not set.");
 
   const sb = supabaseService();
+  // The home store's settings (its row is id 1, from before there were other stores).
   const { data: s, error } = await sb
     .from("store_settings")
     .select("phone_login_enabled, phone_login_channel, whatsapp_login_template, whatsapp_login_language")
@@ -113,8 +116,12 @@ export async function deliverLoginCode(input: { phone: string; code: string; use
   if (!auth.confirmations) return unavailable("phone confirmations are off in Supabase (Authentication › Sign In / Providers › Phone › Confirm phone). Turn them on.");
 
   if (input.userId) {
-    const { data: staff } = await sb.from("user_roles").select("user_id").eq("user_id", input.userId).maybeSingle();
-    if (staff) {
+    // Staff of any store, or the platform's admins.
+    const [{ data: staff }, { data: platform }] = await Promise.all([
+      sb.from("user_roles").select("user_id").eq("user_id", input.userId).limit(1).maybeSingle(),
+      sb.from("platform_admins").select("user_id").eq("user_id", input.userId).maybeSingle(),
+    ]);
+    if (staff || platform) {
       // Say nothing either way, so this can't be used to find staff numbers.
       console.warn(`[login-codes] not sending a code to staff account ${input.userId}`);
       return { ok: true, sent: false };

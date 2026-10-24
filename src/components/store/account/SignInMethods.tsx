@@ -89,7 +89,7 @@ function EmailRow({ email, pendingEmail }: { email: string; pendingEmail: string
             setBusy(true);
             const { error } = await supabaseBrowser().auth.updateUser(
               { email: value.trim() },
-              { emailRedirectTo: `${window.location.origin}/auth/callback?next=/account` },
+              { emailRedirectTo: `${window.location.origin}/auth/confirm` },
             );
             setBusy(false);
             if (error) {

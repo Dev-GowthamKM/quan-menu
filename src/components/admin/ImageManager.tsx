@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import CatalogImage from "../ui/CatalogImage";
 import { cx } from "../ui/controls";
 import { ChevronLeft, ChevronRight, CloseIcon, UploadIcon } from "../ui/icons";
+import { useAdminStore } from "./AdminStore";
 import { datedPath, prepareImage, uploadFile } from "./upload";
 
 export interface EditorImage {
@@ -29,6 +30,7 @@ interface Pending {
  * tied to a colour so the product page shows it when that colour is chosen.
  */
 export default function ImageManager({ images, onChange, colors, folder = "products" }: { images: EditorImage[]; onChange: (next: EditorImage[]) => void; colors: string[]; folder?: string }) {
+  const store = useAdminStore();
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<Pending[]>([]);
   const [over, setOver] = useState(false);
@@ -45,7 +47,7 @@ export default function ImageManager({ images, onChange, colors, folder = "produ
       const job = queue[i];
       try {
         const prepared = await prepareImage(file);
-        const { path, url } = await uploadFile(datedPath(folder, file.name, prepared.ext), prepared.blob, prepared.type, (f) =>
+        const { path, url } = await uploadFile(datedPath(store.id, folder, file.name, prepared.ext), prepared.blob, prepared.type, (f) =>
           setPending((p) => p.map((x) => (x.key === job.key ? { ...x, progress: f } : x))),
         );
         const image: EditorImage = { key: job.key, url, storage_path: path, alt: "", color: null, width: prepared.width, height: prepared.height };
@@ -181,13 +183,14 @@ export default function ImageManager({ images, onChange, colors, folder = "produ
 
 /** One image (logo, banner, tile) with upload, replace and remove. */
 export function SingleImageField({ label, value, onChange, folder, aspect = "aspect-[16/9]" }: { label: string; value: string | null; onChange: (url: string | null) => void; folder: string; aspect?: string }) {
+  const store = useAdminStore();
   const input = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<{ progress?: number; error?: string }>({});
   const pick = async (file: File) => {
     setState({ progress: 0 });
     try {
       const prepared = await prepareImage(file, 2400);
-      const { url } = await uploadFile(datedPath(folder, file.name, prepared.ext), prepared.blob, prepared.type, (f) => setState({ progress: f }));
+      const { url } = await uploadFile(datedPath(store.id, folder, file.name, prepared.ext), prepared.blob, prepared.type, (f) => setState({ progress: f }));
       onChange(url);
       setState({});
     } catch (e) {

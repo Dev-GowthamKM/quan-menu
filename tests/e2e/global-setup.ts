@@ -28,11 +28,15 @@ export default async function globalSetup(config: FullConfig) {
       await sb.auth.admin.updateUserById(found.id, { password: u.password, email_confirm: true });
     }
   }
+  // Without a store header the service role works with the home store.
   await sb.from("user_roles").upsert({ user_id: ids[OWNER.email], role: "owner" });
   await sb.from("user_roles").delete().eq("user_id", ids[CUSTOMER.email]);
+  // The owner also runs the platform (creates stores in the multi-store tests).
+  await sb.from("platform_admins").upsert({ user_id: ids[OWNER.email] });
+  await sb.from("platform_admins").delete().eq("user_id", ids[CUSTOMER.email]);
   await sb.from("coupons").upsert(
     { code: COUPON, description: "End-to-end test code", kind: "percentage", value: 1000, min_subtotal: 0, is_active: true, usage_limit: null, usage_limit_per_customer: null },
-    { onConflict: "code" },
+    { onConflict: "store_id,code" },
   );
 
   // Messages queued by earlier runs (and by the database tests) would otherwise be sent ahead

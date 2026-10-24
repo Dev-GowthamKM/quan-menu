@@ -6,7 +6,10 @@ import { parseShiprocketDate } from "./tracking";
 // (Delhivery, Blue Dart, Xpressbees, DTDC...), prints the label and schedules the pickup;
 // tracking updates come back through the webhook in /api/webhooks/courier.
 
-export const shiprocketConfigured = () => !!(SHIPROCKET_EMAIL && SHIPROCKET_PASSWORD);
+const connected = () => !!(SHIPROCKET_EMAIL && SHIPROCKET_PASSWORD);
+
+/** Whether a store can book Shiprocket: the account is the platform's own, so the home store only (for now). */
+export const shiprocketConfigured = (store: { isHome: boolean }) => store.isHome && connected();
 
 /** Public tracking page for an AWB. */
 export const shiprocketTrackingUrl = (awb: string) => `https://shiprocket.co/tracking/${encodeURIComponent(awb)}`;
@@ -22,7 +25,7 @@ let session: { token: string; expires: number } | null = null;
 
 async function login(): Promise<string> {
   if (session && session.expires > Date.now()) return session.token;
-  if (!shiprocketConfigured()) throw new ShiprocketError("Shiprocket isn't connected. Set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD.", 0);
+  if (!connected()) throw new ShiprocketError("Shiprocket isn't connected. Set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD.", 0);
   const res = await fetch(`${SHIPROCKET_API_BASE}/v1/external/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

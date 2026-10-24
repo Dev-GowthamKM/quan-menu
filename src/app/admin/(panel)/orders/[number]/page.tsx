@@ -42,7 +42,7 @@ const EVENT_TONE: Record<string, string> = {
 
 export default async function AdminOrder({ params }: { params: Promise<{ number: string }> }) {
   const { number } = await params;
-  const { supabase, role } = await requireRole("staff");
+  const { supabase, role, store } = await requireRole("staff");
   const isAdmin = roleAtLeast(role, "admin");
   const { data: order } = await supabase.from("orders").select(ORDER_COLUMNS).eq("order_number", number.toUpperCase()).maybeSingle();
   if (!order) notFound();
@@ -151,7 +151,7 @@ export default async function AdminOrder({ params }: { params: Promise<{ number:
             providers={providers.data ?? []}
             shipment={latestShipment ? { carrier: latestShipment.carrier, tracking_number: latestShipment.tracking_number, tracking_url: latestShipment.tracking_url, shipped_at: latestShipment.shipped_at, delivered_at: latestShipment.delivered_at } : null}
             courier={{
-              enabled: settings.shiprocket_enabled && shiprocketConfigured(),
+              enabled: settings.shiprocket_enabled && shiprocketConfigured(store),
               booking: booking ? {
                 carrier: booking.carrier, awb: booking.tracking_number, trackingUrl: booking.tracking_url, status: booking.status,
                 pickupAt: booking.pickup_scheduled_for, estimatedDelivery: booking.estimated_delivery, courierStatus: booking.courier_status,

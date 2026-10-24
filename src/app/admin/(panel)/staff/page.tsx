@@ -12,7 +12,7 @@ export default async function StaffPage() {
   const { data, error } = await supabase.rpc("admin_staff");
   return (
     <>
-      <PageHeader title="Staff and roles" description="Who can sign in to this admin. Roles are stored on the server; nobody can give themselves access from their own account." />
+      <PageHeader title="Staff and roles" description="Who works on this store in the admin. Roles are stored on the server and belong to one store; nobody can give themselves access from their own account." />
       {error && <Notice tone="error" className="mb-4">{error.message}</Notice>}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <StaffManager staff={data ?? []} canManage={roleAtLeast(role, "owner")} currentUserId={user.id} />

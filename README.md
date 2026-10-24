@@ -10,6 +10,10 @@ and every price, tax and discount is worked out on the server.
 name, logo, colours, fonts, homepage, policies and emails are all set in **Admin › Settings**,
 where [Appearance](#appearance) restyles the whole store with one-click themes.
 
+One deployment can run **many stores**: each has its own catalog, customers, orders, look, staff,
+payment account and web address, and the platform's administrators create them from
+**Admin › All stores**. Taana is the first (home) store. See [Stores](#stores).
+
 ## Contents
 
 - [What's included](#whats-included)
@@ -18,6 +22,7 @@ where [Appearance](#appearance) restyles the whole store with one-click themes.
 - [Database](#database)
 - [Run it locally](#run-it-locally)
 - [Set up the first owner](#set-up-the-first-owner)
+- [Stores](#stores)
 - [Environment variables](#environment-variables)
 - [Deploy](#deploy)
 - [Payment providers](#payment-providers)
@@ -91,6 +96,10 @@ where [Appearance](#appearance) restyles the whole store with one-click themes.
   and COD limits, returns, reviews, policies, FAQ, SEO, email templates, WhatsApp templates,
   customer sign-in with mobile numbers, maintenance mode and sample data removal. Staff and
   roles. Audit log.
+- Stores (for the platform's administrators): create a store with its name, web address, owner
+  and starting look; add or remove web addresses; suspend and reopen it. A store switcher for
+  anyone who works at more than one, and each store's own Razorpay account under
+  **Settings › Payment accounts**.
 
 ## Architecture
 
@@ -133,6 +142,10 @@ where [Appearance](#appearance) restyles the whole store with one-click themes.
   written to `inventory_movements` by a trigger.
 - **Emails** are queued in `email_outbox` inside the same transaction as the event, then sent by
   the server (`processOutbox`) through Resend, so a slow email service never breaks checkout.
+- **Stores.** The storefront's store comes from the web address (`store_domains`; any other
+  address is the home store), the admin panel's from its store switcher (`src/lib/store.ts`).
+  Every database call carries the store's id in an `x-store-id` header, which `current_store_id()`
+  reads in SQL. Cached catalog and settings reads are keyed by store.
 
 ## Security model
 
@@ -156,6 +169,14 @@ where [Appearance](#appearance) restyles the whole store with one-click themes.
   `src/lib/server-env.ts`, which can't be imported into browser code.
 - **Guest access** to an order uses an HMAC-signed link; guest carts use a random token stored
   hashed in the database.
+- **Stores can't reach each other's data.** The store header only chooses which store a call is
+  for. Every row carries `store_id`; every row-level security policy is limited to the current
+  store; roles are per store (a header naming another store gets its caller nothing there); a
+  trigger refuses writes to any other store during a request, including from the service role
+  and security-definer functions; composite foreign keys keep references inside a store (a bag
+  only holds its own store's items); images live in a folder per store that only its staff can
+  write. Each store's Razorpay keys are encrypted (AES-256-GCM) before they're saved, never sent
+  back to the browser, and its webhook is verified with its own secret.
 - **Mobile sign-in:** Supabase Auth makes and checks the codes, and only the store's Send SMS
   hook, which verifies Supabase's signature, can get one delivered. The hook sends only to Indian
   mobile numbers, at most 5 an hour and 10 a day per number, never to staff accounts, and not at
@@ -185,6 +206,10 @@ All schema changes are SQL migrations in `supabase/migrations/` (run in order):
 | `…0800_defaults` | Default "All India" shipping zone and Indian couriers |
 | `…0900_notifications` | Email outbox claiming |
 | `20261019000100_admin_catalog` | Admin product and inventory lists, media library, SKU checks, CSV import, collection previews |
+| `20261020…` – `20261022…` | Shiprocket, WhatsApp, cash-on-delivery safeguards, reminders, mobile sign-in |
+| `20261023000100_theme` | Brand colour and italic headings for Appearance |
+| `20261024000100_multi_store` | Stores, web addresses, platform administrators, `store_id` on every table, per-store rules, roles, uniqueness, order numbers and functions |
+| `20261024000200_store_lookup_and_secrets` | The store for a web address, each store's encrypted keys, platform administrator lists |
 
 Money is stored as integer paise everywhere (`bigint` with a non-negative check). Generated
 TypeScript types are in `src/lib/database.types.ts` (`npm run db:types`).
@@ -254,6 +279,47 @@ and roles** (they must have an account first). Roles: **owner** (everything, inc
 log), **staff** (catalog, stock, orders and fulfilment, returns without refunds, customers,
 reviews, messages).
 
+## Stores
+
+One deployment runs any number of stores. Each has its own products, categories, collections,
+discount codes, delivery zones, customers list, orders and order numbers (`TA100001`,
+`KS100001`…), settings and look, staff and roles, Razorpay account and web addresses. Customer
+accounts belong to the platform, so one login works at every store, but a store only sees the
+people who signed up, signed in or ordered there.
+
+**Platform administrators** create and run stores in **Admin › All stores**, and count as an
+owner in every store. The store's existing owners became platform administrators when the
+multi-store update ran; add others on the same page.
+
+**A new store:**
+
+1. **Admin › All stores › New store:** its name, the address customers will visit (a free
+   `name.vercel.app`, or your own domain), the owner's email (they need an account; leave it empty
+   to own it yourself) and a starting look. It starts with a delivery zone for all of India,
+   Standard and Express rates and the usual couriers.
+2. **Vercel › your project › Settings › Domains:** add the same address. With `VERCEL_API_TOKEN`
+   and `VERCEL_PROJECT_ID` set, the app adds it for you. A `.vercel.app` name works straight away;
+   your own domain also needs its DNS pointed at Vercel.
+3. **Supabase › Authentication › URL Configuration › Redirect URLs:** add `https://ADDRESS/**`,
+   so sign-up, password-reset and Google sign-in come back to that store. (Without it, those
+   links finish on the home store's address.)
+4. The owner adds products from the store's admin (the store switcher at the top of the admin
+   sidebar, or **Open its admin** on the store's page) and, to take online payments, saves the
+   store's Razorpay keys in **Settings › Payment accounts** and adds the webhook shown there.
+   Cash on delivery works straight away.
+
+**What the home store keeps for now.** Stripe, Shiprocket, WhatsApp messages and mobile-number
+sign-in use the platform's own accounts (environment variables), so only the home store offers
+them; their settings are hidden in other stores. Emails to every store's customers go out from
+the address in `EMAIL_FROM`, with the store's name as the sender and its contact email as the
+reply-to.
+
+**Suspending** a store (on its page in All stores) closes its storefront and stops new orders;
+nothing is deleted and its staff can still sign in.
+
+Locally, stores can use addresses like `brand.localhost:3000` (browsers send any
+`*.localhost` name to your own computer).
+
 ## Environment variables
 
 See `.env.example` for comments. Check a deployment at `https://YOUR-SITE/api/health`: it reports
@@ -275,6 +341,8 @@ which settings are present (yes/no only) and whether the database answers.
 | `SUPABASE_SMS_HOOK_SECRET` | For mobile sign-in | Verifies Supabase's calls to `/api/auth/sms` (the Send SMS hook) |
 | `MSG91_AUTH_KEY`, `MSG91_TEMPLATE_ID` | For codes by SMS | Sends sign-in codes through MSG91 with your DLT-approved template |
 | `CRON_SECRET` | Recommended | Authorises `/api/cron/housekeeping` |
+| `STORE_SECRETS_KEY` | For stores' own Razorpay keys | 32 random bytes, base64 (`openssl rand -base64 32`); encrypts the keys stores save in Settings › Payment accounts. Changing it makes saved keys unreadable (stores save them again) |
+| `VERCEL_API_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID` | Optional | Adds stores' web addresses to the Vercel project automatically (a token from Vercel › Account Settings › Tokens) |
 | `NEXT_PUBLIC_GOOGLE_SIGN_IN` | Optional | Shows "Continue with Google" (`1`) |
 | `RAZORPAY_API_BASE`, `STRIPE_API_BASE`, `RESEND_API_BASE`, `SHIPROCKET_API_BASE`, `WHATSAPP_API_BASE`, `MSG91_API_BASE` | Tests only | Point at local mocks (ignored with live payment keys; Shiprocket, WhatsApp and MSG91 only accept localhost) |
 
@@ -301,9 +369,10 @@ keep its database password. Then load the database, either in the browser or wit
 - **Database › Extensions:** enable `pg_cron` before pushing (the migration schedules the stock
   release job when it's available; otherwise rely on the Vercel cron below).
 - **Authentication › URL configuration:** Site URL = your store URL; redirect URLs =
-  `https://YOUR-SITE/auth/callback` and `https://YOUR-SITE/auth/confirm`.
+  `https://YOUR-SITE/**`, plus `https://ADDRESS/**` for each other store's address.
 - **Authentication › Email templates:** copy the four templates from `supabase/templates/` (they
-  link to `/auth/confirm` so verification and password reset work across devices).
+  link to `/auth/confirm` on the address the shopper used, so verification and password reset
+  work across devices and come back to the right store).
 - **Authentication › SMTP:** set up your own SMTP sender (Supabase's built-in sender is rate
   limited and meant for testing). Resend works here too.
 - **Google sign-in (optional):** add the provider with your Google OAuth client, then set
@@ -327,6 +396,14 @@ emails). Delete the sample data before launch.
 **URLs:** storefront `https://YOUR-SITE/`, admin `https://YOUR-SITE/admin` (sign in at
 `/admin/login`).
 
+**Updating a live store.** Run the database update first, then deploy the code (the running
+version keeps working on the updated database). In the browser:
+`npm run db:bundle -- --since <the last migration you applied>`, then paste the file it writes
+(`supabase/setup/update-after-….sql`) into **SQL Editor › New query** and click **Run**. For
+the multi-store version from a store that last applied `20261022000100_phone_sign_in`: run
+`update-after-20261022000100.sql`, set `STORE_SECRETS_KEY`, replace the four email templates, and
+redeploy.
+
 ## Payment providers
 
 **Razorpay (India).**
@@ -344,6 +421,13 @@ emails). Delete the sample data before launch.
    the order in **Admin › Orders** and **Admin › Payments**.
 
 Refunds started in the admin are sent through Razorpay's refund API and confirmed by webhook.
+
+**Each store's own Razorpay account.** In any store, an owner can save its keys in
+**Settings › Payment accounts** (encrypted with `STORE_SECRETS_KEY`; only their last four
+characters are shown again) and add the webhook URL shown there
+(`https://YOUR-SITE/api/webhooks/razorpay?store=<the store's id>`) with the same events. Payments,
+refunds and webhooks for that store then go to its own account. The home store uses the
+environment keys above until it saves its own.
 
 **Cash on delivery** needs no setup: turn it on or off and set the fee and order limits in
 **Settings › Checkout and tax**; zones, rates and PIN codes can exclude it. Record the cash from
@@ -592,6 +676,18 @@ shopper signing up (name asked once, guest bag kept), a returning customer (a wr
 an email customer adding a number and signing in with it, codes on WhatsApp with the copy-code
 template, and refusals (other countries, staff accounts, unsigned hook calls, the switch off).
 
+**Multi-store tests (13 database, 4 Playwright)** cover only platform administrators creating
+stores (with owner, settings, delivery and couriers), web addresses mapping to their store,
+catalogs that only show their own products (even with the same address), staff who can't read,
+change or add to another store by naming it, rows that can't be moved between stores, customers
+listed only where they joined, the server's own access held to the named store, bags limited to
+their store's items, per-store order numbers and delivery rates, orders visible only in their
+store, suspended stores refusing orders, keys no browser can read, and images only in the staff's
+own store folder; in the browser, creating a store from the admin and opening it at its own
+address with its own look and catalog, a shopper's order showing only in that store's admin, a
+payment going to the store's own Razorpay account with its own webhook secret, and suspending and
+reopening the store.
+
 **Theme tests (14 unit, 1 Playwright)** cover the colour arithmetic, that every theme keeps text,
 labels, secondary text and the words on buttons readable on every surface, the look shown before
 the theme migration runs, and an owner switching themes in the admin: the saved settings, the
@@ -619,7 +715,7 @@ the mobile sign-in tests run the same check on the number and code forms and the
 Automated checks don't replace testing with a keyboard and a screen reader.
 
 Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 37/37,
-integration 72/72, Playwright 23/23 against the production build (`next build`), and every page
+integration 86/86, Playwright 27/27 against the production build (`next build`), and every page
 checked at 390 px wide without horizontal scrolling.
 
 ## Running the store
@@ -660,6 +756,11 @@ checked at 390 px wide without horizontal scrolling.
   after long disuse; customers who change numbers should update it (or add an email) under
   **My account**. The MSG91 connection was built against MSG91's documented Flow API and tested
   with the bundled mock: send a real test code before turning it on.
+- Stores share one Supabase project: customer accounts are platform-wide, and Supabase's own
+  emails (sign-up, password reset) come from the project's sender, worded to suit any store (they
+  name no store, since anything a browser sends at sign-up could be made up). Stripe, Shiprocket, WhatsApp and mobile sign-in are the home store's only (see
+  [Stores](#stores)). A store's web address must be added in Vercel (automatic with a token) and
+  in Supabase's redirect URLs by hand.
 - The Vercel cron runs daily on the Hobby plan; pg_cron handles the 5-minute stock release. If
   pg_cron isn't available, use a paid Vercel plan or another scheduler calling
   `/api/cron/housekeeping` every few minutes with the `CRON_SECRET` bearer token.
@@ -674,7 +775,8 @@ src/app/api/            webhooks, cron, health, session info
 src/components/store/   storefront components
 src/components/admin/   admin components (editors, tables, uploads, charts)
 src/server/             Server Actions (store and admin)
-src/lib/                Supabase clients, auth, settings, catalog queries, payments, email, CSV
+src/lib/                Supabase clients, the request's store, auth, settings, catalog queries,
+                        payments, email, CSV
 supabase/migrations/    schema, policies and SQL functions
 supabase/seed.sql       sample data (flagged is_sample)
 tests/integration/      database tests (vitest)

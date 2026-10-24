@@ -1,41 +1,17 @@
 // Storefront catalog reads. Everything goes through the cookie-free public client, so
-// results are cached for all visitors (tag "catalog") and refreshed when staff change
-// the catalog (revalidateTag in the admin actions) or after at most five minutes, which
-// is also how scheduled products appear on time.
+// results are cached for all visitors of a store (keyed by the store's id, tag "catalog")
+// and refreshed when staff change the catalog (revalidateTag in the admin actions) or
+// after at most five minutes, which is also how scheduled products appear on time.
 import { unstable_cache } from "next/cache";
 import { SUPABASE_CONFIGURED } from "./env";
+import { contextStoreId } from "./store";
 import { supabasePublic } from "./supabase/public";
+import { PAGE_SIZE, type SearchParams } from "./catalog-options";
 import type { Facets, ProductCard, ProductPage, Tables } from "./types";
 
 const CACHE = { tags: ["catalog"], revalidate: 300 };
 
-export const PAGE_SIZE = 24;
-
-export type SortKey = "featured" | "newest" | "price_asc" | "price_desc" | "popular";
-export const SORTS: { key: SortKey; label: string }[] = [
-  { key: "featured", label: "Featured" },
-  { key: "newest", label: "Newest" },
-  { key: "popular", label: "Popularity" },
-  { key: "price_asc", label: "Price: low to high" },
-  { key: "price_desc", label: "Price: high to low" },
-];
-
-export interface SearchParams {
-  q?: string | null;
-  category?: string | null;
-  brands?: string[];
-  collection?: string | null;
-  sizes?: string[];
-  colors?: string[];
-  min?: number | null;
-  max?: number | null;
-  inStock?: boolean;
-  onSale?: boolean;
-  sort?: SortKey;
-  page?: number;
-  limit?: number;
-  ids?: string[];
-}
+export { PAGE_SIZE, SORTS, type SearchParams, type SortKey } from "./catalog-options";
 
 function log(where: string, error: { message: string } | null) {
   if (error) console.error(`[catalog] ${where}:`, error.message);
@@ -43,11 +19,11 @@ function log(where: string, error: { message: string } | null) {
 
 type Row = ProductCard & { total_count: number };
 
-export const searchProducts = unstable_cache(
-  async (p: SearchParams): Promise<{ items: ProductCard[]; total: number }> => {
+const searchProductsIn = unstable_cache(
+  async (store: string | null, p: SearchParams): Promise<{ items: ProductCard[]; total: number }> => {
     if (!SUPABASE_CONFIGURED) return { items: [], total: 0 };
     const limit = p.limit ?? PAGE_SIZE;
-    const { data, error } = await supabasePublic().rpc("search_products", {
+    const { data, error } = await supabasePublic(store).rpc("search_products", {
       p_q: p.q || undefined,
       p_category: p.category || undefined,
       p_brands: p.brands?.length ? p.brands : undefined,
@@ -74,6 +50,8 @@ export const searchProducts = unstable_cache(
   CACHE,
 );
 
+export const searchProducts = async (p: SearchParams) => searchProductsIn(await contextStoreId(), p);
+
 /** Product cards in the order of the given ids (recently viewed, wishlist). */
 export async function productCardsByIds(ids: string[]): Promise<ProductCard[]> {
   if (!ids.length) return [];
@@ -82,10 +60,10 @@ export async function productCardsByIds(ids: string[]): Promise<ProductCard[]> {
   return ids.map((id) => byId.get(id)).filter((p): p is ProductCard => !!p);
 }
 
-export const getFacets = unstable_cache(
-  async (q: string | null, category: string | null, collection: string | null): Promise<Facets | null> => {
+const getFacetsIn = unstable_cache(
+  async (store: string | null, q: string | null, category: string | null, collection: string | null): Promise<Facets | null> => {
     if (!SUPABASE_CONFIGURED) return null;
-    const { data, error } = await supabasePublic().rpc("catalog_facets", {
+    const { data, error } = await supabasePublic(store).rpc("catalog_facets", {
       p_q: q || undefined,
       p_category: category || undefined,
       p_collection: collection || undefined,
@@ -97,10 +75,13 @@ export const getFacets = unstable_cache(
   CACHE,
 );
 
-export const getProductPage = unstable_cache(
-  async (slug: string): Promise<ProductPage | null> => {
+export const getFacets = async (q: string | null, category: string | null, collection: string | null) =>
+  getFacetsIn(await contextStoreId(), q, category, collection);
+
+const getProductPageIn = unstable_cache(
+  async (store: string | null, slug: string): Promise<ProductPage | null> => {
     if (!SUPABASE_CONFIGURED) return null;
-    const { data, error } = await supabasePublic().rpc("get_product_page", { p_slug: slug });
+    const { data, error } = await supabasePublic(store).rpc("get_product_page", { p_slug: slug });
     log("get_product_page", error);
     return (data as unknown as ProductPage) ?? null;
   },
@@ -108,17 +89,22 @@ export const getProductPage = unstable_cache(
   CACHE,
 );
 
-export const getRelatedProducts = unstable_cache(
-  async (productId: string, limit = 8): Promise<ProductCard[]> => {
+export const getProductPage = async (slug: string) => getProductPageIn(await contextStoreId(), slug);
+
+const relatedIdsIn = unstable_cache(
+  async (store: string | null, productId: string, limit: number): Promise<string[]> => {
     if (!SUPABASE_CONFIGURED) return [];
-    const { data, error } = await supabasePublic().rpc("related_products", { p_product_id: productId, p_limit: limit });
+    const { data, error } = await supabasePublic(store).rpc("related_products", { p_product_id: productId, p_limit: limit });
     log("related_products", error);
-    const ids = ((data ?? []) as unknown as string[]).map(String);
-    return productCardsByIds(ids);
+    return ((data ?? []) as unknown as string[]).map(String);
   },
   ["related-products"],
   CACHE,
 );
+
+export async function getRelatedProducts(productId: string, limit = 8): Promise<ProductCard[]> {
+  return productCardsByIds(await relatedIdsIn(await contextStoreId(), productId, limit));
+}
 
 export type Category = Pick<
   Tables<"categories">,
@@ -126,10 +112,10 @@ export type Category = Pick<
 >;
 export type Department = Category & { children: Category[] };
 
-export const getCategories = unstable_cache(
-  async (): Promise<Category[]> => {
+const getCategoriesIn = unstable_cache(
+  async (store: string | null): Promise<Category[]> => {
     if (!SUPABASE_CONFIGURED) return [];
-    const { data, error } = await supabasePublic()
+    const { data, error } = await supabasePublic(store)
       .from("categories")
       .select("id, parent_id, name, slug, description, image_url, banner_url, sort_order, seo_title, seo_description")
       .eq("is_published", true)
@@ -141,6 +127,8 @@ export const getCategories = unstable_cache(
   ["categories"],
   CACHE,
 );
+
+export const getCategories = async () => getCategoriesIn(await contextStoreId());
 
 /** Top-level categories (Women, Men...) with their children, for navigation. */
 export async function getDepartments(): Promise<Department[]> {
@@ -165,10 +153,10 @@ export type Brand = Pick<
   "id" | "name" | "slug" | "description" | "logo_url" | "banner_url" | "is_featured" | "sort_order" | "seo_title" | "seo_description"
 >;
 
-export const getBrands = unstable_cache(
-  async (): Promise<Brand[]> => {
+const getBrandsIn = unstable_cache(
+  async (store: string | null): Promise<Brand[]> => {
     if (!SUPABASE_CONFIGURED) return [];
-    const { data, error } = await supabasePublic()
+    const { data, error } = await supabasePublic(store)
       .from("brands")
       .select("id, name, slug, description, logo_url, banner_url, is_featured, sort_order, seo_title, seo_description")
       .eq("is_published", true)
@@ -181,6 +169,8 @@ export const getBrands = unstable_cache(
   CACHE,
 );
 
+export const getBrands = async () => getBrandsIn(await contextStoreId());
+
 export async function getBrand(slug: string) {
   return (await getBrands()).find((b) => b.slug === slug) ?? null;
 }
@@ -191,10 +181,10 @@ export type Collection = Pick<
   | "is_featured" | "sort_order" | "product_sort" | "seo_title" | "seo_description"
 >;
 
-export const getCollections = unstable_cache(
-  async (): Promise<Collection[]> => {
+const getCollectionsIn = unstable_cache(
+  async (store: string | null): Promise<Collection[]> => {
     if (!SUPABASE_CONFIGURED) return [];
-    const { data, error } = await supabasePublic()
+    const { data, error } = await supabasePublic(store)
       .from("collections")
       .select("id, title, slug, description, image_url, banner_url, kind, is_seasonal, season, is_featured, sort_order, product_sort, seo_title, seo_description")
       .order("sort_order")
@@ -205,6 +195,8 @@ export const getCollections = unstable_cache(
   ["collections"],
   CACHE,
 );
+
+export const getCollections = async () => getCollectionsIn(await contextStoreId());
 
 export async function getCollection(slug: string) {
   return (await getCollections()).find((c) => c.slug === slug) ?? null;
@@ -220,10 +212,10 @@ export interface Review {
   created_at: string;
 }
 
-export const getReviews = unstable_cache(
-  async (productId: string): Promise<Review[]> => {
+const getReviewsIn = unstable_cache(
+  async (store: string | null, productId: string): Promise<Review[]> => {
     if (!SUPABASE_CONFIGURED) return [];
-    const { data, error } = await supabasePublic()
+    const { data, error } = await supabasePublic(store)
       .from("product_reviews")
       .select("id, rating, title, body, author_name, is_verified_purchase, created_at")
       .eq("product_id", productId)
@@ -237,16 +229,20 @@ export const getReviews = unstable_cache(
   { tags: ["catalog", "reviews"], revalidate: 300 },
 );
 
-export const getBestSellerIds = unstable_cache(
-  async (limit = 8): Promise<string[]> => {
+export const getReviews = async (productId: string) => getReviewsIn(await contextStoreId(), productId);
+
+const getBestSellerIdsIn = unstable_cache(
+  async (store: string | null, limit: number): Promise<string[]> => {
     if (!SUPABASE_CONFIGURED) return [];
-    const { data, error } = await supabasePublic().rpc("best_seller_ids", { p_limit: limit });
+    const { data, error } = await supabasePublic(store).rpc("best_seller_ids", { p_limit: limit });
     log("best_seller_ids", error);
     return ((data ?? []) as unknown as string[]).map(String);
   },
   ["best-sellers"],
   CACHE,
 );
+
+export const getBestSellerIds = async (limit = 8) => getBestSellerIdsIn(await contextStoreId(), limit);
 
 /** Everything the home page shows, fetched in parallel. */
 export async function getHomeData() {

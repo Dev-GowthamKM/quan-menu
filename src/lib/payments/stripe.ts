@@ -3,9 +3,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { STRIPE_API_BASE, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET } from "../server-env";
 
 // Optional international payments through Stripe Checkout (hosted page). Uses the REST
-// API directly to avoid another dependency.
+// API directly to avoid another dependency. The account is the platform's own
+// (environment variables), so for now only the home store offers it.
 
-export const stripeConfigured = () => !!STRIPE_SECRET_KEY;
+export const stripeConfigured = (store: { isHome: boolean }) => store.isHome && !!STRIPE_SECRET_KEY;
 
 export interface StripeSession {
   id: string;

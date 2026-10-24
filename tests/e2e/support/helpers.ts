@@ -20,13 +20,14 @@ export async function stubRazorpay(context: BrowserContext, outcome: "captured" 
   }, outcome);
 }
 
-export async function addToBag(page: Page, slug: string, size: string, quantity = 1) {
-  await page.goto(`/products/${slug}`);
+/** origin: another store's address (default: the main store's). */
+export async function addToBag(page: Page, slug: string, size: string, quantity = 1, origin = "") {
+  await page.goto(`${origin}/products/${slug}`);
   await page.getByRole("button", { name: `Size ${size}`, exact: true }).click();
   await page.getByRole("button", { name: "Add to bag" }).click();
   await expect(page.locator("dialog[open]")).toBeVisible();
   if (quantity > 1) {
-    await page.goto("/cart");
+    await page.goto(`${origin}/cart`);
     for (let i = 1; i < quantity; i++) {
       await page.getByRole("button", { name: "Increase quantity" }).first().click();
       await expect(page.getByRole("group", { name: /Quantity of/ }).first()).toContainText(String(i + 1));
@@ -41,9 +42,9 @@ export const uniquePhone = () => `+91 9${String(Math.floor(Math.random() * 1e9))
  * Guest checkout from the cart through to the pay button, or "Place order" for cash on
  * delivery (with a phone number of its own, unless one is given).
  */
-export async function checkout(page: Page, email: string, opts: { coupon?: string; whatsapp?: boolean; phone?: string; cod?: boolean } = {}) {
+export async function checkout(page: Page, email: string, opts: { coupon?: string; whatsapp?: boolean; phone?: string; cod?: boolean; origin?: string } = {}) {
   const phone = opts.phone ?? (opts.cod ? uniquePhone() : "+91 98765 43210");
-  await page.goto("/cart");
+  await page.goto(`${opts.origin ?? ""}/cart`);
   if (opts.coupon) {
     await page.fill("#cart-coupon", opts.coupon);
     await page.getByRole("button", { name: "Apply" }).click();

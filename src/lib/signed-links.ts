@@ -1,10 +1,10 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { SITE_URL } from "./env";
 import { LINK_SECRET } from "./server-env";
 
 // Links in reminder emails, signed with the server secret so they can't be made up:
-// unsubscribing an email address, and restoring a bag on another device.
+// unsubscribing an email address, and restoring a bag on another device. They point at
+// the sending store's own address (origin), which is also the store they act on.
 
 function sign(purpose: string, value: string) {
   if (!LINK_SECRET) throw new Error("ORDER_LINK_SECRET (or SUPABASE_SERVICE_ROLE_KEY) is not set.");
@@ -19,10 +19,10 @@ function verify(purpose: string, value: string, signature: string | null | undef
 }
 
 export const unsubscribeQuery = (email: string) => `e=${encodeURIComponent(email.toLowerCase())}&s=${sign("unsubscribe", email.toLowerCase())}`;
-export const unsubscribeUrl = (email: string) => `${SITE_URL}/unsubscribe?${unsubscribeQuery(email)}`;
+export const unsubscribeUrl = (origin: string, email: string) => `${origin}/unsubscribe?${unsubscribeQuery(email)}`;
 /** One-click unsubscribe (RFC 8058), for the List-Unsubscribe header. */
-export const oneClickUnsubscribeUrl = (email: string) => `${SITE_URL}/api/unsubscribe?${unsubscribeQuery(email)}`;
+export const oneClickUnsubscribeUrl = (origin: string, email: string) => `${origin}/api/unsubscribe?${unsubscribeQuery(email)}`;
 export const verifyUnsubscribe = (email: string, signature: string | null | undefined) => verify("unsubscribe", email.toLowerCase(), signature);
 
-export const cartRestoreUrl = (cartId: string) => `${SITE_URL}/cart/restore?c=${cartId}&s=${sign("cart", cartId)}`;
+export const cartRestoreUrl = (origin: string, cartId: string) => `${origin}/cart/restore?c=${cartId}&s=${sign("cart", cartId)}`;
 export const verifyCartRestore = (cartId: string, signature: string | null | undefined) => verify("cart", cartId, signature);

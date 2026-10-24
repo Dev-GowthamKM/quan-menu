@@ -1,27 +1,19 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
-import { SUPABASE_CONFIGURED } from "./env";
+import { getUser } from "./session";
+import { contextStore, isPlatformAdmin } from "./store";
 import { supabaseServer } from "./supabase/server";
 import type { AppRole } from "./types";
 
-/** The signed-in user, verified with Supabase Auth (not just decoded from the cookie). */
-export const getUser = cache(async (): Promise<User | null> => {
-  if (!SUPABASE_CONFIGURED) return null;
-  const sb = await supabaseServer();
-  const { data, error } = await sb.auth.getUser();
-  if (error || !data.user) return null;
-  return data.user;
-});
+export { getUser };
 
-/** The user's staff role, or null for customers and visitors. */
+/** The user's staff role in the request's store, or null for customers and visitors. */
 export const getRole = cache(async (): Promise<AppRole | null> => {
   const user = await getUser();
   if (!user) return null;
-  const sb = await supabaseServer();
-  const { data } = await sb.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
-  return data?.role ?? null;
+  const { data } = await (await supabaseServer()).rpc("my_role");
+  return data ?? null;
 });
 
 const RANK: Record<AppRole, number> = { staff: 1, admin: 2, owner: 3 };
@@ -43,7 +35,8 @@ export async function requireRole(needed: AppRole = "staff") {
   if (!roleAtLeast(role, needed)) {
     throw new AccessError(needed === "staff" ? "Staff access required." : `This needs ${needed} access.`);
   }
-  return { user, role: role!, supabase: await supabaseServer() };
+  const [supabase, store] = await Promise.all([supabaseServer(), contextStore()]);
+  return { user, role: role!, supabase, store };
 }
 
 /** For admin pages: send visitors to sign in, and show customers a 403. */
@@ -53,6 +46,13 @@ export async function requireStaffPage(needed: AppRole = "staff") {
   const role = await getRole();
   if (!roleAtLeast(role, needed)) redirect(role ? "/admin?denied=1" : "/admin/login?denied=1");
   return { user, role: role! };
+}
+
+/** For the platform's pages (creating and running stores): its administrators only. */
+export async function requirePlatformPage() {
+  const ctx = await requireStaffPage();
+  if (!(await isPlatformAdmin())) redirect("/admin?denied=1");
+  return ctx;
 }
 
 /** For account pages. */

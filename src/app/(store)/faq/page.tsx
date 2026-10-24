@@ -6,7 +6,6 @@ import { ChevronDown } from "@/components/ui/icons";
 import { jsonLd } from "@/lib/seo";
 import { faqOf, getSettings } from "@/lib/settings";
 
-export const revalidate = 300;
 export const metadata: Metadata = { title: "FAQs", description: "Answers about orders, delivery, payment, sizing and returns.", alternates: { canonical: "/faq" } };
 
 export default async function FaqPage() {

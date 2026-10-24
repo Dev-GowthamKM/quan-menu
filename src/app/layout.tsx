@@ -1,13 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { SITE_URL } from "@/lib/env";
+import { contextOrigin } from "@/lib/store";
 import { fontVariables } from "./fonts";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: { default: "Taana", template: "%s | Taana" },
-  formatDetection: { telephone: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    // Relative links in metadata (canonical, Open Graph) resolve against the store's own address.
+    metadataBase: new URL(await contextOrigin()),
+    formatDetection: { telephone: false },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",

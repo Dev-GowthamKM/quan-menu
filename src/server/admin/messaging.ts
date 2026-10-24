@@ -8,18 +8,22 @@ import { rateLimit } from "@/lib/rate-limit";
 import { sendTemplate, whatsappConfigured, WhatsAppError } from "@/lib/whatsapp";
 import { waNumber } from "@/lib/whatsapp-format";
 
+const HOME_ONLY = "WhatsApp and text messages use the platform's own accounts, so for now only the main store can send them.";
+
 /**
  * Settings › WhatsApp "Send a test": sends Meta's ready-made hello_world template, which
  * every WhatsApp Business account has, to check the token and phone number id.
  */
 export async function sendWhatsappTest(phone: string): Promise<ActionResult<null>> {
+  let store;
   try {
-    await requireRole("admin");
+    ({ store } = await requireRole("admin"));
   } catch (e) {
     if (e instanceof AccessError) return fail("Only admins can do this.");
     throw e;
   }
-  if (!whatsappConfigured()) return fail("Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID on the server first.");
+  if (!store.isHome) return fail(HOME_ONLY);
+  if (!whatsappConfigured(store)) return fail("Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID on the server first.");
   const to = waNumber(phone);
   if (!to) return fail("Enter a mobile number, for example +91 98450 12345.");
   try {
@@ -38,16 +42,18 @@ export async function sendLoginCodeTest(
   phone: string,
   setup: { channel: LoginCodeChannel; template: string; language: string },
 ): Promise<ActionResult<null>> {
+  let store;
   try {
-    await requireRole("admin");
+    ({ store } = await requireRole("admin"));
   } catch (e) {
     if (e instanceof AccessError) return fail("Only admins can do this.");
     throw e;
   }
+  if (!store.isHome) return fail(HOME_ONLY);
   const to = indianMobile(phone);
   if (!to) return fail("Enter an Indian mobile number, for example 98450 12345.");
   if (setup.channel === "whatsapp") {
-    if (!whatsappConfigured()) return fail("Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID on the server first.");
+    if (!whatsappConfigured(store)) return fail("Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID on the server first.");
     if (!/^[a-z0-9_]+$/.test(setup.template)) return fail("Enter the template's name first.");
   } else if (!msg91Configured()) {
     return fail("Set MSG91_AUTH_KEY and MSG91_TEMPLATE_ID on the server first.");

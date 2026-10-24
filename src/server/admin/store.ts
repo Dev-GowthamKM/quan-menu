@@ -7,7 +7,7 @@ import { authProviderStatus, msg91Configured } from "@/lib/login-codes";
 import { SMS_HOOK_SECRET } from "@/lib/server-env";
 import { BODY_FONT_KEYS, HEADING_FONT_KEYS } from "@/lib/theme";
 import type { AppRole } from "@/lib/types";
-import { whatsappConfigured } from "@/lib/whatsapp";
+import { whatsappConnected } from "@/lib/whatsapp";
 import { WHATSAPP_EVENTS, type WhatsAppEvent } from "@/lib/whatsapp-format";
 
 // Store configuration: shipping, settings, staff roles. Admins only (owners for roles);
@@ -237,11 +237,15 @@ const SECTIONS = {
 
 export type SettingsSection = keyof typeof SECTIONS;
 
+/** Sections for the platform's own accounts (Shiprocket, WhatsApp, text messages): the home store's only, for now. */
+const HOME_ONLY: SettingsSection[] = ["courier", "whatsapp", "signin"];
+
 export async function saveSettings(section: SettingsSection, values: unknown): Promise<ActionResult<null>> {
   const ctx = await role("admin");
   if (!ctx) return fail("Only admins can change settings.");
   const schema = SECTIONS[section];
   if (!schema) return fail("Unknown settings section.");
+  if (HOME_ONLY.includes(section) && !ctx.store.isHome) return fail("This uses the platform's own accounts, so for now only the main store can set it up.");
   const parsed = schema.safeParse(values);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -260,9 +264,12 @@ export async function saveSettings(section: SettingsSection, values: unknown): P
     if (slabs[slabs.length - 1]?.up_to !== null) return fail("The last tax slab must have no upper limit.");
     if (Number(data.cod_max_order) < Number(data.cod_min_order)) return fail("The cash on delivery maximum must be above the minimum.");
   }
-  const { error } = await ctx.supabase.from("store_settings").update(data as never).eq("id", 1);
+  const update = ctx.supabase.from("store_settings").update(data as never);
+  const { error } = await (ctx.store.id ? update.eq("store_id", ctx.store.id) : update.eq("id", 1));
   if (error) return fail(friendlyError(error, "Settings couldn't be saved."));
   revalidateTag("settings");
+  // The store lookup carries the maintenance switch.
+  revalidateTag("stores");
   revalidatePath("/", "layout");
   return ok(null, "Settings saved.");
 }
@@ -271,7 +278,7 @@ export async function saveSettings(section: SettingsSection, values: unknown): P
 async function phoneSignInProblem(s: { phone_login_channel: string; whatsapp_login_template: string }) {
   if (!SMS_HOOK_SECRET) return "Connect the Send SMS hook first: set SUPABASE_SMS_HOOK_SECRET on the server (README › Mobile sign-in).";
   if (s.phone_login_channel === "whatsapp") {
-    if (!whatsappConfigured()) return "Connect WhatsApp first (WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID), or send codes by SMS.";
+    if (!whatsappConnected()) return "Connect WhatsApp first (WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID), or send codes by SMS.";
     if (!s.whatsapp_login_template) return "Enter the name of your approved WhatsApp authentication template.";
   } else if (!msg91Configured()) {
     return "Connect MSG91 first: set MSG91_AUTH_KEY and MSG91_TEMPLATE_ID on the server, or send codes on WhatsApp.";

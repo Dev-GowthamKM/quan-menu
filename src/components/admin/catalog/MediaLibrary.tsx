@@ -8,6 +8,7 @@ import CatalogImage from "../../ui/CatalogImage";
 import { Badge, Button, cx } from "../../ui/controls";
 import { CopyIcon, TrashIcon, UploadIcon } from "../../ui/icons";
 import { useToast } from "../Toaster";
+import { useAdminStore } from "../AdminStore";
 import { datedPath, prepareImage, uploadFile } from "../upload";
 
 export interface MediaFile {
@@ -29,6 +30,7 @@ const kb = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB
 
 /** Bulk image uploads (resized in the browser, with progress) and clean-up of unused files. */
 export default function MediaLibrary({ files }: { files: MediaFile[] }) {
+  const store = useAdminStore();
   const router = useRouter();
   const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
@@ -48,7 +50,7 @@ export default function MediaLibrary({ files }: { files: MediaFile[] }) {
       const job = queue[i];
       try {
         const prepared = await prepareImage(file);
-        await uploadFile(datedPath("library", file.name, prepared.ext), prepared.blob, prepared.type, (f) =>
+        await uploadFile(datedPath(store.id, "library", file.name, prepared.ext), prepared.blob, prepared.type, (f) =>
           setJobs((all) => all.map((x) => (x.key === job.key ? { ...x, progress: f } : x))),
         );
         done++;

@@ -4,8 +4,7 @@ import ProductLayout from "@/components/store/product/ProductLayout";
 import { getProductPage, getRelatedProducts, getReviews } from "@/lib/catalog";
 import { excerpt } from "@/lib/seo";
 import { getSettings } from "@/lib/settings";
-
-export const revalidate = 300;
+import { contextOrigin } from "@/lib/store";
 
 type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -28,7 +27,7 @@ export default async function ProductRoute({ params }: Props) {
   const { slug } = await params;
   const product = await getProductPage(slug);
   if (!product) notFound();
-  const [settings, related, reviews] = await Promise.all([getSettings(), getRelatedProducts(product.id, 8), getReviews(product.id)]);
-  return <ProductLayout product={product} settings={settings} related={related} reviews={reviews} />;
+  const [settings, related, reviews, origin] = await Promise.all([getSettings(), getRelatedProducts(product.id, 8), getReviews(product.id), contextOrigin()]);
+  return <ProductLayout origin={origin} product={product} settings={settings} related={related} reviews={reviews} />;
 }
 

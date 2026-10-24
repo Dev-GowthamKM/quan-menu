@@ -1,11 +1,11 @@
 import "server-only";
 import { formatDateTime } from "./format";
 import { formatMoney } from "./money";
-import { SITE_URL } from "./env";
 import { orderUrl } from "./order-link";
 import { EMAIL_FROM, RESEND_API_BASE, RESEND_API_KEY } from "./server-env";
 import { cartRestoreUrl, oneClickUnsubscribeUrl, unsubscribeUrl } from "./signed-links";
-import { getSettings } from "./settings";
+import { contactOf, getSettings } from "./settings";
+import { storeById, storeOrigin } from "./store";
 import { supabaseService } from "./supabase/admin";
 import type { OrderDetail, StoreSettings, Tables } from "./types";
 import { processWhatsapp } from "./whatsapp";
@@ -14,6 +14,7 @@ import { processWhatsapp } from "./whatsapp";
 // happens (order confirmed, shipped, refunded...); processOutbox renders the store's
 // editable templates and sends them through Resend. Without RESEND_API_KEY messages
 // are marked "skipped", so nothing piles up and admins can see what would have gone out.
+// Each email goes out as its store: the store's name, templates and web address.
 
 type Template = { subject: string; body: string };
 
@@ -55,6 +56,7 @@ function itemsTable(detail: OrderDetail, currency: string) {
 
 export function renderEmail(
   settings: StoreSettings,
+  origin: string,
   template: string,
   detail: OrderDetail,
   data: Record<string, unknown>,
@@ -62,7 +64,7 @@ export function renderEmail(
   const templates = (settings.email_templates ?? {}) as Record<string, Template>;
   const t = templates[template]?.subject ? templates[template] : FALLBACK[template] ?? FALLBACK.order_confirmation;
   const o = detail.order;
-  const link = orderUrl(o.order_number, o.id);
+  const link = orderUrl(origin, o.order_number, o.id);
   const vars: Record<string, string> = {
     store_name: settings.store_name,
     customer_name: (o.customer_name || "there").split(" ")[0],
@@ -135,31 +137,31 @@ function thumb(url: string | null | undefined) {
   return url;
 }
 
-export function renderReminder(settings: StoreSettings, template: string, to: string, data: Record<string, unknown>) {
+export function renderReminder(settings: StoreSettings, origin: string, template: string, to: string, data: Record<string, unknown>) {
   const templates = (settings.email_templates ?? {}) as Record<string, Template>;
   const t = templates[template]?.subject ? templates[template] : REMINDER_FALLBACK[template];
   if (!t) throw new Error(`Unknown email template ${template}`);
   const currency = settings.currency;
   const vars: Record<string, string> = { store_name: settings.store_name, product_title: "", variant: "", product_url: "", cart_url: "", wishlist_url: "" };
   let items: ReminderItem[] = [];
-  let cta = { label: "Visit the store", url: SITE_URL };
+  let cta = { label: "Visit the store", url: origin };
   if (template === "back_in_stock") {
     const variant = [data.color, data.size ? `size ${data.size}` : ""].filter(Boolean).join(", ");
     vars.product_title = String(data.product_title ?? "");
     vars.variant = variant ? ` in ${variant}` : "";
-    vars.product_url = `${SITE_URL}/products/${encodeURIComponent(String(data.slug ?? ""))}${data.color ? `?color=${encodeURIComponent(String(data.color))}` : ""}`;
+    vars.product_url = `${origin}/products/${encodeURIComponent(String(data.slug ?? ""))}${data.color ? `?color=${encodeURIComponent(String(data.color))}` : ""}`;
     items = [{ title: vars.product_title, size: String(data.size ?? ""), color: String(data.color ?? ""), price: Number(data.price), image_url: data.image_url as string | null }];
     cta = { label: "Shop now", url: vars.product_url };
   } else if (template === "cart_reminder") {
-    vars.cart_url = cartRestoreUrl(String(data.cart_id));
+    vars.cart_url = cartRestoreUrl(origin, String(data.cart_id));
     items = (data.items ?? []) as ReminderItem[];
     cta = { label: "Return to your bag", url: vars.cart_url };
   } else if (template === "price_drop") {
-    vars.wishlist_url = `${SITE_URL}/account/wishlist`;
+    vars.wishlist_url = `${origin}/account/wishlist`;
     items = (data.items ?? []) as ReminderItem[];
     cta = { label: "See your wishlist", url: vars.wishlist_url };
   }
-  const unsubscribe = template === "back_in_stock" ? null : unsubscribeUrl(to);
+  const unsubscribe = template === "back_in_stock" ? null : unsubscribeUrl(origin, to);
   const subject = fill(t.subject, vars);
   const body = fill(t.body, vars);
   const paragraphs = body
@@ -195,11 +197,34 @@ export function renderReminder(settings: StoreSettings, template: string, to: st
   return { subject, html, text, unsubscribe };
 }
 
-async function send(to: string, message: { subject: string; html: string; text: string }, headers?: Record<string, string>) {
+/**
+ * The sender for a store's emails: the store's name with the address from EMAIL_FROM
+ * ("Taana <orders@taana.in>" sends brand emails as "Brand <orders@taana.in>").
+ */
+export function senderFor(storeName: string, from = EMAIL_FROM) {
+  const address = from.match(/<([^<>]+)>\s*$/)?.[1] ?? from.trim();
+  const name = storeName.replace(/["<>\\\r\n]/g, "").trim();
+  return name ? `"${name}" <${address}>` : from;
+}
+
+interface Sender {
+  from: string;
+  replyTo?: string;
+}
+
+async function send(sender: Sender, to: string, message: { subject: string; html: string; text: string }, headers?: Record<string, string>) {
   const res = await fetch(`${RESEND_API_BASE}/emails`, {
     method: "POST",
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: EMAIL_FROM, to: [to], subject: message.subject, html: message.html, text: message.text, ...(headers ? { headers } : {}) }),
+    body: JSON.stringify({
+      from: sender.from,
+      ...(sender.replyTo ? { reply_to: sender.replyTo } : {}),
+      to: [to],
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      ...(headers ? { headers } : {}),
+    }),
     signal: AbortSignal.timeout(10_000),
   });
   const body = await res.json().catch(() => ({}));
@@ -224,7 +249,6 @@ async function processEmails(limit: number) {
     console.error("[email] claim failed:", error.message);
     return { sent: 0, failed: 0, skipped: 0 };
   }
-  const settings = await getSettings();
   const counts = { sent: 0, failed: 0, skipped: 0 };
   for (const row of (rows ?? []) as Tables<"email_outbox">[]) {
     try {
@@ -233,23 +257,33 @@ async function processEmails(limit: number) {
         counts.skipped++;
         continue;
       }
+      // The store the email is from: its settings, its address for links, its name as the sender.
+      const [settings, store] = await Promise.all([getSettings(row.store_id), storeById(row.store_id)]);
+      const origin = storeOrigin(store);
+      const contactEmail = contactOf(settings).email;
+      const sender = {
+        from: store.isHome ? EMAIL_FROM : senderFor(settings.store_name),
+        replyTo: !store.isHome && contactEmail && /^[^\s@]+@[^\s@]+$/.test(contactEmail) ? contactEmail : undefined,
+      };
       let id: string;
       if (row.order_id) {
-        const { data: detail, error: dErr } = await sb.rpc("order_detail", { p_order_id: row.order_id });
+        const { data: detail, error: dErr } = await supabaseService(row.store_id).rpc("order_detail", { p_order_id: row.order_id });
         if (dErr || !detail) throw new Error(dErr?.message || "Order not found");
-        const message = renderEmail(settings, row.template, detail as unknown as OrderDetail, (row.data ?? {}) as Record<string, unknown>);
-        id = await send(row.to_email, message);
+        const message = renderEmail(settings, origin, row.template, detail as unknown as OrderDetail, (row.data ?? {}) as Record<string, unknown>);
+        id = await send(sender, row.to_email, message);
       } else {
-        // Reminders: never to someone who unsubscribed after it was queued.
-        const { data: suppressed } = await sb.from("email_suppressions").select("email").eq("email", row.to_email.toLowerCase()).maybeSingle();
+        // Reminders: never to someone who unsubscribed (from this store) after it was queued.
+        let suppression = sb.from("email_suppressions").select("email").eq("email", row.to_email.toLowerCase());
+        if (row.store_id) suppression = suppression.eq("store_id", row.store_id);
+        const { data: suppressed } = await suppression.maybeSingle();
         if (suppressed && row.template !== "back_in_stock") {
           await sb.from("email_outbox").update({ status: "skipped", last_error: "Unsubscribed from reminders." }).eq("id", row.id);
           counts.skipped++;
           continue;
         }
-        const message = renderReminder(settings, row.template, row.to_email, (row.data ?? {}) as Record<string, unknown>);
-        id = await send(row.to_email, message, message.unsubscribe
-          ? { "List-Unsubscribe": `<${oneClickUnsubscribeUrl(row.to_email)}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+        const message = renderReminder(settings, origin, row.template, row.to_email, (row.data ?? {}) as Record<string, unknown>);
+        id = await send(sender, row.to_email, message, message.unsubscribe
+          ? { "List-Unsubscribe": `<${oneClickUnsubscribeUrl(origin, row.to_email)}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
           : undefined);
       }
       await sb.from("email_outbox").update({ status: "sent", sent_at: new Date().toISOString(), provider_message_id: id, last_error: null }).eq("id", row.id);

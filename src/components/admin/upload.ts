@@ -82,9 +82,11 @@ export async function uploadFile(path: string, blob: Blob, contentType: string, 
   return { path, url: storageUrl(path) };
 }
 
-export function datedPath(folder: string, name: string, ext: string) {
+/** A new file's path: in the store's own folder (storage rules let only its staff write there). */
+export function datedPath(storeId: string | null, folder: string, name: string, ext: string) {
   const d = new Date();
-  return `${folder}/${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${safeFileName(name)}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+  const path = `${folder}/${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${safeFileName(name)}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+  return storeId ? `${storeId}/${path}` : path;
 }
 
 /** The storage path of one of our uploaded files, from its public URL. */

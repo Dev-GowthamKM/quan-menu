@@ -6,7 +6,10 @@ import { mergeGuestCart } from "@/server/cart";
 import { GOOGLE_SIGN_IN } from "@/lib/env";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { Button, Checkbox, Field, Input, Notice } from "../../ui/controls";
-import PhoneSignIn, { type CodeChannel } from "./PhoneSignIn";
+import PhoneSignIn, { type CodeChannel, type SignUpStore } from "./PhoneSignIn";
+
+/** Where links in sign-up, reset and email-change emails go: this store's own address. */
+const confirmUrl = () => `${window.location.origin}/auth/confirm`;
 
 function authMessage(message: string) {
   if (/invalid login credentials/i.test(message)) return "That email and password don't match. Try again or reset your password.";
@@ -57,6 +60,7 @@ export function LoginForm({
   admin,
   phone,
   method = "email",
+  store,
 }: {
   next?: string;
   notice?: string | null;
@@ -64,6 +68,8 @@ export function LoginForm({
   /** How sign-in codes are sent, when the store offers signing in with a mobile number. */
   phone?: CodeChannel | null;
   method?: "email" | "phone";
+  /** The store an account made here joins. */
+  store?: SignUpStore;
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -78,7 +84,7 @@ export function LoginForm({
     return (
       <div>
         {notice && <Notice className="mb-6">{notice}</Notice>}
-        <PhoneSignIn channel={phone} next={next} onCancel={() => setUsePhone(false)} />
+        <PhoneSignIn channel={phone} next={next} store={store} onCancel={() => setUsePhone(false)} />
         <p className="mt-8 text-center text-sm text-taupe">New here? Your account is created when you enter the code.</p>
       </div>
     );
@@ -123,7 +129,7 @@ export function LoginForm({
             className="justify-self-start text-sm underline underline-offset-4"
             disabled={resent}
             onClick={async () => {
-              await supabaseBrowser().auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` } });
+              await supabaseBrowser().auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: confirmUrl() } });
               setResent(true);
             }}
           >
@@ -141,7 +147,7 @@ export function LoginForm({
   );
 }
 
-export function SignupForm({ next = "/account", phone }: { next?: string; phone?: CodeChannel | null }) {
+export function SignupForm({ next = "/account", phone, store }: { next?: string; phone?: CodeChannel | null; store?: SignUpStore }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", marketing: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,7 +157,7 @@ export function SignupForm({ next = "/account", phone }: { next?: string; phone?
   if (usePhone && phone) {
     return (
       <div>
-        <PhoneSignIn channel={phone} next={next} onCancel={() => setUsePhone(false)} />
+        <PhoneSignIn channel={phone} next={next} store={store} onCancel={() => setUsePhone(false)} />
         <p className="mt-8 text-xs leading-relaxed text-stone">
           By creating an account you agree to our <Link href="/pages/terms" className="underline">terms</Link> and <Link href="/pages/privacy" className="underline">privacy policy</Link>.
         </p>
@@ -185,9 +191,8 @@ export function SignupForm({ next = "/account", phone }: { next?: string; phone?
             email: form.email.trim(),
             password: form.password,
             options: {
-              data: { full_name: form.name.trim(), marketing_opt_in: form.marketing },
-              // Used by Supabase's default email template; ours link to /auth/confirm instead.
-              emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+              data: { full_name: form.name.trim(), marketing_opt_in: form.marketing, store_id: store?.id ?? undefined },
+              emailRedirectTo: confirmUrl(),
             },
           });
           setBusy(false);
@@ -240,7 +245,7 @@ export function ForgotPasswordForm() {
         e.preventDefault();
         setBusy(true);
         const { error } = await supabaseBrowser().auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+          redirectTo: confirmUrl(),
         });
         setBusy(false);
         // Never reveal whether the email has an account.

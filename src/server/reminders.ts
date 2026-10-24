@@ -7,7 +7,7 @@ import { sqlNull } from "@/lib/db";
 import { fail, friendlyError, ok, type ActionResult } from "@/lib/errors";
 import { rateLimit } from "@/lib/rate-limit";
 import { verifyUnsubscribe } from "@/lib/signed-links";
-import { supabaseService } from "@/lib/supabase/admin";
+import { contextStoreId, storeService } from "@/lib/store";
 import { supabaseServer } from "@/lib/supabase/server";
 
 const email = z.string().trim().toLowerCase().email().max(254);
@@ -19,7 +19,7 @@ export async function requestStockAlert(variantId: string, address: string): Pro
   if (!parsed.success) return fail("Enter a valid email address.");
   if (!(await rateLimit("stock-alert", 10, 600))) return fail("Too many requests. Please try again in a few minutes.");
   const user = await getUser();
-  const { data, error } = await supabaseService().rpc("stock_alert_subscribe", {
+  const { data, error } = await (await storeService()).rpc("stock_alert_subscribe", {
     p_variant_id: variantId,
     p_email: parsed.data,
     p_user_id: sqlNull(user?.id ?? null),
@@ -38,7 +38,7 @@ export async function rememberCheckoutEmail(address: string): Promise<void> {
   if (!(await rateLimit("checkout-contact", 30, 600))) return;
   const id = await cartIdentity();
   if (!id.userId && !id.token) return;
-  await supabaseService().rpc("cart_set_contact", { p_user_id: sqlNull(id.userId), p_token: sqlNull(id.token), p_contact: { email: parsed.data } });
+  await (await storeService()).rpc("cart_set_contact", { p_user_id: sqlNull(id.userId), p_token: sqlNull(id.token), p_contact: { email: parsed.data } });
 }
 
 /** Wishlist price-drop emails on or off, for the signed-in customer. */
@@ -48,7 +48,13 @@ export async function setPriceAlerts(on: boolean): Promise<ActionResult<null>> {
   const sb = await supabaseServer();
   const { error } = await sb.from("profiles").update({ price_alerts: !!on }).eq("id", user.id);
   if (error) return fail(friendlyError(error));
-  if (on) await supabaseService().from("email_suppressions").delete().eq("email", (user.email ?? "").toLowerCase());
+  if (on) {
+    // Unsubscribing is per store: this turns reminders back on for this store only.
+    const store = await contextStoreId();
+    let suppressions = (await storeService()).from("email_suppressions").delete().eq("email", (user.email ?? "").toLowerCase());
+    if (store) suppressions = suppressions.eq("store_id", store);
+    await suppressions;
+  }
   revalidatePath("/account/wishlist");
   return ok(null, on ? "We'll email you when something on your wishlist drops in price." : "Price-drop emails are off.");
 }
@@ -57,7 +63,7 @@ export async function setPriceAlerts(on: boolean): Promise<ActionResult<null>> {
 export async function unsubscribe(address: string, signature: string): Promise<ActionResult<null>> {
   const parsed = email.safeParse(address);
   if (!parsed.success || !verifyUnsubscribe(parsed.data, signature)) return fail("This unsubscribe link isn't valid.");
-  const { error } = await supabaseService().rpc("email_unsubscribe", { p_email: parsed.data });
+  const { error } = await (await storeService()).rpc("email_unsubscribe", { p_email: parsed.data });
   if (error) return fail(friendlyError(error));
   return ok(null, "You're unsubscribed from reminders.");
 }

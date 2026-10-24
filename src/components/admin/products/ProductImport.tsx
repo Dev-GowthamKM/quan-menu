@@ -8,6 +8,7 @@ import { COLUMNS, imageBaseName, isUrl, parseProductCsv, type ParsedFile, type P
 import { Button, cx } from "../../ui/controls";
 import { DownloadIcon, UploadIcon } from "../../ui/icons";
 import { Card } from "../ui";
+import { useAdminStore } from "../AdminStore";
 import { datedPath, pathFromUrl, prepareImage, uploadFile } from "../upload";
 
 const BATCH = 25;
@@ -33,6 +34,7 @@ interface ReportRow {
 type Phase = "idle" | "checking" | "checked" | "importing" | "done";
 
 export default function ProductImport() {
+  const store = useAdminStore();
   const [fileName, setFileName] = useState<string | null>(null);
   const [parsed, setParsed] = useState<ParsedFile | null>(null);
   const [images, setImages] = useState<DroppedImage[]>([]);
@@ -100,7 +102,7 @@ export default function ProductImport() {
       setImages((list) => list.map((x) => (x.key === im.key ? { ...x, state: "uploading", progress: 0, error: undefined } : x)));
       try {
         const prepared = await prepareImage(im.file);
-        const { path } = await uploadFile(datedPath("library", im.file.name, prepared.ext), prepared.blob, prepared.type, (f) =>
+        const { path } = await uploadFile(datedPath(store.id, "library", im.file.name, prepared.ext), prepared.blob, prepared.type, (f) =>
           setImages((list) => list.map((x) => (x.key === im.key ? { ...x, progress: f } : x))),
         );
         map[im.base] = path;

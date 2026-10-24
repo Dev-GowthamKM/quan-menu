@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   let database = "not configured";
   if (SUPABASE_CONFIGURED) {
-    const { error } = await supabasePublic().from("store_settings").select("id").eq("id", 1).maybeSingle();
+    const { error } = await supabasePublic(null).from("store_settings").select("id").eq("id", 1).maybeSingle();
     database = error ? (/schema cache|does not exist/i.test(error.message) ? "migrations not applied" : "unreachable") : "ok";
   }
   const required = {
@@ -29,6 +29,7 @@ export async function GET() {
     stripe_webhook: !!env.STRIPE_WEBHOOK_SECRET,
   };
   const optional = {
+    store_secrets_key: !!env.STORE_SECRETS_KEY,
     email: !!(env.RESEND_API_KEY && env.EMAIL_FROM),
     cron: !!env.CRON_SECRET,
     shiprocket: !!(env.SHIPROCKET_EMAIL && env.SHIPROCKET_PASSWORD),

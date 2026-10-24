@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import OrderView from "@/components/store/order/OrderView";
 import { findAccessibleOrder, loadOrderDetail } from "@/lib/orders";
 import { getSettings } from "@/lib/settings";
+import { contextStore } from "@/lib/store";
 import { whatsappConfigured } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const [{ number }, sp] = await Promise.all([params, searchParams]);
   const access = await findAccessibleOrder(decodeURIComponent(number).toUpperCase(), sp.key);
   if (!access) notFound();
-  const [detail, settings] = await Promise.all([loadOrderDetail(access.id), getSettings()]);
+  const [detail, settings, store] = await Promise.all([loadOrderDetail(access.id), getSettings(), contextStore()]);
   if (!detail) notFound();
   return (
     <OrderView
@@ -22,7 +23,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
       accessKey={sp.key ?? null}
       justPlaced={sp.placed === "1"}
       stripeSession={sp.stripe_session ?? null}
-      whatsapp={settings.whatsapp_enabled && whatsappConfigured()}
+      whatsapp={settings.whatsapp_enabled && whatsappConfigured(store)}
     />
   );
 }

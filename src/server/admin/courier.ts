@@ -42,12 +42,14 @@ function problem(e: unknown, fallback: string) {
 }
 
 async function loadSettings(ctx: Ctx) {
-  const { data } = await ctx.supabase.from("store_settings").select("*").eq("id", 1).single();
+  const query = ctx.supabase.from("store_settings").select("*");
+  const { data } = await (ctx.store.id ? query.eq("store_id", ctx.store.id) : query.eq("id", 1)).single();
   return data as StoreSettings | null;
 }
 
-function ready(s: StoreSettings | null): string | null {
-  if (!shiprocket.shiprocketConfigured()) return "Shiprocket isn't connected. Set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD on the server.";
+function ready(ctx: Ctx, s: StoreSettings | null): string | null {
+  if (!ctx.store.isHome) return "Shiprocket uses the platform's own account, so for now only the main store can book couriers.";
+  if (!shiprocket.shiprocketConfigured(ctx.store)) return "Shiprocket isn't connected. Set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD on the server.";
   if (!s?.shiprocket_enabled) return "Turn on Shiprocket in Shipping › Courier connection first.";
   return null;
 }
@@ -88,7 +90,7 @@ export async function courierOptions(orderId: string): Promise<ActionResult<{ co
   if (!ctx) return fail("Staff access required.");
   if (!uuid.safeParse(orderId).success) return fail("Order not found.");
   const settings = await loadSettings(ctx);
-  const notReady = ready(settings);
+  const notReady = ready(ctx, settings);
   if (notReady) return fail(notReady);
   if (!settings!.shiprocket_pickup_postcode) return fail("Add your pickup PIN code in Shipping › Courier connection.");
   const { order, items } = await loadOrder(ctx, orderId);
@@ -151,7 +153,7 @@ export async function bookCourier(input: z.infer<typeof bookSchema>): Promise<Ac
   if (!parsed.success) return fail("Check the parcel weight and size.");
   const d = parsed.data;
   const settings = await loadSettings(ctx);
-  const notReady = ready(settings);
+  const notReady = ready(ctx, settings);
   if (notReady) return fail(notReady);
   const { order, items, shipments } = await loadOrder(ctx, d.orderId);
   if (!order) return fail("Order not found.");
@@ -238,7 +240,7 @@ export async function scheduleCourierPickup(orderId: string, orderNumber: string
   const ctx = await role("staff");
   if (!ctx) return fail("Staff access required.");
   if (!uuid.safeParse(orderId).success) return fail("Order not found.");
-  const notReady = ready(await loadSettings(ctx));
+  const notReady = ready(ctx, await loadSettings(ctx));
   if (notReady) return fail(notReady);
   const { shipments } = await loadOrder(ctx, orderId);
   const booking = activeBooking(shipments);
@@ -262,7 +264,7 @@ export async function courierLabel(orderId: string): Promise<ActionResult<{ url:
   const ctx = await role("staff");
   if (!ctx) return fail("Staff access required.");
   if (!uuid.safeParse(orderId).success) return fail("Order not found.");
-  if (!shiprocket.shiprocketConfigured()) return fail("Shiprocket isn't connected.");
+  if (!shiprocket.shiprocketConfigured(ctx.store)) return fail("Shiprocket isn't connected.");
   const { shipments } = await loadOrder(ctx, orderId);
   const booking = activeBooking(shipments);
   if (!booking?.provider_shipment_id || !booking.tracking_number) return fail("Book a courier first.");
@@ -280,7 +282,7 @@ export async function cancelCourier(orderId: string, orderNumber: string): Promi
   const ctx = await role("staff");
   if (!ctx) return fail("Staff access required.");
   if (!uuid.safeParse(orderId).success) return fail("Order not found.");
-  if (!shiprocket.shiprocketConfigured()) return fail("Shiprocket isn't connected.");
+  if (!shiprocket.shiprocketConfigured(ctx.store)) return fail("Shiprocket isn't connected.");
   const { shipments } = await loadOrder(ctx, orderId);
   const booking = activeBooking(shipments);
   if (!booking) return fail("There's no courier booking to cancel.");
@@ -301,7 +303,7 @@ export async function refreshTracking(orderId: string, orderNumber: string): Pro
   const ctx = await role("staff");
   if (!ctx) return fail("Staff access required.");
   if (!uuid.safeParse(orderId).success) return fail("Order not found.");
-  if (!shiprocket.shiprocketConfigured()) return fail("Shiprocket isn't connected.");
+  if (!shiprocket.shiprocketConfigured(ctx.store)) return fail("Shiprocket isn't connected.");
   const { shipments } = await loadOrder(ctx, orderId);
   const booking = activeBooking(shipments);
   if (!booking?.tracking_number) return fail("There's no tracking number yet.");
@@ -314,7 +316,7 @@ export async function refreshTracking(orderId: string, orderNumber: string): Pro
     const label = t.status || latest?.srLabel || latest?.activity || "";
     if (!label) return ok(null, "No tracking updates yet.");
     const etd = parseShiprocketDate(t.etd);
-    const { data, error } = await supabaseService().rpc("courier_update", {
+    const { data, error } = await supabaseService(ctx.store.id).rpc("courier_update", {
       p_provider: "shiprocket",
       p_event_key: `${booking.tracking_number}|refresh|${latest?.date ?? label}`,
       p_awb: booking.tracking_number,
@@ -351,7 +353,7 @@ export async function markReturnedToOrigin(orderId: string, orderNumber: string,
 export async function testShiprocket(): Promise<ActionResult<null>> {
   const ctx = await role("admin");
   if (!ctx) return fail("Only admins can do this.");
-  if (!shiprocket.shiprocketConfigured()) return fail("Set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD on the server first.");
+  if (!shiprocket.shiprocketConfigured(ctx.store)) return fail("Set SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD on the server first.");
   try {
     await shiprocket.testConnection();
     return ok(null, "Connected to Shiprocket.");

@@ -51,7 +51,9 @@ test("1. An admin publishes a product with images and variants, and customers se
   state.slug = product!.slug;
   const { data: images } = await db().from("product_images").select("storage_path, alt").eq("product_id", state.productId);
   expect(images).toHaveLength(1);
-  expect(images![0].storage_path).toMatch(/^products\/\d{4}\/\d{2}\/overshirt-front-[0-9a-f]{8}\.(webp|png)$/);
+  // Uploads go in the store's own folder (named by its id), which only its staff can write to.
+  const { data: home } = await db().rpc("home_store_id");
+  expect(images![0].storage_path).toMatch(new RegExp(`^${home}/products/\\d{4}/\\d{2}/overshirt-front-[0-9a-f]{8}\\.(webp|png)$`));
 
   // A draft copy stays hidden from customers.
   await page.getByRole("button", { name: "Duplicate" }).click();

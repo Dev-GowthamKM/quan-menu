@@ -5,12 +5,12 @@ import { useId, type ComponentProps, type ReactNode } from "react";
 import { cx } from "../ui/controls";
 import { adminInput } from "./ui";
 
-export function TextField({ label, hint, className, ...rest }: ComponentProps<"input"> & { label: ReactNode; hint?: ReactNode }) {
+export function TextField({ label, hint, className, inputClassName, ...rest }: ComponentProps<"input"> & { label: ReactNode; hint?: ReactNode; inputClassName?: string }) {
   const id = useId();
   return (
     <div className={cx("grid gap-1.5", className)}>
       <label htmlFor={id} className="text-xs font-medium text-taupe">{label}</label>
-      <input id={id} aria-describedby={hint ? `${id}-hint` : undefined} className={adminInput} {...rest} />
+      <input id={id} aria-describedby={hint ? `${id}-hint` : undefined} className={cx(adminInput, inputClassName)} {...rest} />
       {hint && <p id={`${id}-hint`} className="text-xs text-stone">{hint}</p>}
     </div>
   );

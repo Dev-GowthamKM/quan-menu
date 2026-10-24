@@ -1,6 +1,6 @@
 // Product listing URLs: every filter lives in the query string, so listings can be
 // shared, bookmarked and crawled. Prices in the URL are whole rupees.
-import { SORTS, type SearchParams, type SortKey } from "./catalog";
+import { SORTS, type SearchParams, type SortKey } from "./catalog-options";
 
 export type RawParams = Record<string, string | string[] | undefined>;
 

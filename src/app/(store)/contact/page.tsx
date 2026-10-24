@@ -3,7 +3,6 @@ import { Breadcrumbs } from "@/components/store/listing/ProductListing";
 import ContactForm from "@/components/store/ContactForm";
 import { contactOf, getSettings } from "@/lib/settings";
 
-export const revalidate = 300;
 export const metadata: Metadata = { title: "Contact us", description: "Get in touch about an order, sizing or anything else.", alternates: { canonical: "/contact" } };
 
 export default async function ContactPage() {

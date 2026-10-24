@@ -9,6 +9,11 @@ import { Button, Field, Input, Notice } from "../../ui/controls";
 
 export type CodeChannel = "sms" | "whatsapp";
 
+/** The store a new account joins. */
+export interface SignUpStore {
+  id: string | null;
+}
+
 const RESEND_SECONDS = 60;
 
 /** Supabase Auth's errors in words a shopper can act on. The store's own hook messages pass through. */
@@ -35,12 +40,14 @@ export default function PhoneSignIn({
   mode = "signin",
   next = "/account",
   current = "",
+  store,
   onCancel,
   onLinked,
 }: {
   channel: CodeChannel;
   mode?: "signin" | "link";
   next?: string;
+  store?: SignUpStore;
   /** "link": the account's verified number, if it has one. */
   current?: string;
   onCancel?: () => void;
@@ -93,7 +100,9 @@ export default function PhoneSignIn({
     setBusy(true);
     setError(null);
     const auth = supabaseBrowser().auth;
-    const { error } = mode === "link" ? await auth.updateUser({ phone: `+${n}` }) : await auth.signInWithOtp({ phone: `+${n}` });
+    const { error } = mode === "link"
+      ? await auth.updateUser({ phone: `+${n}` })
+      : await auth.signInWithOtp({ phone: `+${n}`, options: { data: { store_id: store?.id ?? undefined } } });
     setBusy(false);
     if (error) return setError(phoneAuthMessage(error));
     setNumber(n);

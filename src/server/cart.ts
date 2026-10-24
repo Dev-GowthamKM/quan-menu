@@ -2,7 +2,8 @@
 import { cartIdentity, clearGuestToken, ensureGuestToken } from "@/lib/cart-session";
 import { fail, friendlyError, ok, type ActionResult } from "@/lib/errors";
 import { rateLimit } from "@/lib/rate-limit";
-import { supabaseService } from "@/lib/supabase/admin";
+import { storeService } from "@/lib/store";
+import { supabaseServer } from "@/lib/supabase/server";
 import { sqlNull } from "@/lib/db";
 import type { Address, CartQuote } from "@/lib/types";
 
@@ -11,7 +12,7 @@ const isUuid = (s: unknown) => typeof s === "string" && /^[0-9a-f]{8}-[0-9a-f]{4
 /** The current cart, priced on the server (optionally for a delivery address). */
 export async function getCart(opts: { address?: Partial<Address> | null; rateId?: string | null; paymentMethod?: string | null; email?: string | null } = {}): Promise<CartQuote> {
   const id = await cartIdentity();
-  const { data, error } = await supabaseService().rpc("cart_get", {
+  const { data, error } = await (await storeService()).rpc("cart_get", {
     p_user_id: sqlNull(id.userId),
     p_token: sqlNull(id.token),
     p_address: opts.address ? (opts.address as never) : undefined,
@@ -33,7 +34,7 @@ async function setItem(variantId: string, quantity: number, mode: "add" | "set")
   if (!(await rateLimit("cart", 60, 60))) return fail("Too many changes at once. Please wait a moment.");
   const id = await cartIdentity();
   const token = id.userId ? null : mode === "add" ? await ensureGuestToken() : id.token;
-  const { data, error } = await supabaseService().rpc("cart_set_item", {
+  const { data, error } = await (await storeService()).rpc("cart_set_item", {
     p_user_id: sqlNull(id.userId),
     p_token: sqlNull(token),
     p_variant_id: variantId,
@@ -57,7 +58,7 @@ export async function applyCoupon(code: string, email?: string | null): Promise<
   if (clean && !/^[A-Z0-9_-]{3,40}$/.test(clean)) return fail("That code doesn't look right.");
   if (!(await rateLimit("coupon", 20, 300))) return fail("Too many attempts. Please try again in a few minutes.");
   const id = await cartIdentity();
-  const { data, error } = await supabaseService().rpc("cart_set_coupon", {
+  const { data, error } = await (await storeService()).rpc("cart_set_coupon", {
     p_user_id: sqlNull(id.userId),
     p_token: sqlNull(id.token),
     p_code: clean,
@@ -67,11 +68,14 @@ export async function applyCoupon(code: string, email?: string | null): Promise<
   return ok(data as unknown as CartQuote);
 }
 
-/** After sign-in: move the guest bag into the customer's bag. */
+/** After sign-in: the customer joins this store's customers, and the guest bag moves into their bag. */
 export async function mergeGuestCart(): Promise<CartQuote | null> {
   const id = await cartIdentity();
-  if (!id.userId || !id.guestToken) return null;
-  const { data, error } = await supabaseService().rpc("cart_merge", { p_user_id: id.userId, p_token: id.guestToken });
+  if (!id.userId) return null;
+  const { error: joinError } = await (await supabaseServer()).rpc("store_join");
+  if (joinError) console.error("[cart] store join:", joinError.message);
+  if (!id.guestToken) return null;
+  const { data, error } = await (await storeService()).rpc("cart_merge", { p_user_id: id.userId, p_token: id.guestToken });
   if (error) {
     console.error("[cart] merge:", error.message);
     return null;

@@ -1,6 +1,5 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { SITE_URL } from "./env";
 import { LINK_SECRET } from "./server-env";
 
 // Guests open their order through a link signed with a server secret, so nothing
@@ -23,7 +22,8 @@ export function orderPath(orderNumber: string, orderId: string, extra = "") {
   return `/orders/${orderNumber}?key=${orderKey(orderId)}${extra}`;
 }
 
-export const orderUrl = (orderNumber: string, orderId: string) => `${SITE_URL}${orderPath(orderNumber, orderId)}`;
+/** The order's page on its store's own address (origin: storeOrigin(store)). */
+export const orderUrl = (origin: string, orderNumber: string, orderId: string) => `${origin}${orderPath(orderNumber, orderId)}`;
 
 /** Only same-site relative paths are allowed as post-login destinations. */
 export function safeNext(next: string | null | undefined, fallback = "/account") {
