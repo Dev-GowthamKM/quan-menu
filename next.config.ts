@@ -10,6 +10,8 @@ const supabase = (() => {
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Admin › Setup reads the migrations to offer the database update a deployment needs.
+  outputFileTracingIncludes: { "/admin/**": ["./supabase/migrations/*.sql"] },
   experimental: {
     // CSV imports are sent in batches; this leaves room for a large batch.
     serverActions: { bodySizeLimit: "4mb" },

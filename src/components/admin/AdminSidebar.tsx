@@ -7,7 +7,7 @@ import { switchStore } from "@/server/admin/platform";
 import type { AppRole } from "@/lib/types";
 import { cx } from "../ui/controls";
 import {
-  BoxIcon, CardIcon, ChartIcon, ClipboardIcon, CloseIcon, HistoryIcon, HomeIcon, ImageIcon, LayersIcon, MailIcon, MenuIcon,
+  BoxIcon, CardIcon, ChartIcon, CheckIcon, ClipboardIcon, CloseIcon, HistoryIcon, HomeIcon, ImageIcon, LayersIcon, MailIcon, MenuIcon,
   PercentIcon, ReturnIcon, RulerIcon, SettingsIcon, StarIcon, TagIcon, TruckIcon, UsersIcon, ExternalIcon, ShieldIcon,
 } from "../ui/icons";
 import { useToast } from "./Toaster";
@@ -44,6 +44,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: "Store",
     items: [
+      { href: "/admin/setup", label: "Setup", icon: CheckIcon, min: "admin" },
       { href: "/admin/shipping", label: "Shipping", icon: TruckIcon },
       { href: "/admin/settings", label: "Settings", icon: SettingsIcon, min: "admin" },
       { href: "/admin/staff", label: "Staff & roles", icon: ShieldIcon, min: "admin" },

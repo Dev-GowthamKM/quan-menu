@@ -52,7 +52,11 @@ export default async function StorePage({ params, searchParams }: { params: Prom
         <Stat label="Owners" value={owners.length} />
       </div>
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <StoreDetail store={{ id: s.id, name: s.name, status: s.status === "suspended" ? "suspended" : "active", isHome: s.is_home }} domains={domains} vercel={vercel} />
+        <StoreDetail
+          store={{ id: s.id, name: s.name, status: s.status === "suspended" ? "suspended" : "active", isHome: s.is_home, products: Number(s.products) }}
+          domains={domains}
+          vercel={vercel}
+        />
         <Card title="Owners">
           {owners.length ? (
             <ul className="grid gap-1 text-sm">{owners.map((o) => <li key={o} className="truncate">{o}</li>)}</ul>

@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { addStoreDomain, removeStoreDomain, updateStore } from "@/server/admin/platform";
+import { addSampleCatalog, addStoreDomain, removeStoreDomain, updateStore } from "@/server/admin/platform";
 import { Badge, Button, cx } from "../../ui/controls";
 import { TextField } from "../fields";
 import { useToast } from "../Toaster";
@@ -13,7 +13,15 @@ interface Domain {
 }
 
 /** A store's name, status and web addresses, for the platform's administrators. */
-export default function StoreDetail({ store, domains, vercel }: { store: { id: string; name: string; status: "active" | "suspended"; isHome: boolean }; domains: Domain[]; vercel: boolean }) {
+export default function StoreDetail({
+  store,
+  domains,
+  vercel,
+}: {
+  store: { id: string; name: string; status: "active" | "suspended"; isHome: boolean; products: number };
+  domains: Domain[];
+  vercel: boolean;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
@@ -66,6 +74,18 @@ export default function StoreDetail({ store, domains, vercel }: { store: { id: s
           </div>
         )}
       </Card>
+
+      {!store.isHome && store.products === 0 && (
+        <Card title="Products">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="flex-1 text-sm text-taupe">
+              This store has no products yet, so its home page says it&apos;s opening soon. To see it working straight away, add the sample catalog:
+              45 example products with photos, collections, discount codes and homepage banners, all removable in one click later.
+            </p>
+            <Button type="button" size="sm" disabled={pending} onClick={() => run(() => addSampleCatalog(store.id))}>Add the sample catalog</Button>
+          </div>
+        </Card>
+      )}
 
       <Card title="Web addresses">
         <p className="mb-3 text-sm text-taupe">

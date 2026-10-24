@@ -46,6 +46,14 @@ test("the platform's administrator creates a store, which opens at its own addre
   const { data: settings } = await db().from("store_settings").select("store_name, brand_color").eq("store_id", state.storeId).single();
   expect(settings).toEqual({ store_name: NAME, brand_color: "#114a3a" });
 
+  // With nothing on sale yet, its home page says it's opening soon.
+  const early = await browser.newContext();
+  const soon = await early.newPage();
+  await soon.goto(`${ORIGIN}/`);
+  await expect(soon.getByText("Opening soon")).toBeVisible();
+  await expect(soon.getByRole("heading", { level: 1 })).toHaveText(NAME);
+  await early.close();
+
   // A product in the new store (the catalog editor itself is covered by the acceptance tests).
   state.slug = `kesar-kurta-${run}`;
   const { data: product, error } = await db()
@@ -145,6 +153,54 @@ test("the store takes online payments into its own Razorpay account, with its ow
   expect(otherSecret.status()).toBe(400);
   const homeHook = await request.post("/api/webhooks/razorpay", { data: raw, headers: signed(env.RAZORPAY_WEBHOOK_SECRET) });
   expect(homeHook.status()).toBe(200);
+});
+
+test("a store can start with the sample catalog, ready to shop", async ({ browser }) => {
+  const name = `Sample Studio ${run}`;
+  const host = `sample-${run}.localhost:3000`;
+  const admin = await owner(browser);
+  const page = await admin.newPage();
+  await page.goto("/admin/stores/new");
+  await page.getByLabel("Store name").fill(name);
+  await page.getByLabel("Order numbers start with").fill(`S${PREFIX.slice(1)}`);
+  await page.getByLabel("Address customers will visit").fill(host);
+  await page.getByLabel("Start with the sample catalog").check();
+  await page.getByRole("button", { name: "Create store" }).click();
+  await expect(page.getByText(/Added \d+ sample products/).first()).toBeVisible();
+  await expect(page.getByText(`${name} is ready. Next:`)).toBeVisible();
+  const storeId = page.url().match(/stores\/([0-9a-f-]{36})/)![1];
+  await admin.close();
+
+  const { count } = await db().from("products").select("id", { count: "exact", head: true }).eq("store_id", storeId).eq("is_sample", true);
+  expect(count).toBeGreaterThan(40);
+  const guest = await browser.newContext();
+  const shop = await guest.newPage();
+  await shop.goto(`http://${host}/`);
+  await expect(shop.getByRole("heading", { name: "The quiet season" })).toBeVisible();
+  await expect(shop.getByText("Opening soon")).toHaveCount(0);
+  const product = await shop.goto(`http://${host}/products/bias-cut-satin-slip-dress`);
+  expect(product?.status()).toBe(200);
+  await expect(shop.getByRole("heading", { level: 1 })).toContainText(/Slip Dress/i);
+  await guest.close();
+});
+
+test("the setup page lists what's left, and the dashboard points to it", async ({ browser }) => {
+  const admin = await owner(browser);
+  const page = await admin.newPage();
+  await useStore(page, "Taana");
+  await expect(page.getByRole("link", { name: "See what's left" })).toBeVisible();
+  await page.getByRole("link", { name: "See what's left" }).click();
+  await page.waitForURL("**/admin/setup");
+  await expect(page.getByRole("heading", { name: "Setup" })).toBeVisible();
+  await expect(page.getByText("The database has every update this version of the app needs.")).toBeVisible();
+  for (const item of ["Contact details", "Shipping, returns, privacy and terms", "Sample data removed", "Online payments", "Order emails"]) {
+    await expect(page.getByText(item, { exact: true })).toBeVisible();
+  }
+  // Up to date, so the update download says there's nothing to run.
+  const sql = await page.request.get("/admin/setup/update-sql");
+  expect(sql.status()).toBe(200);
+  expect(await sql.text()).toContain("up to date");
+  await admin.close();
 });
 
 test("a suspended store shows a closed page until it's opened again", async ({ browser }) => {

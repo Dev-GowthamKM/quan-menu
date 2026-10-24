@@ -58,12 +58,26 @@ const createSchema = z.object({
   owner_email: z.string().trim().max(254).refine((v) => v === "" || z.string().email().safeParse(v).success, "Enter the owner's email address, or leave it empty."),
   theme: z.string().refine((k) => THEME_PRESETS.some((p) => p.key === k), "Choose a look."),
   tagline: z.string().trim().max(160).default(""),
+  samples: z.boolean().default(false),
 });
 
 export type CreateStoreInput = z.input<typeof createSchema>;
 
-/** Creates a store with its owner, look, a delivery zone for India and the usual couriers. */
-export async function createStore(input: CreateStoreInput): Promise<ActionResult<{ id: string; domain: string | null }>> {
+/** Copies the home store's sample catalog into a store, as one database call. */
+async function copySamples(sb: NonNullable<Awaited<ReturnType<typeof platform>>>, storeId: string) {
+  const { data, error } = await sb.rpc("platform_add_samples", { p_store_id: storeId });
+  if (error) return { ok: false as const, message: friendlyError(error, "The sample catalog couldn't be added.") };
+  revalidateTag("catalog");
+  revalidateTag("settings");
+  const n = data as { products: number; collections: number; coupons: number };
+  return { ok: true as const, message: `Added ${n.products} sample products, ${n.collections} collections and ${n.coupons} discount codes.` };
+}
+
+/**
+ * Creates a store with its owner, look, starter policies, a delivery zone for India and the
+ * usual couriers, and (if asked) a copy of the sample catalog.
+ */
+export async function createStore(input: CreateStoreInput): Promise<ActionResult<{ id: string; domain: string | null; samples: string | null }>> {
   const sb = await platform();
   if (!sb) return fail("Only the platform's administrators can create stores.");
   const parsed = createSchema.safeParse(input);
@@ -86,10 +100,23 @@ export async function createStore(input: CreateStoreInput): Promise<ActionResult
   });
   if (error) return fail(friendlyError(error, "The store couldn't be created."));
   const id = data as string;
+  // The store exists from here on: a problem with the extras is reported, not a failure.
+  const samples = p.samples ? (await copySamples(sb, id)).message : null;
   let domain: string | null = null;
   if (p.hostname && vercelDomainsReady()) domain = (await addVercelDomain(p.hostname)).message;
   changed(id);
-  return ok({ id, domain }, `${p.name} is ready.`);
+  return ok({ id, domain, samples }, `${p.name} is ready.`);
+}
+
+/** Gives a store the sample catalog, to try it out with products in place. */
+export async function addSampleCatalog(storeId: string): Promise<ActionResult<null>> {
+  const sb = await platform();
+  if (!sb) return fail("Only the platform's administrators can do this.");
+  if (!uuid.safeParse(storeId).success) return fail("Unknown store.");
+  const res = await copySamples(sb, storeId);
+  if (!res.ok) return fail(res.message);
+  changed(storeId);
+  return ok(null, res.message);
 }
 
 /** Renames a store, or suspends it (its storefront closes) and opens it again. */

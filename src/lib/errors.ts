@@ -33,7 +33,7 @@ export function friendlyError(error: DbError | null | undefined, fallback = "Som
   if (error.message && BY_MESSAGE[error.message]) return BY_MESSAGE[error.message];
   if (error.code && BY_CODE[error.code]) return BY_CODE[error.code];
   if (error.message && /schema cache|does not exist|relation .* does not exist/i.test(error.message)) {
-    return "The database is not set up yet. Run the migrations (see README).";
+    return "This needs a database update that hasn't been run yet. Admin › Setup shows how to run it.";
   }
   return fallback;
 }

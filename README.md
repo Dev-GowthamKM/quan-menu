@@ -63,6 +63,8 @@ payment account and web address, and the platform's administrators create them f
   wishlist (with optional price-drop emails), cancellation and return requests. Guests
   get a private link to their order, and can look it up by number and email.
 - Policy pages, FAQ, contact form, maintenance page, sitemap and robots.
+- Until a store has something on sale, its homepage says it is opening soon and takes email
+  sign-ups for launch day.
 
 **Admin** (`/admin`)
 
@@ -97,9 +99,13 @@ payment account and web address, and the platform's administrators create them f
   customer sign-in with mobile numbers, maintenance mode and sample data removal. Staff and
   roles. Audit log.
 - Stores (for the platform's administrators): create a store with its name, web address, owner
-  and starting look; add or remove web addresses; suspend and reopen it. A store switcher for
-  anyone who works at more than one, and each store's own Razorpay account under
-  **Settings › Payment accounts**.
+  and starting look, empty or with the sample catalog to try it out; add or remove web addresses;
+  suspend and reopen it. A store switcher for anyone who works at more than one, and each store's
+  own Razorpay account under **Settings › Payment accounts**.
+- Setup: what's left before a store is ready (contact details, policies, its own products,
+  sample data, payments, web address) and, for the platform's administrators, the server's setup
+  and any database update the deployment is waiting for, ready to copy into Supabase's SQL editor
+  from a computer or a phone.
 
 ## Architecture
 
@@ -210,6 +216,11 @@ All schema changes are SQL migrations in `supabase/migrations/` (run in order):
 | `20261023000100_theme` | Brand colour and italic headings for Appearance |
 | `20261024000100_multi_store` | Stores, web addresses, platform administrators, `store_id` on every table, per-store rules, roles, uniqueness, order numbers and functions |
 | `20261024000200_store_lookup_and_secrets` | The store for a web address, each store's encrypted keys, platform administrator lists |
+| `20261025000100_store_starter` | Starter policies, FAQ and email templates for new stores, the one-click sample catalog, `app_schema_version()` |
+
+Every migration from `20261025000100` on ends by replacing `app_schema_version()` with its own
+version, so **Admin › Setup** can tell which updates a database is missing (older databases are
+recognised by a column or function each update added). Keep that line when adding a migration.
 
 Money is stored as integer paise everywhere (`bigint` with a non-negative check). Generated
 TypeScript types are in `src/lib/database.types.ts` (`npm run db:types`).
@@ -296,7 +307,10 @@ multi-store update ran; add others on the same page.
 1. **Admin › All stores › New store:** its name, the address customers will visit (a free
    `name.vercel.app`, or your own domain), the owner's email (they need an account; leave it empty
    to own it yourself) and a starting look. It starts with a delivery zone for all of India,
-   Standard and Express rates and the usual couriers.
+   Standard and Express rates, the usual couriers, sample policies, FAQ and email templates to
+   edit, and, if you tick **Start with the sample catalog**, a copy of the sample products,
+   brands, collections and discount codes (also on the store's page later, while it has no
+   products). Until something is on sale, its homepage says it is opening soon.
 2. **Vercel › your project › Settings › Domains:** add the same address. With `VERCEL_API_TOKEN`
    and `VERCEL_PROJECT_ID` set, the app adds it for you. A `.vercel.app` name works straight away;
    your own domain also needs its DNS pointed at Vercel.
@@ -307,6 +321,9 @@ multi-store update ran; add others on the same page.
    sidebar, or **Open its admin** on the store's page) and, to take online payments, saves the
    store's Razorpay keys in **Settings › Payment accounts** and adds the webhook shown there.
    Cash on delivery works straight away.
+
+**Admin › Setup** (in each store's admin) lists what's still to do before that store is ready
+for customers, with a link to each step.
 
 **What the home store keeps for now.** Stripe, Shiprocket, WhatsApp messages and mobile-number
 sign-in use the platform's own accounts (environment variables), so only the home store offers
@@ -390,19 +407,21 @@ happen.
 **3. After the first deploy:** open `/api/health`, create the owner (above; or in Supabase,
 **Authentication › Users › Add user** with "Auto Confirm User", then run
 `select public.bootstrap_owner('you@example.com');` in the SQL editor), add the Razorpay
-webhook, and work through **Admin › Settings** (store details, tax and GSTIN, shipping, policies,
-emails). Delete the sample data before launch.
+webhook, and work through **Admin › Setup** and **Admin › Settings** (store details, tax and
+GSTIN, shipping, policies, emails). Delete the sample data before launch.
 
 **URLs:** storefront `https://YOUR-SITE/`, admin `https://YOUR-SITE/admin` (sign in at
 `/admin/login`).
 
-**Updating a live store.** Run the database update first, then deploy the code (the running
-version keeps working on the updated database). In the browser:
-`npm run db:bundle -- --since <the last migration you applied>`, then paste the file it writes
-(`supabase/setup/update-after-….sql`) into **SQL Editor › New query** and click **Run**. For
-the multi-store version from a store that last applied `20261022000100_phone_sign_in`: run
-`update-after-20261022000100.sql`, set `STORE_SECRETS_KEY`, replace the four email templates, and
-redeploy.
+**Updating a live store.** Deploy the code, then open **Admin › Setup** signed in as a platform
+administrator (before the multi-store update: the store's owner). When the database is behind, it
+lists the updates waiting: **Copy the update** (or download it), open Supabase's SQL editor from
+the link next to it, paste into a new query and click **Run** (a phone can do it, though a
+computer is easier for a long update). The new code keeps the store running on the old database
+until then, and the old code runs on the updated one, so either order is safe. From a computer,
+`npm run db:bundle -- --since <the last migration you applied>` writes the same file
+(`supabase/setup/update-after-….sql`). For the multi-store version, also set `STORE_SECRETS_KEY`
+and replace the four email templates.
 
 ## Payment providers
 
@@ -676,17 +695,20 @@ shopper signing up (name asked once, guest bag kept), a returning customer (a wr
 an email customer adding a number and signing in with it, codes on WhatsApp with the copy-code
 template, and refusals (other countries, staff accounts, unsigned hook calls, the switch off).
 
-**Multi-store tests (13 database, 4 Playwright)** cover only platform administrators creating
-stores (with owner, settings, delivery and couriers), web addresses mapping to their store,
-catalogs that only show their own products (even with the same address), staff who can't read,
-change or add to another store by naming it, rows that can't be moved between stores, customers
-listed only where they joined, the server's own access held to the named store, bags limited to
-their store's items, per-store order numbers and delivery rates, orders visible only in their
-store, suspended stores refusing orders, keys no browser can read, and images only in the staff's
-own store folder; in the browser, creating a store from the admin and opening it at its own
-address with its own look and catalog, a shopper's order showing only in that store's admin, a
-payment going to the store's own Razorpay account with its own webhook secret, and suspending and
-reopening the store.
+**Multi-store tests (16 database, 6 Playwright)** cover only platform administrators creating
+stores (with owner, settings, delivery, couriers and starter texts), web addresses mapping to
+their store, catalogs that only show their own products (even with the same address), staff who
+can't read, change or add to another store by naming it, rows that can't be moved between stores,
+customers listed only where they joined, the server's own access held to the named store, bags
+limited to their store's items, per-store order numbers and delivery rates, orders visible only
+in their store, suspended stores refusing orders, keys no browser can read, images only in the
+staff's own store folder, copying the sample catalog into a new store only (and removing it there
+without touching the home store's), and the database reporting its version; in the browser,
+creating a store from the admin, its opening-soon homepage, then opening it at its own address
+with its own look and catalog, a store started with the sample catalog ready to shop, the Setup
+checklist and the dashboard's pointer to it, a shopper's order showing only in that store's
+admin, a payment going to the store's own Razorpay account with its own webhook secret, and
+suspending and reopening the store.
 
 **Theme tests (14 unit, 1 Playwright)** cover the colour arithmetic, that every theme keeps text,
 labels, secondary text and the words on buttons readable on every surface, the look shown before
@@ -710,12 +732,12 @@ storefront's colours and its italic or upright headings.
 7. Carts, products and orders are stored on the server and survive a fresh browser.
 
 **Accessibility checks (2, Playwright + axe-core)** scan 13 storefront pages (including the
-checkout) and 14 admin pages for WCAG 2.1 A/AA problems and fail on anything serious or critical;
+checkout) and 18 admin pages for WCAG 2.1 A/AA problems and fail on anything serious or critical;
 the mobile sign-in tests run the same check on the number and code forms and the settings tab.
 Automated checks don't replace testing with a keyboard and a screen reader.
 
 Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 37/37,
-integration 86/86, Playwright 27/27 against the production build (`next build`), and every page
+integration 89/89, Playwright 29/29 against the production build (`next build`), and every page
 checked at 390 px wide without horizontal scrolling.
 
 ## Running the store

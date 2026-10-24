@@ -34,6 +34,12 @@ const TABS = [
 /** Tabs for the platform's own accounts (WhatsApp, text messages): the home store's only, for now. */
 const HOME_ONLY = new Set(["whatsapp", "signin"]);
 
+/**
+ * Saving re-opens a tab's form so it shows what was stored. These keep their state instead:
+ * it already matches what was saved, and it holds a test number someone may be typing.
+ */
+const KEEP_STATE = new Set(["whatsapp", "signin"]);
+
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   await requireStaffPage("admin");
   const { supabase, store, role } = await requireRole("admin");
@@ -64,7 +70,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               </Link>
             ))}
           </nav>
-          <div className="min-w-0" key={`${tab}-${s.updated_at}`}>
+          <div className="min-w-0" key={KEEP_STATE.has(tab) ? tab : `${tab}-${s.updated_at}`}>
             {tab === "general" && <GeneralForm s={s} />}
             {tab === "appearance" && <AppearanceForm s={s} />}
             {tab === "homepage" && <HomepageForm s={s} />}

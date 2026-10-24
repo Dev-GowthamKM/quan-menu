@@ -1332,6 +1332,9 @@ isOneToOne: false
 "admin_update_return":
 { Args: { "p_action": string,"p_note"?: string,"p_request_id": string,"p_restock"?: boolean }; Returns: Json
                            },
+"app_schema_version":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "begin_refund_internal":
 { Args: { "p_actor": string,"p_amount": number,"p_order_id": string,"p_payment_id": string,"p_reason": string,"p_reference": string,"p_return_request_id": string }; Returns: Json
                            },
@@ -1780,6 +1783,9 @@ isOneToOne: false
 "platform_add_domain":
 { Args: { "p_hostname": string,"p_primary"?: boolean,"p_store_id": string }; Returns: string
                            },
+"platform_add_samples":
+{ Args: { "p_store_id": string }; Returns: Json
+                           },
 "platform_admin_list":
 { Args: Record<PropertyKey, never>; Returns: {
               "created_at": string,"email": string,"user_id": string
@@ -2033,6 +2039,9 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: {
               "hint": string,"name": string,"updated_at": string
             }[]
+                           },
+"store_starter_content":
+{ Args: { "p_name": string }; Returns: Json
                            },
 "submit_review":
 { Args: { "p_body": string,"p_product_id": string,"p_rating": number,"p_title": string }; Returns: Json

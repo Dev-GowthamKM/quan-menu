@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { createStore } from "@/server/admin/platform";
 import { THEME_PRESETS } from "@/lib/theme";
 import { Button, cx } from "../../ui/controls";
-import { TextField } from "../fields";
+import { TextField, Toggle } from "../fields";
 import { useToast } from "../Toaster";
 import { Card } from "../ui";
 
@@ -16,7 +16,7 @@ export default function NewStoreForm({ vercel }: { vercel: boolean }) {
   const toast = useToast();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [v, setV] = useState({ name: "", slug: "", order_prefix: "", hostname: "", owner_email: "", tagline: "", theme: THEME_PRESETS[0].key });
+  const [v, setV] = useState({ name: "", slug: "", order_prefix: "", hostname: "", owner_email: "", tagline: "", theme: THEME_PRESETS[0].key, samples: false });
   const slug = v.slug || slugify(v.name);
   const prefix = v.order_prefix || slug.replace(/[^a-z]/g, "").slice(0, 2).toUpperCase();
 
@@ -32,7 +32,7 @@ export default function NewStoreForm({ vercel }: { vercel: boolean }) {
             return toast(res.error, "error");
           }
           setError(null);
-          toast(res.data.domain ? `${res.message} ${res.data.domain}` : res.message ?? "Store created.");
+          toast([res.message ?? "Store created.", res.data.samples, res.data.domain].filter(Boolean).join(" "));
           router.push(`/admin/stores/${res.data.id}?created=1`);
         });
       }}
@@ -115,6 +115,15 @@ export default function NewStoreForm({ vercel }: { vercel: boolean }) {
           ))}
         </div>
         <p className="mt-3 text-xs text-stone">The owner can change colours, fonts and everything else in the store&apos;s Settings › Appearance.</p>
+      </Card>
+
+      <Card title="Products">
+        <Toggle
+          label="Start with the sample catalog"
+          hint="45 example products from six made-up labels, with photos, sizes, collections, discount codes and homepage banners, so the store looks complete straight away. They're marked as samples: remove them all in one click from the store's Settings › Maintenance and data."
+          checked={v.samples}
+          onChange={(x) => setV({ ...v, samples: x })}
+        />
       </Card>
 
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}

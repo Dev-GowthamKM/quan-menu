@@ -2,6 +2,7 @@
 // settings, staff, keys and images stay its own, whatever the caller sends as the store
 // header (which only chooses the store, never grants anything).
 import { randomUUID } from "node:crypto";
+import { readdirSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { guestToken, homeStoreId, makeProduct, makeUser, service, signedInAt, sql, storeClient, uniqueAddress, uniqueEmail, type TestUser } from "./helpers";
 
@@ -228,5 +229,65 @@ describe("images", () => {
     expect((await into(homeAdmin.client, home)).error).toBeNull();
     expect((await into(storeOwner.client, store.id)).error).toBeNull();
     expect((await into(storeOwner.client, home)).error).not.toBeNull();
+  });
+});
+
+describe("new stores", () => {
+  it("start with policies, FAQ and email templates in their own name", async () => {
+    const fresh = await createStore("Starter Studio");
+    const [s] = await sql<{ about: string; faq: number; templates: number; seo_title: string }>(
+      "select policies->>'about' as about, jsonb_array_length(faq) as faq, (select count(*) from jsonb_object_keys(email_templates)) as templates, seo_title from public.store_settings where store_id = $1",
+      [fresh.id],
+    );
+    expect(s.about).toMatch(/^Starter Studio brings together/);
+    expect(Number(s.faq)).toBe(4);
+    expect(Number(s.templates)).toBe(6);
+    expect(s.seo_title).toBe("Starter Studio");
+  });
+
+  it("can take a copy of the sample catalog, which stays theirs and comes off in one click", async () => {
+    const fresh = await createStore("Sample Copy");
+    const owner = await makeUser(undefined, "Sample Owner");
+    await sql("insert into public.user_roles (store_id, user_id, role) values ($1, $2, 'owner')", [fresh.id, owner.id]);
+    // Only the platform's administrators can copy it.
+    expect((await (await signedInAt(owner, fresh.id)).rpc("platform_add_samples", { p_store_id: fresh.id })).error?.message).toBe("forbidden");
+    const [before] = await sql<{ n: string }>("select count(*) as n from public.products where store_id = $1", [home]);
+
+    const added = await platformAdmin.client.rpc("platform_add_samples", { p_store_id: fresh.id });
+    expect(added.error).toBeNull();
+    const counts = added.data as { products: number; variants: number; brands: number; collections: number; coupons: number };
+    const [homeSamples] = await sql<{ n: string }>("select count(*) as n from public.products where store_id = $1 and is_sample", [home]);
+    expect(counts.products).toBe(Number(homeSamples.n));
+    expect(counts.variants).toBeGreaterThan(counts.products);
+    // Nothing changed in the home store, and everything copied belongs to the new store.
+    expect((await sql<{ n: string }>("select count(*) as n from public.products where store_id = $1", [home]))[0].n).toBe(before.n);
+    const [stray] = await sql<{ n: string }>(
+      `select (select count(*) from public.product_variants v join public.products p on p.id = v.product_id where p.store_id = $1 and v.store_id <> $1)
+            + (select count(*) from public.product_images i join public.products p on p.id = i.product_id where p.store_id = $1 and i.store_id <> $1)
+            + (select count(*) from public.products p left join public.brands b on b.id = p.brand_id where p.store_id = $1 and p.brand_id is not null and b.store_id <> $1)
+            + (select count(*) from public.coupons c, unnest(c.collection_ids) x left join public.collections k on k.id = x where c.store_id = $1 and k.store_id is distinct from $1) as n`,
+      [fresh.id],
+    );
+    expect(stray.n).toBe("0");
+    // The new store's shoppers see the copies that are on sale (the samples include a draft and a scheduled product).
+    const [onSale] = await sql<{ n: string }>(
+      "select count(*) as n from public.products where store_id = $1 and is_sample and status = 'active' and published_at <= now()", [home]);
+    const shop = await storeClient(fresh.id).rpc("search_products", { p_limit: 100, p_offset: 0 });
+    expect((shop.data as unknown[]).length).toBe(Number(onSale.n));
+    // Copying twice is refused.
+    expect((await platformAdmin.client.rpc("platform_add_samples", { p_store_id: fresh.id })).error?.message).toBe("samples_exist");
+    expect((await platformAdmin.client.rpc("platform_add_samples", { p_store_id: home })).error?.message).toBe("home_store");
+
+    // The store's owner removes them like any sample data, without touching the home store.
+    const removed = await (await signedInAt(owner, fresh.id)).rpc("admin_delete_sample_data");
+    expect(removed.error).toBeNull();
+    expect((await sql<{ n: string }>("select count(*) as n from public.products where store_id = $1 and is_sample and status <> 'archived'", [fresh.id]))[0].n).toBe("0");
+    expect((await sql<{ n: string }>("select count(*) as n from public.products where store_id = $1 and is_sample", [home]))[0].n).toBe(homeSamples.n);
+  });
+
+  it("report the database's update for the admin's setup page", async () => {
+    const { data } = await service().rpc("app_schema_version");
+    const files = readdirSync("supabase/migrations").filter((f) => /^\d{14}_/.test(f)).sort();
+    expect(data).toBe(files[files.length - 1].slice(0, 14));
   });
 });

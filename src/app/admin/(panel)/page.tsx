@@ -3,7 +3,9 @@ import RevenueChart from "@/components/admin/RevenueChart";
 import { Card, Empty, OrderBadges, PageHeader, Stat, Table, Td, Th } from "@/components/admin/ui";
 import CatalogImage from "@/components/ui/CatalogImage";
 import { Notice } from "@/components/ui/controls";
-import { requireRole } from "@/lib/auth";
+import { requireRole, roleAtLeast } from "@/lib/auth";
+import { setupReport } from "@/lib/setup";
+import { setupAccess } from "@/lib/setup-access";
 import { formatDateTime } from "@/lib/format";
 import { formatMoney } from "@/lib/money";
 import type { FulfillmentStatus, OrderStatus, PaymentStatus } from "@/lib/types";
@@ -25,14 +27,33 @@ interface Dashboard {
   }[];
 }
 
+/** Admins see how many setup steps are left (Admin › Setup), until there are none. */
+async function SetupBanner() {
+  const access = await setupAccess();
+  if (!access) return null;
+  const report = await setupReport({ store: access.store, platform: access.platform, checkAddress: false });
+  if (!report.todo) return null;
+  return (
+    <Notice tone="warning" className="mb-5">
+      {report.database?.pending.length ? "A database update is waiting. " : ""}
+      {report.todo} setup {report.todo === 1 ? "step is" : "steps are"} left before the store is ready.{" "}
+      <Link href="/admin/setup" className="font-medium underline underline-offset-4">See what&apos;s left</Link>
+    </Notice>
+  );
+}
+
 export default async function AdminDashboard({ searchParams }: { searchParams: Promise<{ denied?: string }> }) {
-  const { supabase } = await requireRole("staff");
+  const { supabase, role } = await requireRole("staff");
   const { denied } = await searchParams;
-  const { data, error } = await supabase.rpc("admin_dashboard", { p_days: 30 });
+  const [{ data, error }, banner] = await Promise.all([
+    supabase.rpc("admin_dashboard", { p_days: 30 }),
+    roleAtLeast(role, "admin") ? SetupBanner() : null,
+  ]);
   if (error || !data) {
     return (
       <>
         <PageHeader title="Dashboard" />
+        {banner}
         <Notice tone="error">The dashboard couldn&apos;t load: {error?.message ?? "no data"}. Have all migrations been applied?</Notice>
       </>
     );
@@ -44,6 +65,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
     <>
       <PageHeader title="Dashboard" description="All figures come from live orders and payments. Revenue counts only money a payment provider confirmed, minus refunds." />
       {denied && <Notice tone="warning" className="mb-4">You don&apos;t have access to that page.</Notice>}
+      {banner}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         <Stat label="Net revenue received" value={formatMoney(d.revenue.total, c)} hint={d.revenue.refunded_total ? `${formatMoney(d.revenue.refunded_total, c)} refunded in total` : "All time"} />

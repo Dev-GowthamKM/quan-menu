@@ -44,6 +44,27 @@ export default async function Home() {
     },
   ];
 
+  // A store with nothing on sale yet (new, or every product still a draft) says so, and
+  // collects emails for the day it opens, instead of offering empty shelves.
+  if (!data.newArrivals.length) {
+    return (
+      <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structured) }} />
+        <section className="container-page py-24 text-center md:py-36">
+          <p className="label-caps text-accent">Opening soon</p>
+          <h1 className="mx-auto mt-6 max-w-4xl font-serif text-5xl leading-[1.05] md:text-7xl">{settings.store_name}</h1>
+          {settings.tagline && <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-taupe">{settings.tagline}</p>}
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-taupe">
+            We&apos;re getting our first collection ready. Leave your email and we&apos;ll tell you the day we open.
+          </p>
+          <div className="mx-auto mt-6 max-w-md text-left">
+            <NewsletterForm source="opening-soon" />
+          </div>
+        </section>
+      </>
+    );
+  }
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structured) }} />
