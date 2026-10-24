@@ -91,6 +91,7 @@ export const MIGRATION_NOTES: Record<string, string> = {
   multi_store: "Many stores: each with its own products, orders, customers, settings and staff",
   store_lookup_and_secrets: "Store web addresses, and each store's own Razorpay keys",
   store_starter: "Starter policies for new stores, and the one-click sample catalog",
+  designs: "Saving a store design (six layouts), and a look of its own for every new store",
 };
 
 /**

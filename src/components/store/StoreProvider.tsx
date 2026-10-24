@@ -169,8 +169,8 @@ export default function StoreProvider({ currency, children }: { currency: string
           <div
             key={t.id}
             className={cx(
-              "pointer-events-auto max-w-md animate-fade-in px-5 py-3 text-sm shadow-lg",
-              t.tone === "error" ? "bg-sale text-white" : "bg-brand text-on-brand",
+              "pointer-events-auto max-w-md animate-fade-in rounded-btn px-5 py-3 text-sm shadow-lg",
+              t.tone === "error" ? "bg-sale-fill text-white" : "bg-brand text-on-brand",
             )}
             role={t.tone === "error" ? "alert" : "status"}
           >
@@ -214,10 +214,20 @@ function CartDrawer({
               <span className="text-taupe">Subtotal</span>
               <span className="font-medium">{formatMoney(cart.subtotal - cart.discount_total, cart.currency)}</span>
             </div>
-            {typeof cart.free_shipping_remaining === "number" && cart.free_shipping_remaining > 0 && (
-              <p className="text-xs text-taupe">
-                Add {formatMoney(cart.free_shipping_remaining, cart.currency)} more for free delivery.
-              </p>
+            {!!cart.free_shipping_threshold && typeof cart.free_shipping_remaining === "number" && (
+              <div className="grid gap-1.5">
+                <p className="text-xs text-taupe">
+                  {cart.free_shipping_remaining > 0
+                    ? `Add ${formatMoney(cart.free_shipping_remaining, cart.currency)} more for free delivery.`
+                    : "Your order ships free."}
+                </p>
+                <div className="h-1 overflow-hidden rounded-full bg-bone" aria-hidden>
+                  <div
+                    className="h-full rounded-full bg-brand transition-[width] duration-500"
+                    style={{ width: `${Math.min(100, Math.max(4, ((cart.free_shipping_threshold - Math.max(0, cart.free_shipping_remaining)) / cart.free_shipping_threshold) * 100))}%` }}
+                  />
+                </div>
+              </div>
             )}
             <div className="grid grid-cols-2 gap-2">
               <Link href="/cart" onClick={onClose} className={buttonClass("secondary", "md")}>View bag</Link>
@@ -239,7 +249,7 @@ function CartDrawer({
         <ul className="divide-y divide-line">
           {cart.lines.map((line) => (
             <li key={line.variant_id} className="flex gap-4 px-5 py-4">
-              <Link href={`/products/${line.slug}`} onClick={onClose} tabIndex={-1} aria-hidden="true" className="relative aspect-[4/5] w-20 shrink-0 overflow-hidden bg-bone">
+              <Link href={`/products/${line.slug}`} onClick={onClose} tabIndex={-1} aria-hidden="true" className="relative aspect-[4/5] w-20 shrink-0 overflow-hidden rounded-img bg-bone">
                 <CatalogImage src={line.image_url} alt="" fill sizes="80px" className="object-cover" />
               </Link>
               <div className="min-w-0 flex-1 text-sm">

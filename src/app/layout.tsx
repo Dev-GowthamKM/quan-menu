@@ -8,6 +8,8 @@ export async function generateMetadata(): Promise<Metadata> {
     // Relative links in metadata (canonical, Open Graph) resolve against the store's own address.
     metadataBase: new URL(await contextOrigin()),
     formatDetection: { telephone: false },
+    // The admin's icon; each storefront has its own (see (store)/layout.tsx).
+    icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }] },
   };
 }
 

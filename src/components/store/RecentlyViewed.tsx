@@ -4,6 +4,7 @@ import { getProductCards, getRecommendations } from "@/server/catalog";
 import type { ProductCard as Card } from "@/lib/types";
 import ProductCard from "./ProductCard";
 import Rail from "./Rail";
+import { SectionHeader } from "./SectionHeader";
 
 const KEY = "taana_recently_viewed";
 
@@ -41,10 +42,7 @@ export default function RecentlyViewed({ title, mode = "recent", excludeId }: { 
   if (!items || items.length === 0) return null;
   return (
     <section className="container-page mt-20 md:mt-28">
-      <div className="mb-8">
-        <p className="label-caps text-stone">{mode === "recent" ? "Your history" : "Picked for you"}</p>
-        <h2 className="mt-2 font-serif text-3xl md:text-4xl">{title}</h2>
-      </div>
+      <SectionHeader eyebrow={mode === "recent" ? "Your history" : "Picked for you"} title={title} />
       <Rail label={title}>
         {items.map((p) => (
           <ProductCard key={p.id} product={p} className="w-[46vw] shrink-0 snap-start sm:w-[32vw] md:w-[23vw] xl:w-[19rem]" sizes="(min-width: 1280px) 19rem, (min-width: 768px) 23vw, 46vw" />

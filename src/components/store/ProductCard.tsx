@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { discountPercent } from "@/lib/money";
 import type { ProductCard as Card } from "@/lib/types";
 import CatalogImage from "../ui/CatalogImage";
 import { cx } from "../ui/controls";
@@ -7,6 +8,11 @@ import WishButton from "./WishButton";
 
 const NEW_DAYS = 30;
 
+/**
+ * A product in a grid or row. The pc-* class names are hooks for the store's card style
+ * (data-card on the store's root, styled in globals.css): the same markup becomes a classic,
+ * minimal, outlined, soft, framed or photo-overlay card.
+ */
 export default function ProductCard({
   product,
   priority,
@@ -21,10 +27,11 @@ export default function ProductCard({
   const soldOut = product.available_stock <= 0;
   const isNew = Date.now() - new Date(product.published_at).getTime() < NEW_DAYS * 86_400_000;
   const swatches = product.swatches ?? [];
+  const pct = product.on_sale ? discountPercent(product.price, product.compare_at_price) : 0;
 
   return (
-    <article className={cx("group relative", className)}>
-      <div className="relative aspect-[4/5] overflow-hidden bg-bone">
+    <article className={cx("pc group relative", className)}>
+      <div className="pc-media relative aspect-[4/5] overflow-hidden rounded-img bg-bone">
         <Link href={`/products/${product.slug}`} aria-label={product.title} className="absolute inset-0">
           <CatalogImage
             src={product.image_url}
@@ -48,28 +55,31 @@ export default function ProductCard({
             />
           )}
         </Link>
-        <div className="pointer-events-none absolute top-2.5 left-2.5 flex flex-col items-start gap-1">
+        <div className="pc-badges pointer-events-none absolute top-2.5 left-2.5 flex flex-col items-start gap-1.5">
           {soldOut ? (
-            <span className="label-caps bg-paper/90 px-2 py-1 text-ink">Sold out</span>
+            <span className="pc-badge label-caps rounded-badge bg-paper/90 px-2 py-1 text-ink">Sold out</span>
           ) : product.on_sale && product.compare_at_price ? (
-            <span className="label-caps bg-sale px-2 py-1 text-white">Sale</span>
+            <span className="pc-badge label-caps rounded-badge bg-sale-fill px-2 py-1 text-white">
+              <span className="pc-sale-word">Sale</span>
+              {pct > 0 && <span className="pc-sale-pct">−{pct}%</span>}
+            </span>
           ) : isNew ? (
-            <span className="label-caps bg-paper/90 px-2 py-1 text-ink">New</span>
+            <span className="pc-badge label-caps rounded-badge bg-paper/90 px-2 py-1 text-ink">New</span>
           ) : null}
           {!soldOut && product.available_stock > 0 && product.available_stock <= 3 && (
-            <span className="label-caps bg-paper/90 px-2 py-1 text-sale">Few left</span>
+            <span className="pc-badge label-caps rounded-badge bg-paper/90 px-2 py-1 text-sale">Few left</span>
           )}
         </div>
-        <WishButton productId={product.id} title={product.title} className="absolute top-1.5 right-1.5" />
+        <WishButton productId={product.id} title={product.title} className="pc-wish absolute top-1.5 right-1.5" />
       </div>
-      <div className="mt-3 grid gap-1">
-        {product.brand_name && <p className="label-caps text-stone">{product.brand_name}</p>}
-        <h3 className="text-sm leading-snug">
+      <div className="pc-info mt-3 grid gap-1">
+        {product.brand_name && <p className="pc-brand label-caps text-stone">{product.brand_name}</p>}
+        <h3 className="pc-title text-sm leading-snug">
           <Link href={`/products/${product.slug}`} className="hover:underline hover:underline-offset-4">{product.title}</Link>
         </h3>
-        <Price price={product.price} compareAt={product.compare_at_price} maxPrice={product.max_price} />
+        <Price price={product.price} compareAt={product.compare_at_price} maxPrice={product.max_price} className="pc-price" />
         {swatches.length > 1 && (
-          <div className="mt-1 flex items-center gap-1.5" role="img" aria-label={`${swatches.length} colours`}>
+          <div className="pc-swatches mt-1 flex items-center gap-1.5" role="img" aria-label={`${swatches.length} colours`}>
             {swatches.slice(0, 5).map((s) => (
               <span
                 key={s.name}

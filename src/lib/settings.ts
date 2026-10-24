@@ -17,6 +17,8 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   heading_font: "cormorant",
   heading_italic: true,
   body_font: "jost",
+  design: "atelier",
+  design_options: {},
   currency: "INR",
   timezone: "Asia/Kolkata",
   tax_mode: "inclusive",

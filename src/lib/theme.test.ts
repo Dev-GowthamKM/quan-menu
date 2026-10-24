@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contrast, mix, onColor, readable, THEME_PRESETS, themeOf, themeTokens, themeWarnings } from "./theme";
+import { BODY_FONTS, contrast, HEADING_FONTS, mix, onColor, PALETTES, paletteOf, readable, themeOf, themeTokens, themeWarnings } from "./theme";
 
 describe("colour arithmetic", () => {
   it("measures contrast the WCAG way", () => {
@@ -28,8 +28,12 @@ describe("colour arithmetic", () => {
   });
 });
 
-describe("theme presets", () => {
-  for (const p of THEME_PRESETS) {
+describe("palettes", () => {
+  it("have unique keys", () => {
+    expect(new Set(PALETTES.map((p) => p.key)).size).toBe(PALETTES.length);
+  });
+
+  for (const p of PALETTES) {
     it(`${p.name} is readable everywhere`, () => {
       const t = themeTokens(p.colors);
       expect(themeWarnings(p.colors)).toEqual([]);
@@ -41,10 +45,21 @@ describe("theme presets", () => {
       for (const surface of [t["--color-ivory"], t["--color-paper"], t["--color-bone"]]) {
         expect(contrast(t["--color-stone"], surface)).toBeGreaterThanOrEqual(4.5);
       }
+      for (const surface of [t["--color-ivory"], t["--color-paper"], t["--color-bone"], t["--color-sand"]]) {
+        expect(contrast(t["--color-sale"], surface)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(t["--color-ok"], surface)).toBeGreaterThanOrEqual(4.5);
+      }
+      expect(contrast(t["--color-ink"], t["--color-field"])).toBeGreaterThanOrEqual(4.5);
       expect(contrast(t["--color-on-brand"], t["--color-brand"])).toBeGreaterThanOrEqual(4.5);
       expect(contrast(t["--color-on-brand-soft"], t["--color-brand"])).toBeGreaterThanOrEqual(4.5);
     });
   }
+
+  it("recognises a palette from its colours, in any letter case", () => {
+    const wine = PALETTES[0];
+    expect(paletteOf({ ...wine.colors, brand: wine.colors.brand.toUpperCase() })?.key).toBe("wine");
+    expect(paletteOf({ ...wine.colors, brand: "#123456" })).toBeUndefined();
+  });
 
   it("warns about colours that can't be read", () => {
     const warnings = themeWarnings({ text: "#cccccc", brand: "#f4efe6", accent: "#b07d2b", background: "#ffffff" });
@@ -55,7 +70,7 @@ describe("theme presets", () => {
 describe("themeOf", () => {
   it("shows the new default on a store still on the original palette, before the theme migration", () => {
     expect(themeOf({ primary_color: "#111111", accent_color: "#8C6A43", background_color: "#f7f3ec" })).toEqual({
-      colors: THEME_PRESETS[0].colors,
+      colors: PALETTES[0].colors,
       italic: true,
     });
   });
@@ -71,5 +86,15 @@ describe("themeOf", () => {
     const t = themeOf({ primary_color: "#1f1416", brand_color: "#6b1d2e", accent_color: "#b07d2b", background_color: "#fbf6ee", heading_italic: false });
     expect(t.colors.brand).toBe("#6b1d2e");
     expect(t.italic).toBe(false);
+  });
+});
+
+describe("fonts", () => {
+  it("each have a weight they can be set in", () => {
+    for (const f of [...Object.values(HEADING_FONTS), ...Object.values(BODY_FONTS)]) {
+      expect(f.weight).toBeGreaterThanOrEqual(f.min);
+      expect(f.weight).toBeLessThanOrEqual(f.max);
+      expect(f.css).toMatch(/^var\(--font-[a-z-]+\)$/);
+    }
   });
 });

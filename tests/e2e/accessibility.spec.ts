@@ -31,7 +31,7 @@ test.describe("admin", () => {
     const paths = [
       "/admin", "/admin/products", "/admin/products/new", `/admin/products/${product!.id}`, "/admin/products/import", "/admin/inventory",
       "/admin/collections", "/admin/media", "/admin/orders", "/admin/customers", "/admin/discounts", "/admin/shipping", "/admin/settings",
-      "/admin/settings?tab=payments", "/admin/setup", "/admin/stores", "/admin/stores/new",
+      "/admin/settings?tab=payments", "/admin/settings?tab=appearance", "/admin/settings?tab=homepage", "/admin/setup", "/admin/stores", "/admin/stores/new",
     ];
     if (order) paths.push(`/admin/orders/${order.order_number}`);
     for (const path of paths) await audit(page, path);

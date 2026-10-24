@@ -174,10 +174,10 @@ export function FilterPanel({ facets, hide = [], categories }: Omit<Props, "tota
           }}
         >
           <label className="sr-only" htmlFor="price-min">Minimum price</label>
-          <input id="price-min" inputMode="numeric" placeholder={facets?.price.min ? `₹${Math.floor(facets.price.min / 100)}` : "Min"} value={min} onChange={(e) => setMin(e.target.value)} className="h-9 w-full min-w-0 border border-line bg-white px-2 text-sm" />
+          <input id="price-min" inputMode="numeric" placeholder={facets?.price.min ? `₹${Math.floor(facets.price.min / 100)}` : "Min"} value={min} onChange={(e) => setMin(e.target.value)} className="h-9 w-full min-w-0 rounded-field border border-line bg-field px-2 text-sm" />
           <span className="text-stone">–</span>
           <label className="sr-only" htmlFor="price-max">Maximum price</label>
-          <input id="price-max" inputMode="numeric" placeholder={facets?.price.max ? `₹${Math.ceil(facets.price.max / 100)}` : "Max"} value={max} onChange={(e) => setMax(e.target.value)} className="h-9 w-full min-w-0 border border-line bg-white px-2 text-sm" />
+          <input id="price-max" inputMode="numeric" placeholder={facets?.price.max ? `₹${Math.ceil(facets.price.max / 100)}` : "Max"} value={max} onChange={(e) => setMax(e.target.value)} className="h-9 w-full min-w-0 rounded-field border border-line bg-field px-2 text-sm" />
           <button type="submit" className="h-9 shrink-0 border border-ink px-3 text-xs hover:border-brand hover:bg-brand hover:text-on-brand">Go</button>
         </form>
       </Section>
@@ -245,13 +245,14 @@ export function ActiveFilters({ facets }: { facets: Facets | null }) {
   );
 }
 
-export function MobileFilters({ facets, hide, categories, total }: Props) {
+/** "Filter & sort" in a drawer: on phones, or on every screen (always) for designs without a sidebar. */
+export function MobileFilters({ facets, hide, categories, total, always }: Props & { always?: boolean }) {
   const [open, setOpen] = useState(false);
   const params = useSearchParams();
   const count = ["brand", "size", "color", "min", "stock", "sale"].filter((k) => params.get(k)).length;
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex h-10 items-center gap-2 border border-ink px-4 text-xs tracking-[0.12em] uppercase lg:hidden">
+      <button type="button" onClick={() => setOpen(true)} className={cx("inline-flex h-10 items-center gap-2 rounded-btn border border-ink px-4 text-xs tracking-[0.12em] uppercase", !always && "lg:hidden")}>
         <FilterIcon size={16} /> Filter & sort{count > 0 ? ` (${count})` : ""}
       </button>
       <Dialog

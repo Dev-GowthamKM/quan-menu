@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { checkDelivery, type DeliveryCheck } from "@/server/catalog";
 import { discountPercent, formatMoney } from "@/lib/money";
+import type { GalleryStyle } from "@/lib/designs";
 import type { PageVariant, ProductPage, SizeGuide } from "@/lib/types";
 import { Button, cx } from "../../ui/controls";
 import { Dialog } from "../../ui/Dialog";
@@ -22,7 +23,7 @@ function sizeOrder(variants: PageVariant[]) {
   return seen;
 }
 
-export default function ProductView({ product, currency, preview, stockAlerts }: { product: ProductPage; currency: string; preview?: boolean; stockAlerts?: boolean }) {
+export default function ProductView({ product, currency, preview, stockAlerts, gallery = "thumbs" }: { product: ProductPage; currency: string; preview?: boolean; stockAlerts?: boolean; gallery?: GalleryStyle }) {
   const router = useRouter();
   const search = useSearchParams();
   const { addItem } = useStore();
@@ -55,6 +56,25 @@ export default function ProductView({ product, currency, preview, stockAlerts }:
   const [busy, setBusy] = useState<"add" | "buy" | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const [shared, setShared] = useState(false);
+  // Phones: once the shopper scrolls past the bag button, a bar at the bottom keeps it in reach.
+  const buyRow = useRef<HTMLDivElement>(null);
+  const [pastBuy, setPastBuy] = useState(false);
+  const [atFooter, setAtFooter] = useState(false);
+  useEffect(() => {
+    const el = buyRow.current;
+    const footer = document.querySelector("footer");
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.target === el) setPastBuy(!e.isIntersecting && e.boundingClientRect.top < 0);
+        else setAtFooter(e.isIntersecting);
+      }
+    });
+    io.observe(el);
+    if (footer) io.observe(footer);
+    return () => io.disconnect();
+  }, []);
+  const showBar = pastBuy && !atFooter;
 
   useEffect(() => {
     rememberViewed(product.id);
@@ -112,7 +132,7 @@ export default function ProductView({ product, currency, preview, stockAlerts }:
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-14 xl:gap-20">
-      <Gallery images={product.images} title={product.title} color={color} />
+      <Gallery images={product.images} title={product.title} color={color} layout={gallery} />
 
       <div className="lg:sticky lg:top-36 lg:self-start">
         {preview && (
@@ -207,7 +227,7 @@ export default function ProductView({ product, currency, preview, stockAlerts }:
                       if (v && qty > v.available) setQty(Math.max(1, v.available));
                     }}
                     className={cx(
-                      "relative h-11 border text-sm transition",
+                      "relative h-11 rounded-btn border text-sm transition",
                       size === s ? "border-brand bg-brand text-on-brand" : "border-line bg-paper hover:border-ink",
                       out && "cursor-not-allowed text-stone/60 line-through hover:border-line",
                     )}
@@ -225,8 +245,8 @@ export default function ProductView({ product, currency, preview, stockAlerts }:
         )}
         {stockAlerts && soldOut && !preview && <BackInStock key={`all-${color ?? ""}`} options={soldOutSizes} open />}
 
-        <div className="mt-8 flex items-stretch gap-3">
-          <div className="flex items-center border border-line bg-paper" role="group" aria-label="Quantity">
+        <div ref={buyRow} className="mt-8 flex items-stretch gap-3">
+          <div className="flex items-center rounded-btn border border-line bg-paper" role="group" aria-label="Quantity">
             <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1} className="grid h-12 w-10 place-items-center disabled:opacity-30" aria-label="Decrease quantity">
               <MinusIcon size={14} />
             </button>
@@ -244,7 +264,7 @@ export default function ProductView({ product, currency, preview, stockAlerts }:
           <Button size="lg" className="h-12! flex-1" onClick={() => submit("add")} busy={busy === "add"} disabled={soldOut || preview}>
             {soldOut ? "Sold out" : "Add to bag"}
           </Button>
-          <WishButton productId={product.id} title={product.title} className="h-12 w-12 rounded-none border border-line bg-paper shadow-none" />
+          <WishButton productId={product.id} title={product.title} className="h-12 w-12 rounded-btn border border-line bg-paper shadow-none" />
         </div>
         {!soldOut && (
           <Button variant="secondary" size="lg" className="mt-3 h-12! w-full" onClick={() => submit("buy")} busy={busy === "buy"} disabled={preview}>
@@ -270,6 +290,39 @@ export default function ProductView({ product, currency, preview, stockAlerts }:
       </div>
 
       {product.size_guide && <SizeGuideDialog guide={product.size_guide} open={guideOpen} onClose={() => setGuideOpen(false)} />}
+
+      {!soldOut && !preview && (
+        <div
+          className={cx(
+            "fixed inset-x-0 bottom-0 z-30 border-t border-line bg-ivory/95 px-4 py-3 backdrop-blur transition-transform duration-300 lg:hidden",
+            showBar ? "translate-y-0" : "pointer-events-none translate-y-full",
+          )}
+          aria-hidden={!showBar}
+          inert={!showBar}
+        >
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm">{product.title}</p>
+              <p className={cx("text-sm tabular-nums", pct > 0 && "text-sale")}>
+                {formatMoney(price, currency)}
+                {size ? <span className="text-taupe"> · Size {size}</span> : null}
+              </p>
+            </div>
+            <Button
+              size="md"
+              className="shrink-0"
+              busy={busy === "add"}
+              onClick={() => {
+                if (!needsSize) return submit("add");
+                setError("Please choose a size.");
+                buyRow.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+            >
+              {needsSize ? "Choose a size" : "Add to bag"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -287,7 +340,7 @@ function DeliveryChecker() {
   }, []);
 
   return (
-    <div className="mt-4 border border-line bg-paper p-4">
+    <div className="mt-4 rounded-card border border-line bg-paper p-4">
       <form
         className="flex items-center gap-2"
         onSubmit={async (e) => {

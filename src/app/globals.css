@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
 /*
- * Design tokens. The storefront is editorial: paper-toned backgrounds, serif display
- * type and generous space. The values here are the admin's neutral look; the storefront
- * replaces every colour at runtime with the store's theme (src/lib/theme.ts, applied in
- * (store)/layout.tsx): ink is text, brand fills buttons and bands, on-brand is the text
- * on them, and paper, bone, sand, line, taupe and stone are derived from those.
+ * Design tokens. The values here are the admin's neutral look; the storefront replaces
+ * them at runtime with the store's look ((store)/layout.tsx): colours from its theme
+ * (src/lib/theme.ts: ink is text, brand fills buttons and bands, on-brand is the text on
+ * them, and paper, bone, sand, line, taupe and stone are derived from those), corner radii
+ * and heading style from its design (src/lib/designs.ts). "font-serif" is the store's
+ * heading face, whichever it is.
  */
 @theme {
   --color-ink: #111111;
@@ -21,8 +22,16 @@
   --color-taupe: #5c544c;
   --color-accent: #8c6a43;
   --color-sale: #9b2c2c;
+  --color-sale-fill: #9b2c2c;
   --color-ok: #2f6b4f;
   --color-warn: #9a6200;
+  --color-field: #ffffff;
+
+  --radius-btn: 0px;
+  --radius-card: 0px;
+  --radius-img: 0px;
+  --radius-field: 0px;
+  --radius-badge: 0px;
 
   --font-serif: var(--font-heading), "Cormorant Garamond", Georgia, "Times New Roman", serif;
   --font-sans: var(--font-body), "Jost", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -36,6 +45,12 @@
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: none; }
   }
+  --animate-marquee: marquee var(--marquee-duration, 40s) linear infinite;
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  --animate-spin-slow: spin 18s linear infinite;
 }
 
 @layer base {
@@ -55,10 +70,20 @@
     background: var(--color-brand);
     color: var(--color-on-brand);
   }
-  /* Headings: the store's heading style (italic or upright) and a weight that suits the face. */
+  /* Headings: the store's heading style (italic or upright), a weight that suits the face,
+     and the design's capitals and letter spacing. */
   .font-serif {
     font-style: var(--heading-style, normal);
     font-weight: var(--heading-weight, 400);
+    text-transform: var(--heading-case, none);
+    letter-spacing: var(--heading-tracking, normal);
+    overflow-wrap: break-word;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-marquee,
+    .animate-spin-slow {
+      animation: none;
+    }
   }
   :focus-visible {
     outline: 2px solid var(--color-ink);
@@ -104,6 +129,111 @@
 }
 .prose-store p:last-child {
   margin-bottom: 0;
+}
+
+/* Ornaments (Heritage). In the components layer, so utilities such as `hidden` override them. */
+@layer components {
+  /* A small ornament (a diamond between two lines), in the current text colour. */
+  .ornament {
+    display: inline-block;
+    width: 4.5rem;
+    height: 0.75rem;
+    flex: none;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 12'%3E%3Cpath d='M0 6h27M53 6h27' stroke='black' stroke-width='1.2'/%3E%3Cpath d='M40 .5l5.5 5.5-5.5 5.5-5.5-5.5z'/%3E%3Ccircle cx='31' cy='6' r='1.6'/%3E%3Ccircle cx='49' cy='6' r='1.6'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 12'%3E%3Cpath d='M0 6h27M53 6h27' stroke='black' stroke-width='1.2'/%3E%3Cpath d='M40 .5l5.5 5.5-5.5 5.5-5.5-5.5z'/%3E%3Ccircle cx='31' cy='6' r='1.6'/%3E%3Ccircle cx='49' cy='6' r='1.6'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+
+  /* A repeating border of small diamonds (Heritage), in the current text colour. */
+  .ornament-band {
+    height: 0.625rem;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10'%3E%3Cpath d='M10 1l4 4-4 4-4-4z'/%3E%3Cpath d='M0 5h5M15 5h5' stroke='black'/%3E%3C/svg%3E") left center / 20px 10px repeat-x;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10'%3E%3Cpath d='M10 1l4 4-4 4-4-4z'/%3E%3Cpath d='M0 5h5M15 5h5' stroke='black'/%3E%3C/svg%3E") left center / 20px 10px repeat-x;
+  }
+}
+
+/*
+ * Product cards and section titles change with the store's design: the store's root
+ * element carries data-card and data-title (src/lib/designs.ts) and these rules restyle
+ * the same markup (ProductCard, SectionHeader). They sit outside Tailwind's layers, so
+ * they win over the components' utility classes.
+ */
+.pc-sale-pct {
+  display: none;
+}
+
+[data-card="minimal"] .pc-media { aspect-ratio: 3 / 4; }
+[data-card="minimal"] .pc-brand { display: none; }
+[data-card="minimal"] .pc-info { grid-template-columns: minmax(0, 1fr) auto; column-gap: 0.75rem; align-items: baseline; margin-top: 0.625rem; }
+[data-card="minimal"] .pc-title { font-size: 0.8125rem; }
+[data-card="minimal"] .pc-price { font-size: 0.8125rem; justify-content: flex-end; text-align: right; }
+[data-card="minimal"] .pc-swatches { grid-column: 1 / -1; }
+[data-card="minimal"] .pc-badge { padding: 0.125rem 0.375rem; font-size: 0.625rem; }
+
+[data-card="sticker"] .pc { border: 2px solid var(--color-ink); border-radius: var(--radius-card); padding: 0.5rem; background: var(--color-paper); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+[data-card="sticker"] .pc:hover { transform: translate(-3px, -3px); box-shadow: 5px 5px 0 var(--color-ink); }
+[data-card="sticker"] .pc-media { aspect-ratio: 1 / 1; border-radius: max(0px, calc(var(--radius-card) - 0.5rem)); }
+[data-card="sticker"] .pc-info { padding: 0 0.25rem 0.25rem; margin-top: 0.625rem; }
+[data-card="sticker"] .pc-brand { color: var(--color-accent); }
+[data-card="sticker"] .pc-title { font-weight: 600; }
+[data-card="sticker"] .pc-price { font-size: 1rem; font-weight: 700; }
+[data-card="sticker"] .pc-badge { border-radius: 999px; padding: 0.25rem 0.625rem; font-weight: 700; transform: rotate(-6deg); box-shadow: 0 0 0 2px var(--color-ink); }
+[data-card="sticker"] .pc-sale-word { display: none; }
+[data-card="sticker"] .pc-sale-pct { display: inline; }
+
+[data-card="soft"] .pc-info { justify-items: center; text-align: center; }
+[data-card="soft"] .pc-price,
+[data-card="soft"] .pc-swatches { justify-content: center; }
+[data-card="soft"] .pc-badge { border-radius: 999px; padding-inline: 0.625rem; }
+
+[data-card="framed"] .pc { border: 1px solid var(--color-line); border-radius: var(--radius-card); padding: 0.625rem 0.625rem 1rem; background: var(--color-paper); }
+[data-card="framed"] .pc-info { justify-items: center; text-align: center; margin-top: 0.875rem; }
+[data-card="framed"] .pc-title { font-family: var(--font-serif); font-style: var(--heading-style, normal); font-size: 1.0625rem; }
+[data-card="framed"] .pc-price,
+[data-card="framed"] .pc-swatches { justify-content: center; }
+[data-card="framed"] .pc-badge { background: var(--color-brand); color: var(--color-on-brand); }
+
+[data-card="overlay"] .pc-media { aspect-ratio: 3 / 4; }
+[data-card="overlay"] .pc-info { position: absolute; inset-inline: 0; bottom: 0; margin: 0; padding: 3rem 1rem 1rem; color: #fff; background: linear-gradient(to top, rgb(0 0 0 / 0.75), rgb(0 0 0 / 0)); border-radius: 0 0 var(--radius-img) var(--radius-img); pointer-events: none; }
+[data-card="overlay"] .pc-info a { pointer-events: auto; }
+[data-card="overlay"] .pc-info .text-stone,
+[data-card="overlay"] .pc-info .text-sale,
+[data-card="overlay"] .pc-brand { color: rgb(255 255 255 / 0.85); }
+[data-card="overlay"] .pc-swatches { display: none; }
+
+[data-title="minimal"] .sh { align-items: center; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-line); }
+[data-title="minimal"] .sh-eyebrow { display: none; }
+[data-title="minimal"] .sh-title { margin: 0; font-family: var(--font-sans); font-style: normal; font-weight: 500; font-size: 0.8125rem; line-height: 1.25rem; letter-spacing: 0.14em; text-transform: uppercase; }
+[data-title="minimal"] .sh-link { font-size: 0.75rem; }
+
+[data-title="bold"] .sh-eyebrow { font-weight: 700; }
+[data-title="bold"] .sh-title { font-size: clamp(2rem, 5.5vw, 4rem); line-height: 1; letter-spacing: -0.02em; }
+[data-title="bold"] .sh-title span { background: linear-gradient(transparent 62%, color-mix(in oklab, var(--color-accent) 32%, transparent) 62%); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+[data-title="bold"] .sh-link { border: 2px solid var(--color-ink); border-radius: var(--radius-btn); padding: 0.5rem 1rem; font-weight: 600; text-decoration: none; }
+
+[data-title="soft"] .sh,
+[data-title="ornament"] .sh { flex-direction: column; align-items: center; gap: 0.75rem; text-align: center; }
+[data-title="soft"] .sh-eyebrow { font-size: 0.875rem; font-style: italic; letter-spacing: 0.04em; text-transform: none; }
+[data-title="soft"] .sh-title::after { content: ""; display: block; width: 2.5rem; height: 2px; margin: 0.875rem auto 0; border-radius: 2px; background: var(--color-accent); }
+
+[data-title="ornament"] .sh-title { display: flex; align-items: center; justify-content: center; gap: 1rem; }
+[data-title="ornament"] .sh-title::before,
+[data-title="ornament"] .sh-title::after { content: ""; flex: none; width: clamp(2rem, 7vw, 4.5rem); height: 0.75rem; background: var(--color-accent); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 12'%3E%3Cpath d='M0 6h27M53 6h27' stroke='black' stroke-width='1.2'/%3E%3Cpath d='M40 .5l5.5 5.5-5.5 5.5-5.5-5.5z'/%3E%3Ccircle cx='31' cy='6' r='1.6'/%3E%3Ccircle cx='49' cy='6' r='1.6'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 12'%3E%3Cpath d='M0 6h27M53 6h27' stroke='black' stroke-width='1.2'/%3E%3Cpath d='M40 .5l5.5 5.5-5.5 5.5-5.5-5.5z'/%3E%3Ccircle cx='31' cy='6' r='1.6'/%3E%3Ccircle cx='49' cy='6' r='1.6'/%3E%3C/svg%3E") center / contain no-repeat; }
+
+[data-title="giant"] .sh-title { font-size: clamp(2.25rem, 6.5vw, 5rem); line-height: 0.95; }
+[data-title="giant"] .sh-eyebrow::before { content: "— "; }
+
+/* Brand tiles show the brand colour through the photograph; on dark looks, black. */
+[data-scheme="dark"] .brand-tile {
+  background-color: #0b0b0b;
+}
+
+/* Noir's see-through header over the home page photograph: its announcement too. */
+.overlay-clear .announce {
+  border-color: rgb(255 255 255 / 0.2);
+  background: transparent;
+  color: #fff;
 }
 
 /* Keyboard focus stays visible on brand-coloured bands such as the footer. */

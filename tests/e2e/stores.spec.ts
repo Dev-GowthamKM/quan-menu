@@ -37,14 +37,17 @@ test("the platform's administrator creates a store, which opens at its own addre
   await page.getByLabel("Store name").fill(NAME);
   await page.getByLabel("Order numbers start with").fill(PREFIX);
   await page.getByLabel("Address customers will visit").fill(HOST);
-  await page.getByRole("radio", { name: /Emerald and brass/ }).click();
+  await page.getByRole("radio", { name: "Heritage" }).click();
+  await expect(page.getByRole("radio", { name: "Heritage" })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("button", { name: "Create store" }).click();
   await expect(page.getByText(`${NAME} is ready. Next:`)).toBeVisible();
   state.storeId = page.url().match(/stores\/([0-9a-f-]{36})/)![1];
   await admin.close();
 
-  const { data: settings } = await db().from("store_settings").select("store_name, brand_color").eq("store_id", state.storeId).single();
-  expect(settings).toEqual({ store_name: NAME, brand_color: "#114a3a" });
+  const { data: settings } = await db().from("store_settings").select("store_name, brand_color, design").eq("store_id", state.storeId).single();
+  expect(settings).toMatchObject({ store_name: NAME, design: "heritage" });
+  // One of Heritage's palettes.
+  expect(["#7b1e24", "#0e5560", "#9c3510", "#4a2c1d", "#1f2b6e"]).toContain(settings!.brand_color);
 
   // With nothing on sale yet, its home page says it's opening soon.
   const early = await browser.newContext();
@@ -69,7 +72,8 @@ test("the platform's administrator creates a store, which opens at its own addre
   await shop.goto(`${ORIGIN}/`);
   await expect(shop).toHaveTitle(new RegExp(NAME));
   const brand = await shop.locator("#main").evaluate((el) => getComputedStyle(el).getPropertyValue("--color-brand").trim());
-  expect(brand).toBe("#114a3a");
+  expect(brand).toBe(settings!.brand_color);
+  await expect(shop.locator("[data-design]")).toHaveAttribute("data-design", "heritage");
   await shop.goto(`${ORIGIN}/shop`);
   await expect(shop.getByRole("link", { name: new RegExp(`Kesar Linen Kurta ${run}`) }).first()).toBeVisible();
   // The main store's products aren't part of this store.

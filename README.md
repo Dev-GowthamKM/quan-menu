@@ -65,6 +65,13 @@ payment account and web address, and the platform's administrators create them f
 - Policy pages, FAQ, contact form, maintenance page, sitemap and robots.
 - Until a store has something on sale, its homepage says it is opening soon and takes email
   sign-ups for launch day.
+- Six designs, each built differently: its header and menu, home page layout, product cards,
+  section titles, buttons, product photos and footer (Atelier, Nordic, Bazaar, Boutique,
+  Heritage, Noir), in 30 palettes, light and dark, and 26 fonts. New stores start with a look no
+  other store has (see [Appearance](#appearance)).
+- An announcement bar whose messages take turns (or scroll past), an add-to-bag bar that stays in
+  reach on phones, free-delivery progress in the bag, an optional WhatsApp "Chat with us" button,
+  and each store's own icon in browser tabs.
 
 **Admin** (`/admin`)
 
@@ -102,6 +109,9 @@ payment account and web address, and the platform's administrators create them f
   and starting look, empty or with the sample catalog to try it out; add or remove web addresses;
   suspend and reopen it. A store switcher for anyone who works at more than one, and each store's
   own Razorpay account under **Settings › Payment accounts**.
+- Appearance: a gallery of the designs (each drawn in its colours), palettes and fonts, parts
+  mixed in from other designs, and **Preview on the store**, which shows an unsaved look on the
+  real store to the admin alone. The home page's sections can be reordered or hidden.
 - Setup: what's left before a store is ready (contact details, policies, its own products,
   sample data, payments, web address) and, for the platform's administrators, the server's setup
   and any database update the deployment is waiting for, ready to copy into Supabase's SQL editor
@@ -217,6 +227,7 @@ All schema changes are SQL migrations in `supabase/migrations/` (run in order):
 | `20261024000100_multi_store` | Stores, web addresses, platform administrators, `store_id` on every table, per-store rules, roles, uniqueness, order numbers and functions |
 | `20261024000200_store_lookup_and_secrets` | The store for a web address, each store's encrypted keys, platform administrator lists |
 | `20261025000100_store_starter` | Starter policies, FAQ and email templates for new stores, the one-click sample catalog, `app_schema_version()` |
+| `20261026000100_designs` | Each store's design and the parts it mixes in from others; font names checked by format, so adding a font needs no migration |
 
 Every migration from `20261025000100` on ends by replacing `app_schema_version()` with its own
 version, so **Admin › Setup** can tell which updates a database is missing (older databases are
@@ -305,12 +316,13 @@ multi-store update ran; add others on the same page.
 **A new store:**
 
 1. **Admin › All stores › New store:** its name, the address customers will visit (a free
-   `name.vercel.app`, or your own domain), the owner's email (they need an account; leave it empty
-   to own it yourself) and a starting look. It starts with a delivery zone for all of India,
-   Standard and Express rates, the usual couriers, sample policies, FAQ and email templates to
-   edit, and, if you tick **Start with the sample catalog**, a copy of the sample products,
-   brands, collections and discount codes (also on the store's page later, while it has no
-   products). Until something is on sale, its homepage says it is opening soon.
+   `name.vercel.app`, or your own domain), the owner's email (they need an account; leave it
+   empty to own it yourself) and a starting look: one no other store has (a design, palette and
+   fonts), with **Shuffle** for another or a design of your choice. It starts with a delivery
+   zone for all of India, Standard and Express rates, the usual couriers, sample policies, FAQ
+   and email templates to edit, and, if you tick **Start with the sample catalog**, a copy of the
+   sample products, brands, collections and discount codes (also on the store's page later, while
+   it has no products). Until something is on sale, its homepage says it is opening soon.
 2. **Vercel › your project › Settings › Domains:** add the same address. With `VERCEL_API_TOKEN`
    and `VERCEL_PROJECT_ID` set, the app adds it for you. A `.vercel.app` name works straight away;
    your own domain also needs its DNS pointed at Vercel.
@@ -607,22 +619,47 @@ can be read at `http://localhost:4014/__test/messages`.
 
 ## Appearance
 
-**Admin › Settings › Appearance** sets the look of the whole storefront:
+**Admin › Settings › Appearance** sets how the whole storefront looks and is laid out:
 
-- **Themes:** six starting points, picked with one click and previewed before saving: wine and
-  gold (the default), indigo and saffron, emerald and brass, rose and copper, black and white,
-  and classic ivory.
-- **Colours:** text; buttons and bands (buttons, the announcement bar, the footer); accent
-  (section labels and highlights); background. Everything else the store paints with (panels,
-  borders, secondary text, the words on buttons) is derived from those four in
-  `src/lib/theme.ts`, keeping every pairing readable to WCAG AA. Accent text is deepened where
-  it needs to be, and the form warns about combinations that would be hard to read.
-- **Typography:** heading and body fonts, and italic headings.
+- **Design:** how the store is built. Each of the six has its own header and menu, home page
+  (banner, departments and the order of sections), product cards, section titles, buttons,
+  product photos, shop filters and footer, and suits its own colours and fonts:
 
-A store set up before `20261023000100_theme.sql` needs that migration (in the browser:
-`npm run db:bundle -- --since 20261022000100`, then run the file it writes in the SQL Editor).
-Until it runs, a store on the original palette already shows the new default look, and the
-Appearance page asks for the update before it saves.
+  | Design | Manner |
+  |---|---|
+  | Atelier | Editorial and calm: a centred name, a large menu with pictures, big photographs and serif headlines (Taana's look) |
+  | Nordic | Minimal: a slim header that tucks away on scroll, full-width photographs, numbered departments, filters behind a button |
+  | Bazaar | Bold: a scrolling announcement, a search bar and category chips, chunky capitals, outlined cards with stickers |
+  | Boutique | Soft: rounded shapes, round category bubbles, pastel colours, a rounded banner with a card |
+  | Heritage | Traditional: arched frames, ornaments, jewel tones and classical capitals, the store's story on the home page |
+  | Noir | Dark: a see-through header over a full-screen photograph, a full-screen menu, cards with words on the photo |
+
+- **Colours:** 30 palettes, five or six made for each design (any works with any), or your own
+  four colours: text; buttons and bands; accent; background (light or dark). Everything else
+  the store paints with (panels, borders, secondary text, the words on buttons, sale and error
+  colours, form fields) is derived from those four in `src/lib/theme.ts`, keeping every pairing
+  readable to WCAG AA on light and dark backgrounds; the form warns about combinations that
+  would be hard to read.
+- **Typography:** 16 heading fonts (serif and sans serif) and 10 for body text, and italic
+  headings where the font has a true italic.
+- **Mix and match:** take the header, main banner, product cards, corners or buttons from
+  another design.
+- **Surprise me** picks a design, palette and fonts no other store on the platform has.
+- **Preview on the store** opens the store in the unsaved look, in a new tab, for two hours. The
+  link is signed by the server and works only for that store; customers keep seeing the saved
+  look, and **End preview** goes back to it. Previews work before the database update too.
+
+**Settings › Homepage › Sections** reorders or hides the home page's sections (the design's
+order until you change it). Several announcement messages, separated by `|`, take turns.
+**Settings › Store details** turns on the WhatsApp "Chat with us" button. Each store's icon (its
+initials in its colours) is drawn by `/store-icon.svg`.
+
+New stores get a fresh look when they're created: the design fewest stores use that still has
+a palette no store uses, then such a palette and an unused heading font (`freshLook` in
+`src/lib/designs.ts`), so the first 30 stores all look different.
+
+Saving a design needs `20261026000100_designs.sql` (Admin › Setup offers it with the other
+updates); until then the store keeps its current look, and the Appearance page says so.
 
 ## Email
 
@@ -695,7 +732,7 @@ shopper signing up (name asked once, guest bag kept), a returning customer (a wr
 an email customer adding a number and signing in with it, codes on WhatsApp with the copy-code
 template, and refusals (other countries, staff accounts, unsigned hook calls, the switch off).
 
-**Multi-store tests (16 database, 6 Playwright)** cover only platform administrators creating
+**Multi-store tests (17 database, 6 Playwright)** cover only platform administrators creating
 stores (with owner, settings, delivery, couriers and starter texts), web addresses mapping to
 their store, catalogs that only show their own products (even with the same address), staff who
 can't read, change or add to another store by naming it, rows that can't be moved between stores,
@@ -710,10 +747,16 @@ checklist and the dashboard's pointer to it, a shopper's order showing only in t
 admin, a payment going to the store's own Razorpay account with its own webhook secret, and
 suspending and reopening the store.
 
-**Theme tests (14 unit, 1 Playwright)** cover the colour arithmetic, that every theme keeps text,
-labels, secondary text and the words on buttons readable on every surface, the look shown before
-the theme migration runs, and an owner switching themes in the admin: the saved settings, the
-storefront's colours and its italic or upright headings.
+**Theme and design tests (54 unit, 1 database, 4 Playwright)** cover the colour arithmetic; that
+every one of the 30 palettes keeps text, labels, secondary text, sale and error colours, fields
+and the words on buttons readable on every surface; fonts' weights; that the six designs differ
+in every part and suggest real palettes, fonts and sections; mixed-in parts and defaults; that
+new stores get different looks until the designs and palettes run out, and Shuffle always shows
+something new; the home page's own section order; store icons' initials; the database saving a
+new store's design and rejecting malformed names; and, in the browser, every design built its own
+way and accessible on its home, product and shop pages through **Preview on the store**, a forged
+preview link doing nothing and customers seeing the saved look meanwhile, an owner changing
+palette, fonts and design (and back), reordering the home page, and the chat button and icon.
 
 **Acceptance tests (7, Playwright)** follow the brief:
 
@@ -732,12 +775,13 @@ storefront's colours and its italic or upright headings.
 7. Carts, products and orders are stored on the server and survive a fresh browser.
 
 **Accessibility checks (2, Playwright + axe-core)** scan 13 storefront pages (including the
-checkout) and 18 admin pages for WCAG 2.1 A/AA problems and fail on anything serious or critical;
-the mobile sign-in tests run the same check on the number and code forms and the settings tab.
-Automated checks don't replace testing with a keyboard and a screen reader.
+checkout) and 20 admin pages for WCAG 2.1 A/AA problems and fail on anything serious or critical;
+the mobile sign-in tests run the same check on the number and code forms and the settings tab,
+and the design tests on the home, product and shop pages of all six designs. Automated checks
+don't replace testing with a keyboard and a screen reader.
 
-Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 37/37,
-integration 89/89, Playwright 29/29 against the production build (`next build`), and every page
+Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 77/77,
+integration 90/90, Playwright 32/32 against the production build (`next build`), and every page
 checked at 390 px wide without horizontal scrolling.
 
 ## Running the store

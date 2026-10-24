@@ -4,13 +4,20 @@ import { useState, useTransition, type ReactNode } from "react";
 import { deleteSampleData, saveSettings, type SettingsSection } from "@/server/admin/store";
 import { formatMoney, fromMinor, toMinor } from "@/lib/money";
 import type { ContactInfo, FaqItem, HeroSlide, Homepage, Policies, Promo, SocialLinks, StoreSettings } from "@/lib/types";
-import { HEADING_WEIGHT, isHexColor, THEME_PRESETS, themeOf, themeTokens, themeWarnings, type BodyFont, type HeadingFont, type ThemePreset } from "@/lib/theme";
-import { Button, buttonClass, cx, Notice } from "../../ui/controls";
-import { CloseIcon, PlusIcon } from "../../ui/icons";
+import Link from "next/link";
+import { previewLook } from "@/server/admin/store";
+import { DESIGN_LIST, DESIGNS, designLook, freshLook, lookOfSettings, OPTION_CHOICES, OPTION_LABELS, resolveDesign, SECTION_KEYS, SECTION_LABELS, type Design, type DesignOptions, type Look, type SectionKey, type TakenLook } from "@/lib/designs";
+import {
+  BODY_FONT_KEYS, BODY_FONTS, HEADING_FONT_KEYS, HEADING_FONTS, isHexColor, isLight, paletteByKey, paletteOf, PALETTES, themeOf, themeTokens, themeWarnings,
+  type BodyFont, type HeadingFont, type Palette, type ThemeColors,
+} from "@/lib/theme";
+import { Button, cx, Notice } from "../../ui/controls";
+import { ArrowDown, ArrowUp, CloseIcon, ExternalIcon, PlusIcon } from "../../ui/icons";
 import { SelectField, TextArea, TextField, Toggle } from "../fields";
 import { SingleImageField } from "../ImageManager";
 import { useToast } from "../Toaster";
 import { adminInput, Card } from "../ui";
+import DesignThumb from "./DesignThumb";
 
 function useSave(section: SettingsSection) {
   const router = useRouter();
@@ -53,7 +60,7 @@ function Form({ children, onSubmit, pending, error, note }: { children: ReactNod
 export function GeneralForm({ s }: { s: StoreSettings }) {
   const { pending, error, save } = useSave("general");
   const [v, setV] = useState({ store_name: s.store_name, tagline: s.tagline, logo_url: s.logo_url, contact: (s.contact ?? {}) as ContactInfo, social: (s.social ?? {}) as SocialLinks });
-  const contact = (k: keyof ContactInfo, val: string) => setV({ ...v, contact: { ...v.contact, [k]: val } });
+  const contact = (k: Exclude<keyof ContactInfo, "chat_button">, val: string) => setV({ ...v, contact: { ...v.contact, [k]: val } });
   const social = (k: keyof SocialLinks, val: string) => setV({ ...v, social: { ...v.social, [k]: val } });
   return (
     <Form onSubmit={() => save(v)} pending={pending} error={error}>
@@ -71,7 +78,16 @@ export function GeneralForm({ s }: { s: StoreSettings }) {
         <div className="grid gap-4 md:grid-cols-2">
           <TextField label="Email" type="email" value={v.contact.email ?? ""} onChange={(e) => contact("email", e.target.value)} />
           <TextField label="Phone" value={v.contact.phone ?? ""} onChange={(e) => contact("phone", e.target.value)} />
-          <TextField label="WhatsApp" value={v.contact.whatsapp ?? ""} onChange={(e) => contact("whatsapp", e.target.value)} placeholder="+91…" />
+          <div className="grid content-start gap-2">
+            <TextField label="WhatsApp" value={v.contact.whatsapp ?? ""} onChange={(e) => contact("whatsapp", e.target.value)} placeholder="+91…" />
+            <Toggle
+              label="Show a “Chat with us” button on the store"
+              hint="A round button in the corner of every page that opens WhatsApp with this number."
+              checked={!!v.contact.chat_button}
+              disabled={!v.contact.whatsapp?.trim()}
+              onChange={(on) => setV({ ...v, contact: { ...v.contact, chat_button: on } })}
+            />
+          </div>
           <TextField label="Hours" value={v.contact.hours ?? ""} onChange={(e) => contact("hours", e.target.value)} placeholder="Mon–Sat, 10am–7pm IST" />
           <TextArea label="Address (also printed on invoices)" value={v.contact.address ?? ""} onChange={(e) => contact("address", e.target.value)} rows={3} className="md:col-span-2" />
         </div>
@@ -87,114 +103,151 @@ export function GeneralForm({ s }: { s: StoreSettings }) {
   );
 }
 
-const HEADING: Record<HeadingFont, string> = { cormorant: "Cormorant Garamond", playfair: "Playfair Display", bodoni: "Bodoni Moda", "dm-serif": "DM Serif Display" };
-const BODY: Record<BodyFont, string> = { jost: "Jost", inter: "Inter", manrope: "Manrope", "dm-sans": "DM Sans" };
-const FONT_VAR: Record<string, string> = {
-  cormorant: "var(--font-cormorant)", playfair: "var(--font-playfair)", bodoni: "var(--font-bodoni)", "dm-serif": "var(--font-dm-serif)",
-  jost: "var(--font-jost)", inter: "var(--font-inter)", manrope: "var(--font-manrope)", "dm-sans": "var(--font-dm-sans)",
-};
+const FONT_GROUPS = (suggested: readonly string[]) => [
+  { label: "Suits this design", keys: HEADING_FONT_KEYS.filter((k) => suggested.includes(k)) },
+  { label: "Serif", keys: HEADING_FONT_KEYS.filter((k) => !suggested.includes(k) && HEADING_FONTS[k].kind === "serif") },
+  { label: "Sans serif", keys: HEADING_FONT_KEYS.filter((k) => !suggested.includes(k) && HEADING_FONTS[k].kind === "sans") },
+];
 
-interface Look {
-  primary_color: string;
-  brand_color: string;
-  accent_color: string;
-  background_color: string;
-  heading_font: HeadingFont;
-  heading_italic: boolean;
-  body_font: BodyFont;
+/** A palette as a swatch button: background, brand and accent, with its name. */
+function PaletteButton({ palette, active, onPick }: { palette: Palette; active: boolean; onPick: () => void }) {
+  const c = palette.colors;
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onPick}
+      className={cx("flex items-center gap-2.5 rounded-md border p-2 text-left transition", active ? "border-ink ring-1 ring-ink" : "border-black/10 hover:border-black/30")}
+    >
+      <span className="flex h-9 w-14 shrink-0 overflow-hidden rounded-sm border border-black/10" style={{ background: c.background }} aria-hidden>
+        <span className="w-1/2" style={{ background: c.brand }} />
+        <span className="grid flex-1 place-items-center text-[10px] font-semibold" style={{ color: c.text }}>Aa</span>
+        <span className="w-1.5" style={{ background: c.accent }} />
+      </span>
+      <span className="text-xs leading-tight font-medium">{palette.name}</span>
+    </button>
+  );
 }
 
-const lookOf = (p: ThemePreset): Look => ({
-  primary_color: p.colors.text,
-  brand_color: p.colors.brand,
-  accent_color: p.colors.accent,
-  background_color: p.colors.background,
-  heading_font: p.heading_font,
-  heading_italic: p.heading_italic,
-  body_font: p.body_font,
-});
-
-const sameLook = (a: Look, b: Look) =>
-  (Object.keys(a) as (keyof Look)[]).every((k) => String(a[k]).toLowerCase() === String(b[k]).toLowerCase());
-
-export function AppearanceForm({ s }: { s: StoreSettings }) {
+/**
+ * Settings › Appearance: the store's design (how it's built), colours and fonts, parts mixed
+ * in from other designs, and a preview, in a drawing here and on the real store.
+ */
+export function AppearanceForm({ s, taken }: { s: StoreSettings; taken: TakenLook[] }) {
   const { pending, error, save } = useSave("appearance");
-  // brand_color and heading_italic arrive with the theme database update; until then the
-  // form starts from what the store shows (themeOf).
-  const updated = s.brand_color != null && s.heading_italic != null;
+  const toast = useToast();
+  // brand_color and heading_italic arrive with the theme database update and design with the
+  // designs update; until then the form starts from what the store shows.
+  const updated = s.brand_color != null && s.heading_italic != null && (s as { design?: string | null }).design != null;
   const current = themeOf(s);
-  const [v, setV] = useState<Look>({
-    primary_color: current.colors.text,
-    brand_color: current.colors.brand,
-    accent_color: current.colors.accent,
-    background_color: current.colors.background,
-    heading_font: s.heading_font as HeadingFont,
-    heading_italic: current.italic,
-    body_font: s.body_font as BodyFont,
-  });
-  const colors = { text: v.primary_color, brand: v.brand_color, accent: v.accent_color, background: v.background_color };
+  const [look, setLook] = useState<Look>(() => lookOfSettings(s, current.colors, current.italic));
+  const [previewing, startPreview] = useTransition();
+  const design = DESIGNS[look.design];
+  const resolved = resolveDesign(look.design, look.options);
+  const colors = look.colors;
   const valid = Object.values(colors).every(isHexColor);
   const warnings = valid ? themeWarnings(colors) : [];
-  const accentShown = valid ? themeTokens(colors)["--color-accent"] : v.accent_color;
-  const color = (k: "primary_color" | "brand_color" | "accent_color" | "background_color", label: string, hint: string) => (
+  const accentShown = valid ? themeTokens(colors)["--color-accent"] : colors.accent;
+  const activePalette = valid ? paletteOf(colors)?.key : undefined;
+  const suggested = design.palettes.map((k) => paletteByKey(k)).filter((p): p is Palette => !!p);
+  const others = PALETTES.filter((p) => !design.palettes.includes(p.key));
+  const headingFont = HEADING_FONTS[look.heading_font];
+  const setColor = (k: keyof ThemeColors, value: string) => setLook({ ...look, colors: { ...look.colors, [k]: value } });
+  const setOption = (k: keyof DesignOptions, value: string) => {
+    const options = { ...look.options } as Record<string, string>;
+    if (value) options[k] = value;
+    else delete options[k];
+    setLook({ ...look, options: options as DesignOptions });
+  };
+
+  const preview = () => {
+    // Open the tab while the click still counts (or browsers block it), then send it to the store.
+    const tab = window.open("", "_blank");
+    startPreview(async () => {
+      const res = await previewLook(look);
+      if (!res.ok) {
+        tab?.close();
+        return toast(res.error, "error");
+      }
+      if (tab) tab.location.href = res.data.url;
+      else window.location.assign(res.data.url);
+    });
+  };
+
+  const color = (k: keyof ThemeColors, label: string, hint: string) => (
     <div className="grid content-start gap-1.5">
       <span className="text-xs font-medium text-taupe">{label}</span>
       <div className="flex items-center gap-2">
-        <input type="color" value={isHexColor(v[k]) ? v[k] : "#000000"} onChange={(e) => setV({ ...v, [k]: e.target.value })} aria-label={label} className="size-9 cursor-pointer rounded border border-black/15 bg-white p-0.5" />
-        <input value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value.trim() })} aria-label={`${label} hex`} className={cx(adminInput, "w-28 font-mono")} maxLength={7} />
+        <input type="color" value={isHexColor(colors[k]) ? colors[k] : "#000000"} onChange={(e) => setColor(k, e.target.value)} aria-label={label} className="size-9 cursor-pointer rounded border border-black/15 bg-white p-0.5" />
+        <input value={colors[k]} onChange={(e) => setColor(k, e.target.value.trim())} aria-label={`${label} hex`} className={cx(adminInput, "w-28 font-mono")} maxLength={7} />
       </div>
       <span className="text-xs text-stone">{hint}</span>
     </div>
   );
+
   return (
-    <Form onSubmit={() => save(v)} pending={pending} error={error} note={!updated ? "Saving needs the database update below." : undefined}>
+    <Form onSubmit={() => save(look)} pending={pending} error={error} note={!updated ? "Saving needs the database update in Admin › Setup. Previews work already." : undefined}>
       {!updated && (
         <Notice tone="warning">
-          One more step before these can be saved: run the latest database update (the file <code className="font-mono text-xs">update-after-20261022000100.sql</code>) in Supabase › SQL Editor. Until then the store shows italic headings with your current colours.
+          One more step before a new look can be saved: run the database update in <Link href="/admin/setup" className="underline">Admin › Setup</Link>.
+          Until then you can still try any look on your store with <strong>Preview on the store</strong>.
         </Notice>
       )}
-      <Card title="Themes">
-        <p className="mb-3 text-sm text-taupe">Start from a theme, then adjust anything below. Nothing changes on the store until you save.</p>
+      <Card title="Design">
+        <p className="mb-3 text-sm text-taupe">
+          A design decides how the store is built: its header and menu, home page, product cards, section titles, buttons, product photos and footer.
+          Choosing one also picks colours and fonts that suit it; change those below.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {THEME_PRESETS.map((p) => {
-            const look = lookOf(p);
-            const active = sameLook(look, v);
+          {DESIGN_LIST.map((d) => {
+            const on = look.design === d.key;
+            const sample = on ? look : designLook(d.key);
             return (
               <button
-                key={p.key}
+                key={d.key}
                 type="button"
-                aria-pressed={active}
-                onClick={() => setV(look)}
-                className={cx("rounded-md border p-2.5 text-left transition", active ? "border-ink ring-1 ring-ink" : "border-black/10 hover:border-black/30")}
+                aria-pressed={on}
+                onClick={() => !on && setLook(designLook(d.key))}
+                className={cx("rounded-md border p-2.5 text-left transition", on ? "border-ink ring-1 ring-ink" : "border-black/10 hover:border-black/30")}
               >
-                <span className="flex h-16 overflow-hidden rounded-sm border border-black/5" style={{ background: p.colors.background }}>
-                  <span className="w-[30%]" style={{ background: p.colors.brand }} />
-                  <span
-                    className="grid flex-1 place-items-center text-3xl leading-none"
-                    style={{ color: p.colors.text, fontFamily: FONT_VAR[p.heading_font], fontStyle: p.heading_italic ? "italic" : "normal", fontWeight: HEADING_WEIGHT[p.heading_font] }}
-                  >
-                    Aa
-                  </span>
-                  <span className="w-2.5" style={{ background: p.colors.accent }} />
-                </span>
-                <span className="mt-2 block text-sm font-medium">{p.name}</span>
-                <span className="block text-xs text-stone">{HEADING[p.heading_font]}{p.heading_italic ? " italic" : ""} · {BODY[p.body_font]}</span>
+                <DesignThumb design={on ? resolved : d} colors={sample.colors} heading={sample.heading_font} italic={sample.heading_italic} />
+                <span className="mt-2 block text-sm font-medium">{d.name}</span>
+                <span className="mt-0.5 block text-xs leading-snug text-stone">{d.summary}</span>
               </button>
             );
           })}
         </div>
-      </Card>
-      <Card title="Colours">
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          {color("primary_color", "Text", "Words and outlines. Keep it dark.")}
-          {color("brand_color", "Buttons and bands", "Buttons, the announcement bar and the footer.")}
-          {color("accent_color", "Accent", "Section labels and highlights.")}
-          {color("background_color", "Background", "A light paper tone suits photography.")}
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Button variant="secondary" size="sm" onClick={() => setLook(freshLook(taken, Math.random, { avoid: look }))}>Surprise me</Button>
+          <span className="text-xs text-stone">A design, colours and fonts no other store on the platform has yet.</span>
         </div>
-        {valid && accentShown !== v.accent_color.toLowerCase() && (
+      </Card>
+
+      <Card title="Colours">
+        <p className="mb-3 text-sm text-taupe">Palettes made for {design.name}. Any palette works with any design.</p>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {suggested.map((p) => (
+            <PaletteButton key={p.key} palette={p} active={activePalette === p.key} onPick={() => setLook({ ...look, colors: { ...p.colors } })} />
+          ))}
+        </div>
+        <details className="mt-3" open={!!activePalette && !design.palettes.includes(activePalette)}>
+          <summary className="cursor-pointer text-sm underline underline-offset-4">More palettes</summary>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {others.map((p) => (
+              <PaletteButton key={p.key} palette={p} active={activePalette === p.key} onPick={() => setLook({ ...look, colors: { ...p.colors } })} />
+            ))}
+          </div>
+        </details>
+        <div className="mt-6 grid gap-5 border-t border-black/5 pt-5 sm:grid-cols-2 xl:grid-cols-4">
+          {color("text", "Text", "Words and outlines.")}
+          {color("brand", "Buttons and bands", "Buttons, the announcement bar and some footers.")}
+          {color("accent", "Accent", "Section labels and highlights.")}
+          {color("background", "Background", "Light or dark: the other colours adjust.")}
+        </div>
+        {valid && accentShown !== colors.accent.toLowerCase() && (
           <p className="mt-4 flex items-center gap-2 text-xs text-stone">
             <span className="size-3 shrink-0 rounded-sm" style={{ background: accentShown }} aria-hidden />
-            Accent text is shown a little deeper ({accentShown}) so it stays readable on the background.
+            Accent text is shown a little {isLight(colors) ? "deeper" : "lighter"} ({accentShown}) so it stays readable on the background.
           </p>
         )}
         {!valid && <p className="mt-4 text-xs text-sale">Colours are hex codes like #6b1d2e.</p>}
@@ -204,69 +257,91 @@ export function AppearanceForm({ s }: { s: StoreSettings }) {
           </Notice>
         )}
       </Card>
+
       <Card title="Typography">
         <div className="grid gap-4 md:grid-cols-2">
-          <SelectField label="Headings" value={v.heading_font} onChange={(e) => setV({ ...v, heading_font: e.target.value as HeadingFont })}>
-            {Object.entries(HEADING).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+          <SelectField
+            label="Headings"
+            value={look.heading_font}
+            onChange={(e) => {
+              const heading_font = e.target.value as HeadingFont;
+              setLook({ ...look, heading_font, heading_italic: look.heading_italic && HEADING_FONTS[heading_font].italic });
+            }}
+          >
+            {FONT_GROUPS(design.headings).filter((g) => g.keys.length).map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.keys.map((k) => <option key={k} value={k}>{HEADING_FONTS[k].label}</option>)}
+              </optgroup>
+            ))}
           </SelectField>
-          <SelectField label="Body text" value={v.body_font} onChange={(e) => setV({ ...v, body_font: e.target.value as BodyFont })}>
-            {Object.entries(BODY).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+          <SelectField label="Body text" value={look.body_font} onChange={(e) => setLook({ ...look, body_font: e.target.value as BodyFont })}>
+            {BODY_FONT_KEYS.map((k) => <option key={k} value={k}>{BODY_FONTS[k].label}{design.bodies.includes(k) ? " (suits this design)" : ""}</option>)}
           </SelectField>
-          <Toggle label="Italic headings" hint="Page titles, section headings and banners in the italic of the heading font." checked={v.heading_italic} onChange={(heading_italic) => setV({ ...v, heading_italic })} />
+          <Toggle
+            label="Italic headings"
+            hint={headingFont.italic ? "Page titles, section headings and banners in the italic of the heading font." : `${headingFont.label} has no italic, so its headings are upright.`}
+            checked={look.heading_italic && headingFont.italic}
+            disabled={!headingFont.italic}
+            onChange={(heading_italic) => setLook({ ...look, heading_italic })}
+          />
+        </div>
+        <p className="mt-4 text-sm text-taupe" style={{ fontFamily: headingFont.css, fontStyle: look.heading_italic && headingFont.italic ? "italic" : "normal", textTransform: design.headingCase === "uppercase" ? "uppercase" : "none", fontSize: "1.75rem", lineHeight: 1.1 }}>
+          {s.store_name}: the new season
+        </p>
+      </Card>
+
+      <Card title="Mix and match">
+        <p className="mb-4 text-sm text-taupe">Borrow a part from another design. &ldquo;As in {design.name}&rdquo; keeps the design&apos;s own.</p>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {(Object.keys(OPTION_LABELS) as (keyof DesignOptions)[]).map((k) => {
+            const meta = OPTION_LABELS[k] as { label: string; names: Record<string, string> };
+            return (
+              <SelectField key={k} label={meta.label} value={look.options[k] ?? ""} onChange={(e) => setOption(k, e.target.value)}>
+                <option value="">As in {design.name} ({meta.names[design[k]]})</option>
+                {(OPTION_CHOICES[k] as readonly string[]).filter((v) => v !== design[k]).map((v) => <option key={v} value={v}>{meta.names[v]}</option>)}
+              </SelectField>
+            );
+          })}
         </div>
       </Card>
-      <Card title="Preview">
-        <ThemePreview look={v} storeName={s.store_name} />
+
+      <Card
+        title="Preview"
+        actions={
+          <Button size="sm" variant="secondary" onClick={preview} busy={previewing} disabled={!valid}>
+            Preview on the store <ExternalIcon size={12} />
+          </Button>
+        }
+      >
+        <DesignThumb design={resolved} colors={valid ? colors : current.colors} heading={look.heading_font} italic={look.heading_italic} storeName={s.store_name} className="max-w-xl" />
+        <p className="mt-3 text-xs text-stone">
+          <strong className="font-medium text-taupe">Preview on the store</strong> opens your store in this look in a new tab, for you, for two hours. Customers see the saved look until you save.
+        </p>
       </Card>
     </Form>
-  );
-}
-
-/** A small storefront in the chosen look, built from the same tokens as the real one. */
-function ThemePreview({ look, storeName }: { look: Look; storeName: string }) {
-  const colors = { text: look.primary_color, brand: look.brand_color, accent: look.accent_color, background: look.background_color };
-  if (!Object.values(colors).every(isHexColor)) return <p className="text-sm text-stone">Enter every colour as a hex code to see the preview.</p>;
-  const style = {
-    ...themeTokens(colors),
-    "--font-serif": `${FONT_VAR[look.heading_font]}, Georgia, serif`,
-    "--font-sans": `${FONT_VAR[look.body_font]}, ui-sans-serif, system-ui, sans-serif`,
-    "--heading-style": look.heading_italic ? "italic" : "normal",
-    "--heading-weight": String(HEADING_WEIGHT[look.heading_font]),
-  } as React.CSSProperties;
-  return (
-    <div style={style} className="overflow-hidden rounded-md border border-black/10 bg-ivory font-sans text-ink" aria-label="Preview of the store">
-      <p className="bg-brand px-4 py-1.5 text-center text-[10px] tracking-[0.16em] text-on-brand uppercase">Free delivery on orders over ₹2,999</p>
-      <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-3">
-        <span className="font-serif text-xl leading-none tracking-[0.28em] uppercase">{storeName}</span>
-        <span className="hidden text-[11px] tracking-[0.12em] uppercase sm:inline">New in · Women · Men · <span className="text-sale">Sale</span></span>
-      </div>
-      <div className="grid sm:grid-cols-[1fr_10rem]">
-        <div className="bg-bone px-6 py-8">
-          <p className="label-caps text-accent">The autumn edit</p>
-          <p className="mt-3 font-serif text-4xl leading-none">The quiet season</p>
-          <p className="mt-3 max-w-xs text-sm leading-relaxed text-taupe">Wool, cashmere and soft tailoring for cooler days.</p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <span className={buttonClass("primary", "sm")}>Add to bag</span>
-            <span className={buttonClass("secondary", "sm")}>Explore</span>
-          </div>
-        </div>
-        <div className="hidden bg-sand sm:block" aria-hidden />
-      </div>
-      <div className="grid gap-1 bg-brand px-6 py-5 text-on-brand">
-        <p className="font-serif text-xl">Join the {storeName} list</p>
-        <p className="text-xs text-on-brand-soft">The footer: links, contact details and the newsletter.</p>
-      </div>
-    </div>
   );
 }
 
 const blankSlide: HeroSlide = { image_url: "", heading: "", eyebrow: "", subheading: "", cta_label: "Shop now", cta_href: "/shop" };
 const blankPromo: Promo = { image_url: "", heading: "", eyebrow: "", cta_label: "Shop", cta_href: "/shop" };
 
-export function HomepageForm({ s }: { s: StoreSettings }) {
+/** Every home page section, in the store's order (or its design's), with which are shown. */
+function sectionList(design: Design, saved: Homepage["sections"]): { key: SectionKey; on: boolean }[] {
+  const known = (k: string): k is SectionKey => (SECTION_KEYS as readonly string[]).includes(k);
+  const list = saved?.length
+    ? saved.filter((x) => known(x.key)).map((x) => ({ key: x.key as SectionKey, on: x.on !== false }))
+    : design.sections.map((key) => ({ key, on: true }));
+  for (const key of SECTION_KEYS) if (!list.some((x) => x.key === key)) list.push({ key, on: false });
+  return list;
+}
+
+export function HomepageForm({ s, design }: { s: StoreSettings; design: Design }) {
   const { pending, error, save } = useSave("homepage");
   const initial = (s.homepage ?? {}) as Homepage;
-  const [v, setV] = useState<Required<Homepage>>({ announcement: initial.announcement ?? "", hero: initial.hero ?? [], promos: initial.promos ?? [] });
+  const [v, setV] = useState<Omit<Required<Homepage>, "sections">>({ announcement: initial.announcement ?? "", hero: initial.hero ?? [], promos: initial.promos ?? [] });
+  // null: the design's own order (it changes with the design); a list once the store arranges its own.
+  const [order, setOrder] = useState<{ key: SectionKey; on: boolean }[] | null>(initial.sections?.length ? sectionList(design, initial.sections) : null);
+  const sections = order ?? sectionList(design, undefined);
   const setSlide = (i: number, p: Partial<HeroSlide>) => setV({ ...v, hero: v.hero.map((x, j) => (j === i ? { ...x, ...p, sample: false } : x)) });
   const setPromo = (i: number, p: Partial<Promo>) => setV({ ...v, promos: v.promos.map((x, j) => (j === i ? { ...x, ...p, sample: false } : x)) });
   const move = <T,>(list: T[], i: number, d: number) => {
@@ -277,9 +352,49 @@ export function HomepageForm({ s }: { s: StoreSettings }) {
   };
   const valid = () => [...v.hero, ...v.promos].every((x) => x.image_url && x.heading.trim());
   return (
-    <Form onSubmit={() => (valid() ? save({ homepage: v }) : undefined)} pending={pending} error={error ?? (valid() ? null : "Every banner needs an image and a heading.")} note="Departments, new arrivals, best sellers, brands and collections fill in from your catalog.">
+    <Form
+      onSubmit={() => (valid() ? save({ homepage: { ...v, ...(order ? { sections: order } : {}) } }) : undefined)}
+      pending={pending}
+      error={error ?? (valid() ? null : "Every banner needs an image and a heading.")}
+      note="Departments, new arrivals, best sellers, brands and collections fill in from your catalog."
+    >
       <Card title="Announcement bar">
-        <TextField label="Text (leave empty to hide)" value={v.announcement} onChange={(e) => setV({ ...v, announcement: e.target.value })} maxLength={200} placeholder="Free delivery on orders over ₹1,999" />
+        <TextField
+          label="Text (leave empty to hide)"
+          value={v.announcement}
+          onChange={(e) => setV({ ...v, announcement: e.target.value })}
+          maxLength={200}
+          placeholder="Free delivery on orders over ₹1,999 | New festive edit"
+          hint="Several messages? Separate them with | and they take turns (or scroll past, in designs with a moving bar)."
+        />
+      </Card>
+      <Card
+        title="Sections"
+        actions={order && <button type="button" className="text-xs underline" onClick={() => setOrder(null)}>Use {design.name}&apos;s order</button>}
+      >
+        <p className="mb-3 text-sm text-taupe">
+          {order ? "Your own order." : `${design.name}'s order.`} Untick a section to hide it; the arrows move it. Sections without content (no banners, no brands) hide themselves.
+        </p>
+        <ol className="grid gap-1.5">
+          {sections.map((x, i) => (
+            <li key={x.key} className={cx("flex items-center gap-3 rounded-md border px-3 py-2", x.on ? "border-black/10 bg-white" : "border-dashed border-black/15 text-stone")}>
+              <input
+                type="checkbox"
+                className="size-4 accent-ink"
+                checked={x.on}
+                aria-label={`Show ${SECTION_LABELS[x.key]}`}
+                onChange={(e) => setOrder(sections.map((y) => (y.key === x.key ? { ...y, on: e.target.checked } : y)))}
+              />
+              <span className="flex-1 text-sm">{SECTION_LABELS[x.key]}</span>
+              <button type="button" className="grid size-7 place-items-center rounded hover:bg-black/5 disabled:opacity-30" disabled={i === 0} onClick={() => setOrder(move(sections, i, -1))} aria-label={`Move ${SECTION_LABELS[x.key]} up`}>
+                <ArrowUp size={14} />
+              </button>
+              <button type="button" className="grid size-7 place-items-center rounded hover:bg-black/5 disabled:opacity-30" disabled={i === sections.length - 1} onClick={() => setOrder(move(sections, i, 1))} aria-label={`Move ${SECTION_LABELS[x.key]} down`}>
+                <ArrowDown size={14} />
+              </button>
+            </li>
+          ))}
+        </ol>
       </Card>
       <Card title="Hero campaign" actions={v.hero.length < 6 && <button type="button" className="inline-flex items-center gap-1 text-xs underline" onClick={() => setV({ ...v, hero: [...v.hero, { ...blankSlide }] })}><PlusIcon size={11} /> Add slide</button>}>
         {v.hero.length === 0 && <p className="text-sm text-stone">No hero slides. The homepage starts with your departments.</p>}

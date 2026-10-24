@@ -38,6 +38,9 @@ export const PlusIcon = (p: IconProps) => <Svg {...p}><path d="M12 5v14M5 12h14"
 export const MinusIcon = (p: IconProps) => <Svg {...p}><path d="M5 12h14" /></Svg>;
 export const CheckIcon = (p: IconProps) => <Svg {...p}><path d="m5 12.5 4.5 4.5L19 7.5" /></Svg>;
 export const ArrowRight = (p: IconProps) => <Svg {...p}><path d="M5 12h14M13 6l6 6-6 6" /></Svg>;
+export const ArrowUp = (p: IconProps) => <Svg {...p}><path d="M12 19V5M6 11l6-6 6 6" /></Svg>;
+export const ArrowDown = (p: IconProps) => <Svg {...p}><path d="M12 5v14M6 13l6 6 6-6" /></Svg>;
+export const ChatIcon = (p: IconProps) => <Svg {...p}><path d="M4 18.5V6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v8a1.5 1.5 0 0 1-1.5 1.5H8.5L4 18.5Z" /><path d="M8.5 9.5h7M8.5 12.5h4.5" /></Svg>;
 export const TruckIcon = (p: IconProps) => <Svg {...p}><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7" /><circle cx="7" cy="17.5" r="1.5" /><circle cx="17" cy="17.5" r="1.5" /></Svg>;
 export const ReturnIcon = (p: IconProps) => <Svg {...p}><path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-3" /></Svg>;
 export const ShareIcon = (p: IconProps) => <Svg {...p}><path d="M12 4v11M8 8l4-4 4 4" /><path d="M5 13v6h14v-6" /></Svg>;

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { GalleryStyle } from "@/lib/designs";
 import type { PageImage } from "@/lib/types";
 import CatalogImage from "../../ui/CatalogImage";
 import { cx } from "../../ui/controls";
@@ -7,11 +8,12 @@ import { Dialog } from "../../ui/Dialog";
 import { ChevronLeft, ChevronRight, ZoomIcon } from "../../ui/icons";
 
 /**
- * Product images: thumbnails and a hover-zoom main image on desktop, a swipeable strip
- * on phones, and a full-screen viewer with 2x zoom on any device. Images tagged with the
- * selected colour come first.
+ * Product images: on desktop, thumbnails beside a hover-zoom main image, or (as the design
+ * chooses) every image stacked or in a grid beside the details; a swipeable strip on phones;
+ * and a full-screen viewer with 2x zoom on any device. Images tagged with the selected
+ * colour come first.
  */
-export default function Gallery({ images, title, color }: { images: PageImage[]; title: string; color: string | null }) {
+export default function Gallery({ images, title, color, layout = "thumbs" }: { images: PageImage[]; title: string; color: string | null; layout?: GalleryStyle }) {
   const ordered = useMemo(() => {
     if (!color) return images;
     const mine = images.filter((i) => i.color === color);
@@ -30,7 +32,7 @@ export default function Gallery({ images, title, color }: { images: PageImage[];
   }, [color]);
 
   if (!ordered.length) {
-    return <div className="aspect-[4/5] bg-bone" role="img" aria-label="No image available" />;
+    return <div className="aspect-[4/5] rounded-img bg-bone" role="img" aria-label="No image available" />;
   }
   const current = ordered[Math.min(active, ordered.length - 1)];
   const go = (i: number) => setActive((i + ordered.length) % ordered.length);
@@ -49,7 +51,7 @@ export default function Gallery({ images, title, color }: { images: PageImage[];
           aria-label={`${title} images`}
         >
           {ordered.map((img, i) => (
-            <button key={img.id} type="button" onClick={() => { setActive(i); setViewer(true); }} className="relative aspect-[4/5] w-full shrink-0 snap-center bg-bone" aria-label={`Open image ${i + 1} of ${ordered.length}`}>
+            <button key={img.id} type="button" onClick={() => { setActive(i); setViewer(true); }} className="relative aspect-[4/5] w-full shrink-0 snap-center overflow-hidden bg-bone" aria-label={`Open image ${i + 1} of ${ordered.length}`}>
               <CatalogImage src={img.url} alt={img.alt || title} fill sizes="100vw" priority={i === 0} className="object-cover" />
             </button>
           ))}
@@ -63,8 +65,26 @@ export default function Gallery({ images, title, color }: { images: PageImage[];
         )}
       </div>
 
+      {/* Desktop, stacked or grid: every image at once */}
+      {layout !== "thumbs" && (
+        <ul className={cx("hidden gap-3 lg:grid", layout === "grid" && "lg:grid-cols-2")} aria-label={`${title} images`}>
+          {ordered.map((img, i) => (
+            <li key={img.id} className={cx(layout === "grid" && i === 0 && "lg:col-span-2")}>
+              <button
+                type="button"
+                onClick={() => { setActive(i); setViewer(true); }}
+                className="relative block aspect-[4/5] w-full cursor-zoom-in overflow-hidden rounded-img bg-bone"
+                aria-label={`Open image ${i + 1} of ${ordered.length} full screen`}
+              >
+                <CatalogImage src={img.url} alt={img.alt || title} fill priority={i === 0} sizes={layout === "grid" && i > 0 ? "(min-width: 1280px) 23vw, 28vw" : "(min-width: 1280px) 46vw, 55vw"} className="object-cover transition duration-700 hover:scale-[1.02]" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {/* Desktop: thumbnails + zoomable main image */}
-      <div className="hidden gap-4 lg:grid lg:grid-cols-[4.5rem_1fr]">
+      <div className={cx("hidden gap-4 lg:grid-cols-[4.5rem_1fr]", layout === "thumbs" && "lg:grid")}>
         <ul className="grid content-start gap-3" aria-label="Choose image">
           {ordered.map((img, i) => (
             <li key={img.id}>
@@ -73,7 +93,7 @@ export default function Gallery({ images, title, color }: { images: PageImage[];
                 onClick={() => setActive(i)}
                 aria-label={`Show image ${i + 1}`}
                 aria-current={i === active}
-                className={cx("relative block aspect-[4/5] w-full overflow-hidden bg-bone ring-offset-2 ring-offset-ivory transition", i === active ? "ring-1 ring-ink" : "opacity-70 hover:opacity-100")}
+                className={cx("relative block aspect-[4/5] w-full overflow-hidden rounded-img bg-bone ring-offset-2 ring-offset-ivory transition", i === active ? "ring-1 ring-ink" : "opacity-70 hover:opacity-100")}
               >
                 <CatalogImage src={img.url} alt="" fill sizes="72px" className="object-cover" />
               </button>
@@ -83,7 +103,7 @@ export default function Gallery({ images, title, color }: { images: PageImage[];
         <div className="relative">
           <button
             type="button"
-            className="relative block aspect-[4/5] w-full cursor-zoom-in overflow-hidden bg-bone"
+            className="relative block aspect-[4/5] w-full cursor-zoom-in overflow-hidden rounded-img bg-bone"
             onMouseMove={(e) => {
               const r = e.currentTarget.getBoundingClientRect();
               setZoom({ x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 });
@@ -102,7 +122,7 @@ export default function Gallery({ images, title, color }: { images: PageImage[];
               style={zoom ? { transform: "scale(2)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}
             />
           </button>
-          <span className="pointer-events-none absolute right-4 bottom-4 inline-flex items-center gap-1.5 bg-paper/90 px-2.5 py-1.5 text-[11px] tracking-wider uppercase">
+          <span className="pointer-events-none absolute right-4 bottom-4 inline-flex items-center gap-1.5 rounded-badge bg-paper/90 px-2.5 py-1.5 text-[11px] tracking-wider uppercase">
             <ZoomIcon size={14} /> Hover to zoom
           </span>
           {ordered.length > 1 && (

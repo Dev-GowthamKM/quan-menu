@@ -2,21 +2,29 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createStore } from "@/server/admin/platform";
-import { THEME_PRESETS } from "@/lib/theme";
+import { describeLook, DESIGN_LIST, freshLook, type Look, type TakenLook } from "@/lib/designs";
+import { paletteOf } from "@/lib/theme";
 import { Button, cx } from "../../ui/controls";
 import { TextField, Toggle } from "../fields";
 import { useToast } from "../Toaster";
+import DesignThumb from "../store/DesignThumb";
 import { Card } from "../ui";
 
 const slugify = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "");
 
-/** Platform › New store: name, web address, owner and a starting look. */
-export default function NewStoreForm({ vercel }: { vercel: boolean }) {
+/**
+ * Platform › New store: name, web address, owner and a starting look. The look starts as one
+ * no other store has (initial, worked out on the server); Shuffle finds another.
+ */
+export default function NewStoreForm({ vercel, taken, initial }: { vercel: boolean; taken: TakenLook[]; initial: Look }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [v, setV] = useState({ name: "", slug: "", order_prefix: "", hostname: "", owner_email: "", tagline: "", theme: THEME_PRESETS[0].key, samples: false });
+  const [v, setV] = useState({ name: "", slug: "", order_prefix: "", hostname: "", owner_email: "", tagline: "", samples: false });
+  const [look, setLook] = useState<Look>(initial);
+  const palette = paletteOf(look.colors);
+  const unique = !taken.some((t) => t.design === look.design && t.brand?.toLowerCase() === look.colors.brand.toLowerCase());
   const slug = v.slug || slugify(v.name);
   const prefix = v.order_prefix || slug.replace(/[^a-z]/g, "").slice(0, 2).toUpperCase();
 
@@ -26,7 +34,7 @@ export default function NewStoreForm({ vercel }: { vercel: boolean }) {
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
-          const res = await createStore(v);
+          const res = await createStore({ ...v, look });
           if (!res.ok) {
             setError(res.error);
             return toast(res.error, "error");
@@ -95,26 +103,32 @@ export default function NewStoreForm({ vercel }: { vercel: boolean }) {
       </Card>
 
       <Card title="Starting look">
-        <div role="radiogroup" aria-label="Starting look" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {THEME_PRESETS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              role="radio"
-              aria-checked={v.theme === t.key}
-              onClick={() => setV({ ...v, theme: t.key })}
-              className={cx("rounded-lg border p-3 text-left transition", v.theme === t.key ? "border-ink ring-2 ring-ink" : "border-black/15 hover:border-black/40")}
-            >
-              <span className="flex h-12 overflow-hidden rounded-md" style={{ background: t.colors.background }}>
-                <span className="w-1/3" style={{ background: t.colors.brand }} />
-                <span className="grid flex-1 place-items-center text-lg" style={{ color: t.colors.text, fontStyle: t.heading_italic ? "italic" : "normal", fontFamily: "Georgia, serif" }}>Aa</span>
-                <span className="w-3" style={{ background: t.colors.accent }} />
-              </span>
-              <span className="mt-2 block text-sm font-medium">{t.name}</span>
-            </button>
-          ))}
+        <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_16rem]">
+          <div>
+            <DesignThumb design={DESIGN_LIST.find((d) => d.key === look.design)!} colors={look.colors} heading={look.heading_font} italic={look.heading_italic} storeName={v.name || "Your store"} />
+            <p className="mt-3 text-sm font-medium" aria-live="polite">{describeLook(look, palette?.name)}</p>
+            <p className="mt-0.5 text-xs text-stone">{unique ? "No other store on the platform looks like this." : "Another store shares this design and colours; Shuffle for a look of its own."}</p>
+          </div>
+          <div className="grid content-start gap-3">
+            <Button variant="secondary" onClick={() => setLook(freshLook(taken, Math.random, { avoid: look }))}>Shuffle</Button>
+            <div role="radiogroup" aria-label="Design" className="grid grid-cols-2 gap-2">
+              {DESIGN_LIST.map((d) => (
+                <button
+                  key={d.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={look.design === d.key}
+                  onClick={() => setLook(freshLook(taken, Math.random, { design: d.key, avoid: look }))}
+                  className={cx("rounded-md border px-3 py-2 text-left text-sm transition", look.design === d.key ? "border-ink ring-2 ring-ink" : "border-black/15 hover:border-black/40")}
+                >
+                  {d.name}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-stone">Each design builds the store differently: header, home page, product cards, buttons and footer.</p>
+          </div>
         </div>
-        <p className="mt-3 text-xs text-stone">The owner can change colours, fonts and everything else in the store&apos;s Settings › Appearance.</p>
+        <p className="mt-4 text-xs text-stone">The owner can change the design, colours, fonts and everything else in the store&apos;s Settings › Appearance.</p>
       </Card>
 
       <Card title="Products">

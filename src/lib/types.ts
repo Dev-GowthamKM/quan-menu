@@ -36,9 +36,12 @@ export interface Promo {
 }
 
 export interface Homepage {
+  /** One message, or several separated by | that take turns. */
   announcement?: string;
   hero?: HeroSlide[];
   promos?: Promo[];
+  /** The store's own order of home page sections (lib/designs.ts); without it, the design's. */
+  sections?: { key: string; on: boolean }[];
 }
 
 export interface Policies {
@@ -68,6 +71,8 @@ export interface ContactInfo {
   email?: string;
   phone?: string;
   whatsapp?: string;
+  /** Show a "Chat with us" button on the store that opens WhatsApp with this number. */
+  chat_button?: boolean;
   address?: string;
   hours?: string;
 }

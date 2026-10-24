@@ -1,18 +1,20 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { cx } from "../ui/controls";
 import { BagIcon, HeartIcon, SearchIcon, UserIcon } from "../ui/icons";
 import SearchDialog from "./SearchDialog";
 import { useStore } from "./StoreProvider";
 
-export default function HeaderActions() {
+/** Search, account, wishlist and bag. searchOnWide: false when the header has its own search box. */
+export default function HeaderActions({ searchOnWide = true }: { searchOnWide?: boolean }) {
   const { session, cartCount, openCart } = useStore();
   const [searchOpen, setSearchOpen] = useState(false);
   const signedIn = !!session?.user;
 
   return (
     <div className="flex items-center justify-self-end gap-0.5 sm:gap-1.5">
-      <button type="button" onClick={() => setSearchOpen(true)} className="grid size-10 place-items-center hover:text-accent" aria-label="Search">
+      <button type="button" onClick={() => setSearchOpen(true)} className={cx("grid size-10 place-items-center hover:text-accent", !searchOnWide && "lg:hidden")} aria-label="Search">
         <SearchIcon />
       </button>
       <Link
@@ -35,7 +37,7 @@ export default function HeaderActions() {
         )}
       </button>
       {session?.role && (
-        <Link href="/admin" className="ml-2 hidden border border-ink px-2.5 py-1 text-[11px] tracking-wider uppercase hover:border-brand hover:bg-brand hover:text-on-brand xl:inline-block">
+        <Link href="/admin" className="ml-2 hidden rounded-btn border border-current px-2.5 py-1 text-[11px] tracking-wider uppercase hover:border-brand hover:bg-brand hover:text-on-brand xl:inline-block">
           Admin
         </Link>
       )}

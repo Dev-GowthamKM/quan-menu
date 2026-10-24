@@ -2,7 +2,10 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { getDepartments, getFacets, PAGE_SIZE, searchProducts, type SearchParams } from "@/lib/catalog";
 import { listingQuery, type ListingParams, type RawParams } from "@/lib/listing";
+import { storefrontLook } from "@/lib/look";
+import { getSettings } from "@/lib/settings";
 import CatalogImage from "../../ui/CatalogImage";
+import { cx } from "../../ui/controls";
 import { ChevronLeft, ChevronRight } from "../../ui/icons";
 import { ProductGrid } from "../sections";
 import { ActiveFilters, FilterPanel, MobileFilters, SortSelect, type CategoryLink } from "./Filters";
@@ -55,7 +58,7 @@ function Pagination({ page, total, basePath, query }: { page: number; total: num
   return (
     <nav aria-label="Pagination" className="mt-16 flex items-center justify-center gap-1">
       {page > 1 && (
-        <Link href={href(page - 1)} rel="prev" className="grid size-10 place-items-center border border-line hover:border-ink" aria-label="Previous page">
+        <Link href={href(page - 1)} rel="prev" className="grid size-10 place-items-center rounded-btn border border-line hover:border-ink" aria-label="Previous page">
           <ChevronLeft size={16} />
         </Link>
       )}
@@ -65,14 +68,14 @@ function Pagination({ page, total, basePath, query }: { page: number; total: num
           <Link
             href={href(p)}
             aria-current={p === page ? "page" : undefined}
-            className={p === page ? "grid size-10 place-items-center bg-brand text-sm text-on-brand" : "grid size-10 place-items-center border border-line text-sm hover:border-ink"}
+            className={p === page ? "grid size-10 place-items-center rounded-btn bg-brand text-sm text-on-brand" : "grid size-10 place-items-center rounded-btn border border-line text-sm hover:border-ink"}
           >
             {p}
           </Link>
         </span>
       ))}
       {page < pages && (
-        <Link href={href(page + 1)} rel="next" className="grid size-10 place-items-center border border-line hover:border-ink" aria-label="Next page">
+        <Link href={href(page + 1)} rel="next" className="grid size-10 place-items-center rounded-btn border border-line hover:border-ink" aria-label="Next page">
           <ChevronRight size={16} />
         </Link>
       )}
@@ -114,10 +117,13 @@ export default async function ProductListing({
     q: scope.q ?? params.q,
     brands: scope.brands?.length ? scope.brands : params.brands,
   };
-  const [results, facets] = await Promise.all([
+  const [results, facets, settings] = await Promise.all([
     searchProducts(query),
     getFacets(query.q ?? null, query.category ?? null, query.collection ?? null),
+    getSettings(),
   ]);
+  // Some designs keep the filters behind a button on every screen, for a wider grid.
+  const drawer = (await storefrontLook(settings)).design.filters === "drawer";
 
   return (
     <div>
@@ -144,12 +150,14 @@ export default async function ProductListing({
           )}
         </div>
 
-        <div className="mt-8 grid gap-10 lg:grid-cols-[15rem_1fr] xl:grid-cols-[16rem_1fr]">
-          <aside aria-label="Filters" className="hidden lg:block">
-            <Suspense>
-              <FilterPanel facets={facets} hide={hide} categories={categories} />
-            </Suspense>
-          </aside>
+        <div className={cx("mt-8 grid gap-10", !drawer && "lg:grid-cols-[15rem_1fr] xl:grid-cols-[16rem_1fr]")}>
+          {!drawer && (
+            <aside aria-label="Filters" className="hidden lg:block">
+              <Suspense>
+                <FilterPanel facets={facets} hide={hide} categories={categories} />
+              </Suspense>
+            </aside>
+          )}
           <div className="min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
               <p className="text-sm text-taupe" aria-live="polite">
@@ -157,7 +165,7 @@ export default async function ProductListing({
               </p>
               <div className="flex items-center gap-3">
                 <Suspense>
-                  <MobileFilters facets={facets} hide={hide} categories={categories} total={results.total} />
+                  <MobileFilters facets={facets} hide={hide} categories={categories} total={results.total} always={drawer} />
                   <SortSelect className="hidden lg:flex" />
                 </Suspense>
               </div>

@@ -6,7 +6,8 @@ import { getUser } from "@/lib/auth";
 import { fail, friendlyError, ok, type ActionResult } from "@/lib/errors";
 import { ADMIN_STORE_COOKIE, isPlatformAdmin, myStores } from "@/lib/store";
 import { sessionClient } from "@/lib/supabase/session";
-import { THEME_PRESETS } from "@/lib/theme";
+import { freshLook } from "@/lib/designs";
+import { lookColumns, lookSchema, takenLooks } from "@/lib/look";
 import { addVercelDomain, removeVercelDomain, vercelDomainsReady } from "@/lib/vercel";
 
 // The platform: switching the admin panel between stores, and (for the platform's admins)
@@ -56,7 +57,8 @@ const createSchema = z.object({
   order_prefix: z.string().trim().toUpperCase().regex(/^$|^[A-Z]{2,4}$/, "Order numbers start with 2 to 4 capital letters, like TA."),
   hostname: hostSchema,
   owner_email: z.string().trim().max(254).refine((v) => v === "" || z.string().email().safeParse(v).success, "Enter the owner's email address, or leave it empty."),
-  theme: z.string().refine((k) => THEME_PRESETS.some((p) => p.key === k), "Choose a look."),
+  /** The starting look; without one, a look no other store has. */
+  look: lookSchema.optional(),
   tagline: z.string().trim().max(160).default(""),
   samples: z.boolean().default(false),
 });
@@ -83,7 +85,7 @@ export async function createStore(input: CreateStoreInput): Promise<ActionResult
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the form.");
   const p = parsed.data;
-  const preset = THEME_PRESETS.find((t) => t.key === p.theme)!;
+  const look = lookColumns(p.look ?? freshLook(await takenLooks()));
   const { data, error } = await sb.rpc("platform_create_store", {
     p: {
       name: p.name,
@@ -92,10 +94,12 @@ export async function createStore(input: CreateStoreInput): Promise<ActionResult
       hostname: p.hostname,
       owner_email: p.owner_email,
       tagline: p.tagline,
-      colors: { ...preset.colors },
-      heading_font: preset.heading_font,
-      body_font: preset.body_font,
-      heading_italic: preset.heading_italic,
+      colors: { text: look.primary_color, brand: look.brand_color, accent: look.accent_color, background: look.background_color },
+      heading_font: look.heading_font,
+      body_font: look.body_font,
+      heading_italic: look.heading_italic,
+      design: look.design,
+      design_options: { ...look.design_options },
     },
   });
   if (error) return fail(friendlyError(error, "The store couldn't be created."));

@@ -14,6 +14,8 @@ import { stripeConfigured } from "@/lib/payments/stripe";
 import { EMAIL_FROM, RAZORPAY_KEY_SECRET, RESEND_API_KEY, SMS_HOOK_SECRET } from "@/lib/server-env";
 import { secretsReady } from "@/lib/store-secrets";
 import { whatsappConfigured, whatsappConnected } from "@/lib/whatsapp";
+import { resolveDesign } from "@/lib/designs";
+import { takenLooks } from "@/lib/look";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -47,13 +49,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const tabs = TABS.filter((t) => store.isHome || !HOME_ONLY.has(t.key));
   const tab = tabs.find((t) => t.key === raw)?.key ?? "general";
   const settingsQuery = supabase.from("store_settings").select("*");
-  const [{ data: s, error }, samples, waiting, signin, keys, savedKeys] = await Promise.all([
+  const [{ data: s, error }, samples, waiting, signin, keys, savedKeys, taken] = await Promise.all([
     (store.id ? settingsQuery.eq("store_id", store.id) : settingsQuery.eq("id", 1)).single(),
     tab === "maintenance" ? supabase.from("products").select("id", { count: "exact", head: true }).eq("is_sample", true) : Promise.resolve({ count: 0 }),
     tab === "emails" ? supabase.from("stock_alerts").select("id", { count: "exact", head: true }).is("notified_at", null) : Promise.resolve({ count: 0 }),
     tab === "signin" ? signinStatus() : Promise.resolve(null),
     tab === "checkout" || tab === "payments" ? razorpayKeys(store) : Promise.resolve(null),
     tab === "payments" && store.id ? supabase.rpc("store_secret_status") : Promise.resolve({ data: [] }),
+    tab === "appearance" ? takenLooks(store.id) : Promise.resolve([]),
   ]);
   return (
     <>
@@ -72,8 +75,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </nav>
           <div className="min-w-0" key={KEEP_STATE.has(tab) ? tab : `${tab}-${s.updated_at}`}>
             {tab === "general" && <GeneralForm s={s} />}
-            {tab === "appearance" && <AppearanceForm s={s} />}
-            {tab === "homepage" && <HomepageForm s={s} />}
+            {tab === "appearance" && <AppearanceForm s={s} taken={taken} />}
+            {tab === "homepage" && <HomepageForm s={s} design={resolveDesign(s.design, s.design_options)} />}
             {tab === "checkout" && <CheckoutForm s={s} razorpayReady={!!keys} stripeReady={stripeConfigured(store)} home={store.isHome} />}
             {tab === "payments" && (
               <PaymentAccounts

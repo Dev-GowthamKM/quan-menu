@@ -5,7 +5,9 @@ import { AccessError, requireRole } from "@/lib/auth";
 import { fail, friendlyError, ok, type ActionResult } from "@/lib/errors";
 import { authProviderStatus, msg91Configured } from "@/lib/login-codes";
 import { SMS_HOOK_SECRET } from "@/lib/server-env";
-import { BODY_FONT_KEYS, HEADING_FONT_KEYS } from "@/lib/theme";
+import { SECTION_KEYS } from "@/lib/designs";
+import { lookColumns, lookSchema, signLookPreview } from "@/lib/look";
+import { storeOrigin } from "@/lib/store";
 import type { AppRole } from "@/lib/types";
 import { whatsappConnected } from "@/lib/whatsapp";
 import { WHATSAPP_EVENTS, type WhatsAppEvent } from "@/lib/whatsapp-format";
@@ -126,7 +128,6 @@ export async function saveProvider(input: { id?: string | null; name: string; tr
 
 // --- Settings -----------------------------------------------------------------------------
 
-const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Colours are hex codes like #1a1a1a.");
 const url = z.string().trim().max(1000).nullable().transform((v) => v || null);
 const text = (max: number) => z.string().max(max);
 /** Button links: a page on this site or an http(s) address, never javascript: or data:. */
@@ -138,18 +139,11 @@ const SECTIONS = {
     store_name: z.string().trim().min(1).max(80),
     tagline: text(160),
     logo_url: url,
-    contact: z.object({ email: text(200), phone: text(40), whatsapp: text(40), address: text(500), hours: text(200) }).partial(),
+    contact: z.object({ email: text(200), phone: text(40), whatsapp: text(40), chat_button: z.boolean(), address: text(500), hours: text(200) }).partial(),
     social: z.object({ instagram: webUrl, facebook: webUrl, x: webUrl, pinterest: webUrl, youtube: webUrl }).partial(),
   }),
-  appearance: z.object({
-    primary_color: hex,
-    brand_color: hex,
-    accent_color: hex,
-    background_color: hex,
-    heading_font: z.enum(HEADING_FONT_KEYS),
-    heading_italic: z.boolean(),
-    body_font: z.enum(BODY_FONT_KEYS),
-  }),
+  // The whole look (design, mixed-in parts, colours, fonts), saved as its columns.
+  appearance: lookSchema.transform(lookColumns),
   homepage: z.object({
     homepage: z.object({
       announcement: text(200).optional(),
@@ -162,6 +156,7 @@ const SECTIONS = {
         image_url: z.string().max(1000), image_alt: text(200).optional(), eyebrow: text(80).optional(), heading: z.string().trim().min(1).max(120),
         cta_label: text(40).optional(), cta_href: link.optional(), sample: z.boolean().optional(),
       })).max(6),
+      sections: z.array(z.object({ key: z.enum(SECTION_KEYS), on: z.boolean() })).max(SECTION_KEYS.length).optional(),
     }),
   }),
   checkout: z.object({
@@ -272,6 +267,19 @@ export async function saveSettings(section: SettingsSection, values: unknown): P
   revalidateTag("stores");
   revalidatePath("/", "layout");
   return ok(null, "Settings saved.");
+}
+
+/**
+ * A link that opens the store in an unsaved look ("Preview on the store"): signed, for this
+ * store only, for two hours. Opening it changes nothing for anyone else.
+ */
+export async function previewLook(input: unknown): Promise<ActionResult<{ url: string }>> {
+  const ctx = await role("admin");
+  if (!ctx) return fail("Only admins can preview looks.");
+  const parsed = lookSchema.safeParse(input);
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the colours and fonts.");
+  if (!ctx.store.isHome && !ctx.store.host) return fail("Give the store a web address first (All stores › the store › Web addresses).");
+  return ok({ url: `${storeOrigin(ctx.store)}/?look=${signLookPreview(ctx.store.id, parsed.data)}` });
 }
 
 /** What still stops customers from signing in with a mobile number, if anything. */

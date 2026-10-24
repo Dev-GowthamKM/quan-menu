@@ -285,6 +285,33 @@ describe("new stores", () => {
     expect((await sql<{ n: string }>("select count(*) as n from public.products where store_id = $1 and is_sample", [home]))[0].n).toBe(homeSamples.n);
   });
 
+  it("start in the design and mixed-in parts chosen for them; names are checked", async () => {
+    const slug = `d-${randomUUID().slice(0, 8)}`;
+    const { data: id, error } = await platformAdmin.client.rpc("platform_create_store", {
+      p: {
+        name: "Bazaar Test", slug, order_prefix: letters(), design: "bazaar", design_options: { card: "framed", corners: "soft" },
+        heading_font: "unbounded", body_font: "figtree", heading_italic: false,
+        colors: { text: "#141414", brand: "#e8400c", accent: "#2340e8", background: "#fffaf2" },
+      },
+    });
+    expect(error).toBeNull();
+    const [row] = await sql<{ design: string; design_options: unknown; heading_font: string; body_font: string; brand_color: string }>(
+      "select design, design_options, heading_font, body_font, brand_color from public.store_settings where store_id = $1",
+      [id],
+    );
+    expect(row).toEqual({ design: "bazaar", design_options: { card: "framed", corners: "soft" }, heading_font: "unbounded", body_font: "figtree", brand_color: "#e8400c" });
+
+    // Older callers that send no design get the original one.
+    const plain = await createStore("Plain Store");
+    const [defaults] = await sql<{ design: string; design_options: unknown }>("select design, design_options from public.store_settings where store_id = $1", [plain.id]);
+    expect(defaults).toEqual({ design: "atelier", design_options: {} });
+
+    // The database keeps names well-formed whatever the app sends.
+    for (const change of ["design = 'Not a design!'", "heading_font = 'Comic; Sans'", "body_font = ''", "design_options = '[]'::jsonb"]) {
+      await expect(sql(`update public.store_settings set ${change} where store_id = $1`, [id])).rejects.toThrow(/check constraint/);
+    }
+  });
+
   it("report the database's update for the admin's setup page", async () => {
     const { data } = await service().rpc("app_schema_version");
     const files = readdirSync("supabase/migrations").filter((f) => /^\d{14}_/.test(f)).sort();

@@ -11,12 +11,12 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "link";
 type Size = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2";
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-btn font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2";
 const variants: Record<Variant, string> = {
   primary: "bg-brand text-on-brand hover:bg-brand/85 border border-brand",
   secondary: "border border-ink text-ink bg-transparent hover:border-brand hover:bg-brand hover:text-on-brand",
   ghost: "text-ink hover:bg-ink/5 border border-transparent",
-  danger: "bg-sale text-white hover:bg-sale/90 border border-sale",
+  danger: "bg-sale-fill text-white hover:bg-sale-fill/90 border border-sale-fill",
   link: "text-ink underline underline-offset-4 decoration-ink/30 hover:decoration-ink px-0! h-auto!",
 };
 const sizes: Record<Size, string> = {
@@ -68,7 +68,7 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 const fieldBase =
-  "w-full min-w-0 border border-line bg-white text-sm text-ink placeholder:text-stone/70 transition-colors focus:border-ink focus:outline-none disabled:bg-bone/50 aria-[invalid=true]:border-sale";
+  "w-full min-w-0 rounded-field border border-line bg-field text-sm text-ink placeholder:text-stone/70 transition-colors focus:border-ink focus:outline-none disabled:bg-bone/50 aria-[invalid=true]:border-sale";
 
 export const Input = forwardRef<HTMLInputElement, ComponentProps<"input">>(function Input({ className, ...rest }, ref) {
   return <input ref={ref} className={cx(fieldBase, "h-11 px-3", className)} {...rest} />;
@@ -144,7 +144,7 @@ const tones = {
   red: "bg-red-50 text-red-800 ring-1 ring-red-200",
   blue: "bg-sky-50 text-sky-800 ring-1 ring-sky-200",
   violet: "bg-violet-50 text-violet-800 ring-1 ring-violet-200",
-  sale: "bg-sale text-white",
+  sale: "bg-sale-fill text-white",
 } as const;
 export type Tone = keyof typeof tones;
 

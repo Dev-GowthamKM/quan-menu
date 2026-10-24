@@ -1,7 +1,8 @@
-// Store colours. The admin picks four in Settings › Appearance: text, buttons and bands,
-// accent and background. Everything else the storefront paints with (panels, borders,
-// secondary text, the words on buttons) is derived from those four here, with contrast
-// checked, so any combination stays readable.
+// Store colours and fonts. The admin picks four colours in Settings › Appearance: text,
+// buttons and bands, accent and background. Everything else the storefront paints with
+// (panels, borders, secondary text, the words on buttons, sale and error colours) is derived
+// from those four here, with contrast checked, so any combination stays readable, on light
+// backgrounds and dark ones.
 import type { StoreSettings } from "./types";
 
 export interface ThemeColors {
@@ -11,32 +12,137 @@ export interface ThemeColors {
   background: string;
 }
 
-export const HEADING_FONT_KEYS = ["cormorant", "playfair", "bodoni", "dm-serif"] as const;
-export const BODY_FONT_KEYS = ["jost", "inter", "manrope", "dm-sans"] as const;
+// --- Fonts ---------------------------------------------------------------------------------
+// Loaded in app/fonts.ts (each as a CSS variable on <html>, downloaded only where used).
+
+export const HEADING_FONT_KEYS = [
+  "cormorant", "playfair", "bodoni", "dm-serif", "fraunces", "cinzel", "italiana", "marcellus",
+  "syne", "space-grotesk", "unbounded", "bricolage", "archivo", "outfit", "josefin", "tenor",
+] as const;
+export const BODY_FONT_KEYS = ["jost", "inter", "manrope", "dm-sans", "karla", "work-sans", "figtree", "nunito", "lora", "outfit"] as const;
 export type HeadingFont = (typeof HEADING_FONT_KEYS)[number];
 export type BodyFont = (typeof BODY_FONT_KEYS)[number];
 
-/** The weight headings are set in, chosen per face so none looks faint. */
-export const HEADING_WEIGHT: Record<HeadingFont, number> = { cormorant: 500, playfair: 500, bodoni: 500, "dm-serif": 400 };
+export interface FontInfo {
+  label: string;
+  /** The CSS variable app/fonts.ts declares. */
+  css: string;
+  kind: "serif" | "sans";
+  /** Whether the face has a true italic (others would be slanted artificially). */
+  italic: boolean;
+  /** The weight headings are set in, chosen per face so none looks faint, and the range it has. */
+  weight: number;
+  min: number;
+  max: number;
+}
 
-export interface ThemePreset {
+const font = (label: string, key: string, kind: FontInfo["kind"], italic: boolean, weight: number, min = weight, max = weight): FontInfo =>
+  ({ label, css: `var(--font-${key})`, kind, italic, weight, min, max });
+
+export const HEADING_FONTS: Record<HeadingFont, FontInfo> = {
+  cormorant: font("Cormorant Garamond", "cormorant", "serif", true, 500, 400, 700),
+  playfair: font("Playfair Display", "playfair", "serif", true, 500, 400, 900),
+  bodoni: font("Bodoni Moda", "bodoni", "serif", true, 500, 400, 900),
+  "dm-serif": font("DM Serif Display", "dm-serif", "serif", true, 400),
+  fraunces: font("Fraunces", "fraunces", "serif", true, 500, 100, 900),
+  cinzel: font("Cinzel", "cinzel", "serif", false, 500, 400, 900),
+  italiana: font("Italiana", "italiana", "serif", false, 400),
+  marcellus: font("Marcellus", "marcellus", "serif", false, 400),
+  syne: font("Syne", "syne", "sans", false, 700, 400, 800),
+  "space-grotesk": font("Space Grotesk", "space-grotesk", "sans", false, 500, 300, 700),
+  unbounded: font("Unbounded", "unbounded", "sans", false, 600, 200, 900),
+  bricolage: font("Bricolage Grotesque", "bricolage", "sans", false, 700, 200, 800),
+  archivo: font("Archivo", "archivo", "sans", true, 800, 100, 900),
+  outfit: font("Outfit", "outfit", "sans", false, 500, 100, 900),
+  josefin: font("Josefin Sans", "josefin", "sans", true, 500, 100, 700),
+  tenor: font("Tenor Sans", "tenor", "sans", false, 400),
+};
+
+export const BODY_FONTS: Record<BodyFont, FontInfo> = {
+  jost: font("Jost", "jost", "sans", true, 400, 100, 900),
+  inter: font("Inter", "inter", "sans", true, 400, 100, 900),
+  manrope: font("Manrope", "manrope", "sans", false, 400, 200, 800),
+  "dm-sans": font("DM Sans", "dm-sans", "sans", true, 400, 100, 1000),
+  karla: font("Karla", "karla", "sans", true, 400, 200, 800),
+  "work-sans": font("Work Sans", "work-sans", "sans", true, 400, 100, 900),
+  figtree: font("Figtree", "figtree", "sans", true, 400, 300, 900),
+  nunito: font("Nunito", "nunito", "sans", true, 400, 200, 1000),
+  lora: font("Lora", "lora", "serif", true, 400, 400, 700),
+  outfit: font("Outfit", "outfit", "sans", false, 400, 100, 900),
+};
+
+export const isHeadingFont = (k: unknown): k is HeadingFont => typeof k === "string" && k in HEADING_FONTS;
+export const isBodyFont = (k: unknown): k is BodyFont => typeof k === "string" && k in BODY_FONTS;
+
+/** A font's CSS stack, with fallbacks of the same kind while it loads. */
+export function fontStack(f: FontInfo) {
+  return f.kind === "serif"
+    ? `${f.css}, Georgia, "Times New Roman", serif`
+    : `${f.css}, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`;
+}
+
+// --- Palettes --------------------------------------------------------------------------------
+
+export interface Palette {
   key: string;
   name: string;
   colors: ThemeColors;
-  heading_font: HeadingFont;
-  body_font: BodyFont;
-  heading_italic: boolean;
 }
 
-/** One-click looks in Settings › Appearance. The first is the default for new stores. */
-export const THEME_PRESETS: ThemePreset[] = [
-  { key: "wine", name: "Wine and gold", colors: { text: "#1f1416", brand: "#6b1d2e", accent: "#b07d2b", background: "#fbf6ee" }, heading_font: "cormorant", body_font: "jost", heading_italic: true },
-  { key: "indigo", name: "Indigo and saffron", colors: { text: "#121a2c", brand: "#24366f", accent: "#c8741c", background: "#f6f4ef" }, heading_font: "bodoni", body_font: "manrope", heading_italic: true },
-  { key: "emerald", name: "Emerald and brass", colors: { text: "#132019", brand: "#114a3a", accent: "#a8843f", background: "#f5f2e9" }, heading_font: "playfair", body_font: "dm-sans", heading_italic: true },
-  { key: "rose", name: "Rose and copper", colors: { text: "#2a1519", brand: "#a3324f", accent: "#b9713f", background: "#fdf5f3" }, heading_font: "dm-serif", body_font: "inter", heading_italic: true },
-  { key: "noir", name: "Black and white", colors: { text: "#0d0d0d", brand: "#0d0d0d", accent: "#94733a", background: "#ffffff" }, heading_font: "bodoni", body_font: "inter", heading_italic: false },
-  { key: "ivory", name: "Classic ivory", colors: { text: "#111111", brand: "#111111", accent: "#8c6a43", background: "#f7f3ec" }, heading_font: "cormorant", body_font: "jost", heading_italic: false },
+const palette = (key: string, name: string, text: string, brand: string, accent: string, background: string): Palette =>
+  ({ key, name, colors: { text, brand, accent, background } });
+
+/**
+ * One-click colours in Settings › Appearance, grouped by the design they were made for
+ * (lib/designs.ts), though any palette works with any design. The first is the default.
+ */
+export const PALETTES: Palette[] = [
+  // Editorial
+  palette("wine", "Wine and gold", "#1f1416", "#6b1d2e", "#b07d2b", "#fbf6ee"),
+  palette("indigo", "Indigo and saffron", "#121a2c", "#24366f", "#c8741c", "#f6f4ef"),
+  palette("emerald", "Emerald and brass", "#132019", "#114a3a", "#a8843f", "#f5f2e9"),
+  palette("rose", "Rose and copper", "#2a1519", "#a3324f", "#b9713f", "#fdf5f3"),
+  palette("noir", "Black and white", "#0d0d0d", "#0d0d0d", "#94733a", "#ffffff"),
+  palette("ivory", "Classic ivory", "#111111", "#111111", "#8c6a43", "#f7f3ec"),
+  // Minimal
+  palette("snow", "Snow and charcoal", "#1c1c1c", "#1c1c1c", "#6e6e6e", "#ffffff"),
+  palette("oat", "Oat and espresso", "#2a231e", "#3b2f27", "#8b7461", "#f3efe7"),
+  palette("fog", "Fog and slate", "#1d272c", "#34495e", "#5d7a87", "#eef1f3"),
+  palette("sage", "Sage and pine", "#1e2a21", "#3e5c47", "#7a8c68", "#f1f3ec"),
+  palette("clay", "Clay and stone", "#2a1f1a", "#8c4a35", "#9c7864", "#f6efe8"),
+  // Bold
+  palette("tangerine", "Tangerine and cobalt", "#141414", "#e8400c", "#2340e8", "#fffaf2"),
+  palette("bubblegum", "Pink and navy", "#1a1033", "#c2185b", "#3730a3", "#fff5fa"),
+  palette("cobalt", "Cobalt and sun", "#0d1440", "#1f3fe0", "#c2410c", "#f3f5ff"),
+  palette("cherry", "Cherry and teal", "#1f0f0f", "#d7263d", "#1b998b", "#fff8ef"),
+  palette("acid", "Acid lime on black", "#f4f4ef", "#c6f135", "#c6f135", "#121212"),
+  // Soft
+  palette("blush", "Blush and berry", "#2e1a1f", "#a8495f", "#c0806b", "#fff6f3"),
+  palette("lavender", "Lavender and plum", "#231a35", "#6b4fa3", "#8e6cc0", "#f8f5ff"),
+  palette("mint", "Mint and forest", "#142a21", "#2a7356", "#4f9a7c", "#f1faf5"),
+  palette("butter", "Butter and cinnamon", "#2d2214", "#9a4f26", "#b8862f", "#fffaea"),
+  palette("sky", "Sky and navy", "#14213d", "#2f5f93", "#d0694e", "#f3f8fd"),
+  // Traditional
+  palette("maharani", "Maroon and gold", "#2b1210", "#7b1e24", "#b8860b", "#fbf4e6"),
+  palette("peacock", "Peacock and brass", "#0f2a2e", "#0e5560", "#a97b2c", "#f2f6f0"),
+  palette("marigold", "Marigold and rust", "#2e1606", "#9c3510", "#c98411", "#fff7e8"),
+  palette("temple", "Temple brown and gold", "#2a1d14", "#4a2c1d", "#a8742a", "#f6efe3"),
+  palette("royal", "Royal blue and antique gold", "#141a33", "#1f2b6e", "#9a7b3c", "#f4f4f8"),
+  // Dark
+  palette("onyx", "Onyx and champagne", "#f3efe8", "#f3efe8", "#c9a96e", "#0f0f0f"),
+  palette("midnight", "Midnight and gold", "#eef0f6", "#d9b45a", "#d9b45a", "#0e1322"),
+  palette("bordeaux", "Bordeaux night", "#f5ecec", "#c43c58", "#e0a76b", "#160c0f"),
+  palette("graphite", "Graphite and ice", "#ececec", "#a8cbdb", "#a8cbdb", "#1a1b1e"),
 ];
+
+export const paletteByKey = (key: string) => PALETTES.find((p) => p.key === key);
+
+const sameColor = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
+/** The palette these colours come from, if they're one of the ready-made ones. */
+export function paletteOf(c: ThemeColors) {
+  return PALETTES.find((p) => sameColor(p.colors.text, c.text) && sameColor(p.colors.brand, c.brand) && sameColor(p.colors.accent, c.accent) && sameColor(p.colors.background, c.background));
+}
 
 /**
  * The store's colours and heading style. brand_color and heading_italic are missing until
@@ -45,7 +151,7 @@ export const THEME_PRESETS: ThemePreset[] = [
  */
 export function themeOf(s: Pick<StoreSettings, "primary_color" | "accent_color" | "background_color"> & { brand_color?: string | null; heading_italic?: boolean | null }): { colors: ThemeColors; italic: boolean } {
   const original = [s.primary_color, s.accent_color, s.background_color].map((c) => c.toLowerCase()).join() === "#111111,#8c6a43,#f7f3ec";
-  if (s.brand_color == null && original) return { colors: { ...THEME_PRESETS[0].colors }, italic: true };
+  if (s.brand_color == null && original) return { colors: { ...PALETTES[0].colors }, italic: true };
   return {
     colors: { text: s.primary_color, brand: s.brand_color ?? s.primary_color, accent: s.accent_color, background: s.background_color },
     italic: s.heading_italic ?? true,
@@ -128,11 +234,28 @@ export function onColor(fill: string, c: ThemeColors) {
   return candidates.find((x) => contrast(x, fill) >= 4.5) ?? candidates.sort((x, y) => contrast(y, fill) - contrast(x, fill))[0];
 }
 
+/** Whether the background is light (dark words on it) or dark (light words). */
+export const isLight = (c: ThemeColors) => luminance(c.background) > 0.18;
+
+/** fg, adjusted just enough to reach `min` against every one of the surfaces. */
+function readableOnAll(fg: string, surfaces: string[], min = 4.5) {
+  let c = fg.toLowerCase();
+  for (const s of surfaces) c = readable(c, s, min);
+  // Darkening for one surface can't undo another on the same side of the scale, but check.
+  return surfaces.every((s) => contrast(c, s) >= min) ? c : readable(c, surfaces[0], min);
+}
+
+const SALE = "#9b2c2c";
+const OK = "#2f6b4f";
+const WARN = "#9a6200";
+
 /** Every colour token the storefront uses, as CSS custom properties. */
 export function themeTokens(c: ThemeColors): Record<string, string> {
-  const light = luminance(c.background) > 0.18;
+  const light = isLight(c);
   const bone = mix(c.background, c.accent, light ? 0.09 : 0.14);
   const sand = mix(c.background, c.accent, light ? 0.18 : 0.24);
+  const paper = light ? mix(c.background, "#ffffff", 0.5) : mix(c.background, c.text, 0.05);
+  const surfaces = [c.background, paper, bone, sand];
   const onBrand = onColor(c.brand, c);
   // Quieter words on the brand colour (footer links): as soft as stays readable.
   const onBrandSoft = [0.3, 0.25, 0.2, 0.15, 0.1, 0.05].map((t) => mix(onBrand, c.brand, t)).find((x) => contrast(x, c.brand) >= 4.5) ?? onBrand;
@@ -143,12 +266,18 @@ export function themeTokens(c: ThemeColors): Record<string, string> {
     "--color-on-brand-soft": onBrandSoft,
     "--color-accent": readable(c.accent, sand),
     "--color-ivory": c.background,
-    "--color-paper": light ? mix(c.background, "#ffffff", 0.5) : mix(c.background, c.text, 0.05),
+    "--color-paper": paper,
     "--color-bone": bone,
     "--color-sand": sand,
     "--color-line": mix(mix(c.background, c.accent, 0.1), c.text, 0.08),
     "--color-taupe": readable(mix(c.text, c.background, 0.3), sand, 5),
     "--color-stone": readable(mix(c.text, c.background, 0.45), bone, 4.5),
+    // Sale prices, errors and confirmations as text, readable on every surface (lighter on dark backgrounds).
+    "--color-sale": readableOnAll(SALE, surfaces),
+    "--color-ok": readableOnAll(OK, surfaces),
+    "--color-warn": readableOnAll(WARN, surfaces),
+    // Form fields: white on light backgrounds, a lifted panel on dark ones.
+    "--color-field": light ? "#ffffff" : mix(c.background, c.text, 0.08),
   };
 }
 

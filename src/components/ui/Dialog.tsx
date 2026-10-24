@@ -21,7 +21,7 @@ export function Dialog({
   onClose: () => void;
   title?: ReactNode;
   side?: "center" | "right" | "left";
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "full";
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
@@ -42,7 +42,7 @@ export function Dialog({
     };
   }, [open]);
 
-  const width = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-3xl", xl: "max-w-5xl" }[size];
+  const width = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-3xl", xl: "max-w-5xl", full: "max-w-none" }[size];
   const placement =
     side === "center"
       ? cx("m-auto w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)]", width)

@@ -8,6 +8,8 @@ const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 // (this file runs on the edge and imports neither).
 const SCOPE_HEADER = "x-store-scope";
 const STORE_HEADER = "x-store-id";
+// Must match LOOK_COOKIE in lib/look.ts: an admin's unsaved look, shown on this storefront only.
+const LOOK_COOKIE = "taana_look";
 
 interface HostStore {
   id: string | null;
@@ -65,6 +67,17 @@ export async function middleware(request: NextRequest) {
     const confirm = request.nextUrl.clone();
     confirm.pathname = "/auth/confirm";
     return NextResponse.redirect(confirm);
+  }
+  // "Preview on the store" opens /?look=<signed look>: keep it in a cookie on this address and
+  // drop it from the URL (the store's layout checks the signature). ?look=exit ends it.
+  const look = request.nextUrl.searchParams.get("look");
+  if (look !== null && isStorefront(path)) {
+    const clean = request.nextUrl.clone();
+    clean.searchParams.delete("look");
+    const redirect = NextResponse.redirect(clean);
+    if (look === "exit" || look.length > 2000) redirect.cookies.delete(LOOK_COOKIE);
+    else redirect.cookies.set(LOOK_COOKIE, look, { httpOnly: true, sameSite: "lax", secure: request.nextUrl.protocol === "https:", path: "/", maxAge: 2 * 60 * 60 });
+    return redirect;
   }
   const isAdmin = path === "/admin" || (path.startsWith("/admin/") && !path.startsWith("/admin/login"));
   const scope = path === "/admin" || path.startsWith("/admin/") ? "admin" : "store";
