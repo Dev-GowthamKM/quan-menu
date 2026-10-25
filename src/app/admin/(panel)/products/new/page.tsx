@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import ProductEditor, { type EditorProduct } from "@/components/admin/products/ProductEditor";
 import { requireRole } from "@/lib/auth";
-import { editorContext } from "../editor-data";
+import { editorContext, productSpin } from "../editor-data";
 
 export const metadata: Metadata = { title: "New product" };
 
@@ -14,6 +14,6 @@ const BLANK: EditorProduct = {
 
 export default async function NewProduct() {
   const { supabase } = await requireRole("staff");
-  const { options, settings } = await editorContext(supabase);
-  return <ProductEditor product={BLANK} options={options} settings={settings} />;
+  const [{ options, settings }, spin] = await Promise.all([editorContext(supabase), productSpin(supabase, null)]);
+  return <ProductEditor product={{ ...BLANK, spin }} options={options} settings={settings} />;
 }

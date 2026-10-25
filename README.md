@@ -65,10 +65,16 @@ payment account and web address, and the platform's administrators create them f
 - Policy pages, FAQ, contact form, maintenance page, sitemap and robots.
 - Until a store has something on sale, its homepage says it is opening soon and takes email
   sign-ups for launch day.
-- Six designs, each built differently: its header and menu, home page layout, product cards,
+- Eight designs, each built differently: its header and menu, home page layout, product cards,
   section titles, buttons, product photos and footer (Atelier, Nordic, Bazaar, Boutique,
-  Heritage, Noir), in 30 palettes, light and dark, and 26 fonts. New stores start with a look no
-  other store has (see [Appearance](#appearance)).
+  Heritage, Noir, Cinema, Neon), in 38 palettes, light and dark, and 26 fonts. New stores start
+  with a look no other store has (see [Appearance](#appearance)).
+- Movement, as the design chooses: sections that ease in as the shopper scrolls, pictures that
+  drift slower than the page, a Spotlight whose picture stays pinned while each collection's
+  words pass by and the background changes colour, and giant words sliding sideways. The
+  opening banner can play a short silent film, and a product can be shown as a 360° view the
+  shopper turns by dragging. Nothing moves for shoppers whose device asks for less motion, and
+  films give way to the photo on slow or data-saving connections.
 - An announcement bar whose messages take turns (or scroll past), an add-to-bag bar that stays in
   reach on phones, free-delivery progress in the bag, an optional WhatsApp "Chat with us" button,
   and each store's own icon in browser tabs.
@@ -110,8 +116,9 @@ payment account and web address, and the platform's administrators create them f
   suspend and reopen it. A store switcher for anyone who works at more than one, and each store's
   own Razorpay account under **Settings › Payment accounts**.
 - Appearance: a gallery of the designs (each drawn in its colours), palettes and fonts, parts
-  mixed in from other designs, and **Preview on the store**, which shows an unsaved look on the
-  real store to the admin alone. The home page's sections can be reordered or hidden.
+  mixed in from other designs (motion too), and **Preview on the store**, which shows an unsaved
+  look on the real store to the admin alone. The home page's sections can be reordered or
+  hidden, and its opening banner can play a video (uploaded, up to 50 MB, or a link).
 - Setup: what's left before a store is ready (contact details, policies, its own products,
   sample data, payments, web address) and, for the platform's administrators, the server's setup
   and any database update the deployment is waiting for, ready to copy into Supabase's SQL editor
@@ -228,6 +235,7 @@ All schema changes are SQL migrations in `supabase/migrations/` (run in order):
 | `20261024000200_store_lookup_and_secrets` | The store for a web address, each store's encrypted keys, platform administrator lists |
 | `20261025000100_store_starter` | Starter policies, FAQ and email templates for new stores, the one-click sample catalog, `app_schema_version()` |
 | `20261026000100_designs` | Each store's design and the parts it mixes in from others; font names checked by format, so adding a font needs no migration |
+| `20261027000100_motion` | Banner films: the catalog bucket also takes MP4 and WebM, up to 50 MB; `products.spin` for the 360° view, returned with the product page |
 
 Every migration from `20261025000100` on ends by replacing `app_schema_version()` with its own
 version, so **Admin › Setup** can tell which updates a database is missing (older databases are
@@ -621,7 +629,7 @@ can be read at `http://localhost:4014/__test/messages`.
 
 **Admin › Settings › Appearance** sets how the whole storefront looks and is laid out:
 
-- **Design:** how the store is built. Each of the six has its own header and menu, home page
+- **Design:** how the store is built. Each of the eight has its own header and menu, home page
   (banner, departments and the order of sections), product cards, section titles, buttons,
   product photos, shop filters and footer, and suits its own colours and fonts:
 
@@ -633,8 +641,10 @@ can be read at `http://localhost:4014/__test/messages`.
   | Boutique | Soft: rounded shapes, round category bubbles, pastel colours, a rounded banner with a card |
   | Heritage | Traditional: arched frames, ornaments, jewel tones and classical capitals, the store's story on the home page |
   | Noir | Dark: a see-through header over a full-screen photograph, a full-screen menu, cards with words on the photo |
+  | Cinema | Cinematic and calm: a floating header over a full-screen film or photograph, big serif lines, a pinned Spotlight, departments as full-width scenes, tall gallery cards |
+  | Neon | Electric: a glass header with its own shop button, a glowing product in front of giant words, colours that change as you scroll, glowing cards on dark backgrounds |
 
-- **Colours:** 30 palettes, five or six made for each design (any works with any), or your own
+- **Colours:** 38 palettes, four to six made for each design (any works with any), or your own
   four colours: text; buttons and bands; accent; background (light or dark). Everything else
   the store paints with (panels, borders, secondary text, the words on buttons, sale and error
   colours, form fields) is derived from those four in `src/lib/theme.ts`, keeping every pairing
@@ -642,24 +652,42 @@ can be read at `http://localhost:4014/__test/messages`.
   would be hard to read.
 - **Typography:** 16 heading fonts (serif and sans serif) and 10 for body text, and italic
   headings where the font has a true italic.
-- **Mix and match:** take the header, main banner, product cards, corners or buttons from
-  another design.
+- **Mix and match:** take the header, main banner, product cards, corners, buttons or motion
+  from another design.
+- **Motion:** still; sections easing in as the shopper scrolls; or cinematic, which adds
+  pictures drifting slower than the page and giant words sliding sideways
+  (`src/components/store/Motion.tsx`). Atelier is still; Noir, Cinema and Neon are cinematic;
+  the others ease in. Nothing moves for shoppers whose device asks for less motion, and the page
+  is complete without it.
 - **Surprise me** picks a design, palette and fonts no other store on the platform has.
 - **Preview on the store** opens the store in the unsaved look, in a new tab, for two hours. The
   link is signed by the server and works only for that store; customers keep seeing the saved
   look, and **End preview** goes back to it. Previews work before the database update too.
 
 **Settings › Homepage › Sections** reorders or hides the home page's sections (the design's
-order until you change it). Several announcement messages, separated by `|`, take turns.
+order until you change it), including the **Spotlight** (featured collections, or else
+departments, one at a time with a pinned picture) and the **Statement** (the second banner's
+heading in giant letters behind its picture). The first banner can play a **video**: upload an
+MP4 or WebM (up to 50 MB; 10 to 20 seconds at 1080p is plenty) or paste a link. It plays muted
+on a loop, with a pause button; the banner's picture shows until it can play, and instead of it
+for shoppers who ask for less motion or are on a slow or data-saving connection. Several
+announcement messages, separated by `|`, take turns.
 **Settings › Store details** turns on the WhatsApp "Chat with us" button. Each store's icon (its
 initials in its colours) is drawn by `/store-icon.svg`.
 
 New stores get a fresh look when they're created: the design fewest stores use that still has
 a palette no store uses, then such a palette and an unused heading font (`freshLook` in
-`src/lib/designs.ts`), so the first 30 stores all look different.
+`src/lib/designs.ts`), so the first 38 stores all look different.
 
-Saving a design needs `20261026000100_designs.sql` (Admin › Setup offers it with the other
-updates); until then the store keeps its current look, and the Appearance page says so.
+**360° view:** upload eight or more photos taken all the way round a piece, in order, and tick
+**Show as a 360° view** under the product's images. Its page then opens on a picture the shopper
+turns by dragging (or with the arrow keys), turning once by itself to show it can; **Photos**
+switches to the usual gallery. With fewer photos it shows the gallery.
+
+Saving a design needs `20261026000100_designs.sql`, and uploading videos and the 360° view need
+`20261027000100_motion.sql` (Admin › Setup offers them with the other updates). Until then the
+store keeps its current look, a video link works but uploads don't, and the admin says what's
+needed where it matters.
 
 ## Email
 
@@ -747,16 +775,21 @@ checklist and the dashboard's pointer to it, a shopper's order showing only in t
 admin, a payment going to the store's own Razorpay account with its own webhook secret, and
 suspending and reopening the store.
 
-**Theme and design tests (54 unit, 1 database, 4 Playwright)** cover the colour arithmetic; that
-every one of the 30 palettes keeps text, labels, secondary text, sale and error colours, fields
-and the words on buttons readable on every surface; fonts' weights; that the six designs differ
-in every part and suggest real palettes, fonts and sections; mixed-in parts and defaults; that
-new stores get different looks until the designs and palettes run out, and Shuffle always shows
-something new; the home page's own section order; store icons' initials; the database saving a
-new store's design and rejecting malformed names; and, in the browser, every design built its own
-way and accessible on its home, product and shop pages through **Preview on the store**, a forged
-preview link doing nothing and customers seeing the saved look meanwhile, an owner changing
-palette, fonts and design (and back), reordering the home page, and the chat button and icon.
+**Theme and design tests (63 unit, 4 database, 6 Playwright)** cover the colour arithmetic; that
+every one of the 38 palettes keeps text, labels, secondary text, sale and error colours, fields
+and the words on buttons readable on every surface, and the Spotlight's changing backgrounds
+too; fonts' weights; that the eight designs differ in every part and suggest real palettes,
+fonts and sections; mixed-in parts, motion and defaults; that new stores get different looks
+until the designs and palettes run out, and Shuffle always shows something new; the home page's
+own section order; store icons' initials; the database saving a new store's design and
+rejecting malformed names, taking banner films only from staff and nothing but pictures and
+videos, and the 360° switch (staff only) reaching the product page; and, in the browser, every
+design built its own way and accessible on its home, product and shop pages through **Preview on
+the store**, a forged preview link doing nothing and customers seeing the saved look meanwhile,
+an owner changing palette, fonts and design (and back), reordering the home page, the chat
+button and icon, a banner film uploaded, playing and pausing (and the photo instead for shoppers
+who ask for less motion), and a 360° view switched on in the editor and turned with the keys and
+by dragging.
 
 **Acceptance tests (7, Playwright)** follow the brief:
 
@@ -777,12 +810,16 @@ palette, fonts and design (and back), reordering the home page, and the chat but
 **Accessibility checks (2, Playwright + axe-core)** scan 13 storefront pages (including the
 checkout) and 20 admin pages for WCAG 2.1 A/AA problems and fail on anything serious or critical;
 the mobile sign-in tests run the same check on the number and code forms and the settings tab,
-and the design tests on the home, product and shop pages of all six designs. Automated checks
+and the design tests on the home, product and shop pages of all eight designs, a home page with
+a film and a product page with a 360° view. Automated checks
 don't replace testing with a keyboard and a screen reader.
 
-Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 77/77,
-integration 90/90, Playwright 32/32 against the production build (`next build`), and every page
-checked at 390 px wide without horizontal scrolling.
+Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 86/86,
+integration 93/93, Playwright 34/34 against the production build (`next build`), and the home,
+shop, product, bag, sign-in and collections pages of all eight designs checked at 360, 390, 768,
+1024 and 1280 px wide without horizontal scrolling. The update from the live database's version
+(`20261022000100`) through `20261027000100`, as Admin › Setup hands it out, applies in one
+transaction.
 
 ## Running the store
 

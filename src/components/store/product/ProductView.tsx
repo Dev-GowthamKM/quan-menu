@@ -131,8 +131,8 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
   };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-14 xl:gap-20">
-      <Gallery images={product.images} title={product.title} color={color} layout={gallery} />
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-14 xl:gap-20">
+      <Gallery images={product.images} title={product.title} color={color} layout={gallery} spin={!!product.spin} />
 
       <div className="lg:sticky lg:top-36 lg:self-start">
         {preview && (
@@ -261,7 +261,7 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
               <PlusIcon size={14} />
             </button>
           </div>
-          <Button size="lg" className="h-12! flex-1" onClick={() => submit("add")} busy={busy === "add"} disabled={soldOut || preview}>
+          <Button size="lg" className="h-12! min-w-0 flex-1 px-4! sm:px-8!" onClick={() => submit("add")} busy={busy === "add"} disabled={soldOut || preview}>
             {soldOut ? "Sold out" : "Add to bag"}
           </Button>
           <WishButton productId={product.id} title={product.title} className="h-12 w-12 rounded-btn border border-line bg-paper shadow-none" />

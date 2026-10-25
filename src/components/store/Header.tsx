@@ -41,8 +41,10 @@ const WORDMARK: Record<HeaderStyle, string> = {
   centered: "text-[1.9rem]",
   heritage: "text-2xl tracking-[0.22em] uppercase",
   overlay: "text-xl tracking-[0.42em] uppercase",
+  floating: "text-xl tracking-tight sm:text-2xl",
+  glass: "text-xl tracking-tight uppercase",
 };
-const LOGO_HEIGHT: Record<HeaderStyle, string> = { classic: "h-8", inline: "h-7", bold: "h-9", centered: "h-10", heritage: "h-10", overlay: "h-8" };
+const LOGO_HEIGHT: Record<HeaderStyle, string> = { classic: "h-8", inline: "h-7", bold: "h-9", centered: "h-10", heritage: "h-10", overlay: "h-8", floating: "h-7", glass: "h-8" };
 
 export function Logo({ settings, variant = "classic", className }: { settings: Settings; variant?: HeaderStyle; className?: string }) {
   return (
@@ -113,7 +115,7 @@ interface Props {
   departments: Department[];
   announcement?: string;
   design: Design;
-  /** Noir: the home page opens with a full-screen photograph the header can sit over. */
+  /** The home page opens with a full-screen banner the header can sit over (Noir, Cinema, Neon). */
   overlayHero?: boolean;
 }
 
@@ -271,9 +273,62 @@ export default function Header({ settings, departments, announcement, design, ov
       );
     }
 
+    case "floating":
+      return (
+        <OverlayHeader overlayOnHome={overlayHero} mode="floating" onPhoto={design.hero !== "glow"} top={bar}>
+          <div className="px-3 pt-3 pb-1 sm:px-4">
+            <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 rounded-full border border-line bg-paper/80 px-3 shadow-[0_8px_30px_-12px_rgb(0_0_0/0.25)] backdrop-blur-xl supports-[backdrop-filter]:bg-paper/65 sm:px-5 lg:gap-5 xl:gap-8">
+              <div className="lg:hidden">{menu}</div>
+              <Logo settings={settings} variant="floating" />
+              <nav aria-label="Main" className="hidden flex-1 lg:block">
+                <ul className="flex items-center justify-center gap-1">
+                  {items.map((i) => (
+                    <li key={i.key} className="group relative">
+                      <Link href={i.href} aria-haspopup={hasChildren(i) ? "true" : undefined} className={cx("inline-flex h-9 items-center rounded-full px-2 text-[13px] whitespace-nowrap transition-colors hover:bg-bone xl:px-3.5", i.sale && "text-sale")}>
+                        {i.label}
+                      </Link>
+                      {hasChildren(i) && <DropList item={i} className="left-1/2 -translate-x-1/2 pt-3" panelClassName="rounded-card border border-line bg-paper/95 p-5 shadow-xl backdrop-blur-xl" />}
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+              <div className="ml-auto lg:ml-0"><HeaderActions /></div>
+            </div>
+          </div>
+        </OverlayHeader>
+      );
+
+    case "glass":
+      return (
+        <OverlayHeader overlayOnHome={overlayHero} mode="glass" onPhoto={design.hero !== "glow"} top={bar}>
+          <div className="container-page flex h-16 items-center gap-4 lg:h-[4.5rem] lg:gap-6 xl:gap-8">
+            <div className="lg:hidden">{menu}</div>
+            <Logo settings={settings} variant="glass" />
+            <nav aria-label="Main" className="hidden flex-1 lg:block">
+              <ul className="flex items-center justify-center gap-5 text-[12px] font-semibold tracking-[0.1em] whitespace-nowrap uppercase xl:gap-7 xl:tracking-[0.14em]">
+                {items.map((i) => (
+                  <li key={i.key} className="group relative">
+                    <Link href={i.href} aria-haspopup={hasChildren(i) ? "true" : undefined} className={cx("flex h-16 items-center transition-colors lg:h-[4.5rem]", i.sale ? "text-sale" : "hover:text-accent")}>
+                      {i.label}
+                    </Link>
+                    {hasChildren(i) && <DropList item={i} className="left-1/2 -translate-x-1/2" panelClassName="rounded-card border border-line bg-ivory/90 p-5 normal-case tracking-normal shadow-2xl backdrop-blur-xl" />}
+                  </li>
+                ))}
+              </ul>
+            </nav>
+            <div className="ml-auto flex items-center gap-3 lg:ml-0">
+              <HeaderActions />
+              <Link href="/shop?sort=newest" className="hidden h-9 items-center rounded-btn bg-brand px-5 text-[11px] font-bold tracking-[0.14em] whitespace-nowrap text-on-brand uppercase shadow-[0_0_28px_-4px_var(--color-brand)] sm:inline-flex lg:hidden xl:inline-flex">
+                Shop now
+              </Link>
+            </div>
+          </div>
+        </OverlayHeader>
+      );
+
     case "overlay":
       return (
-        <OverlayHeader overlayOnHome={overlayHero} top={bar}>
+        <OverlayHeader overlayOnHome={overlayHero} onPhoto={design.hero !== "glow"} top={bar}>
           <div className="container-page grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-4 lg:h-20">
             <div><MobileMenu departments={departments} storeName={settings.store_name} variant="full" /></div>
             <Logo settings={settings} variant="overlay" className="justify-self-center" />

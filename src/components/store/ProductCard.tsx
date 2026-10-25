@@ -30,7 +30,7 @@ export default function ProductCard({
   const pct = product.on_sale ? discountPercent(product.price, product.compare_at_price) : 0;
 
   return (
-    <article className={cx("pc group relative", className)}>
+    <article className={cx("pc group relative", className)} data-reveal>
       <div className="pc-media relative aspect-[4/5] overflow-hidden rounded-img bg-bone">
         <Link href={`/products/${product.slug}`} aria-label={product.title} className="absolute inset-0">
           <CatalogImage

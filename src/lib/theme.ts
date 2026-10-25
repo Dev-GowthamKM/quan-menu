@@ -133,6 +133,16 @@ export const PALETTES: Palette[] = [
   palette("midnight", "Midnight and gold", "#eef0f6", "#d9b45a", "#d9b45a", "#0e1322"),
   palette("bordeaux", "Bordeaux night", "#f5ecec", "#c43c58", "#e0a76b", "#160c0f"),
   palette("graphite", "Graphite and ice", "#ececec", "#a8cbdb", "#a8cbdb", "#1a1b1e"),
+  // Cinematic, light
+  palette("linen", "Linen and ink", "#23201c", "#23201c", "#9b7b5a", "#f7f4ef"),
+  palette("stone", "Stone and smoke", "#2a2925", "#4a463f", "#8a8172", "#eeece6"),
+  palette("sandstone", "Sandstone and walnut", "#2b211a", "#6e4f39", "#b08a62", "#f5eee5"),
+  palette("mist", "Mist and slate", "#1f2629", "#3f5560", "#8aa0a8", "#f1f4f4"),
+  // Neon, dark
+  palette("ultraviolet", "Ultraviolet", "#f6f1ff", "#b14dff", "#ff5ccf", "#0b0713"),
+  palette("cyber", "Electric blue", "#eef6ff", "#2f80ff", "#22d3ee", "#050a14"),
+  palette("magma", "Magma", "#fff3ec", "#ff5a1f", "#ffb020", "#110705"),
+  palette("toxic", "Acid green", "#f2ffe8", "#9dff3b", "#3bffd2", "#070b06"),
 ];
 
 export const paletteByKey = (key: string) => PALETTES.find((p) => p.key === key);
@@ -279,6 +289,26 @@ export function themeTokens(c: ThemeColors): Record<string, string> {
     // Form fields: white on light backgrounds, a lifted panel on dark ones.
     "--color-field": light ? "#ffffff" : mix(c.background, c.text, 0.08),
   };
+}
+
+/**
+ * Backgrounds for chapters the shopper scrolls through (the Spotlight section): the page's
+ * own, then deepening toward the accent and brand colours, each keeping text, secondary text
+ * and accent labels readable.
+ */
+export function chapterColors(c: ThemeColors, count: number): string[] {
+  const t = themeTokens(c);
+  const steps: [string, number][] = isLight(c)
+    ? [[c.background, 0], [c.accent, 0.14], [c.brand, 0.1], [c.accent, 0.24]]
+    : [[c.background, 0], [c.brand, 0.22], [c.accent, 0.16], [c.brand, 0.32]];
+  return Array.from({ length: count }, (_, i) => {
+    const [toward, amount] = steps[i % steps.length];
+    for (let a = amount; a > 0; a -= 0.02) {
+      const bg = mix(c.background, toward, a);
+      if (contrast(c.text, bg) >= 7 && contrast(t["--color-taupe"], bg) >= 4.5 && contrast(t["--color-accent"], bg) >= 4.5) return bg;
+    }
+    return c.background.toLowerCase();
+  });
 }
 
 /** What would make the store hard to read with these colours, in words for the admin. */

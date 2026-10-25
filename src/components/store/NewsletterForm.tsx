@@ -36,7 +36,7 @@ export default function NewsletterForm({ source = "footer", dark, boxed }: { sou
           placeholder="Your email address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className={cx("min-w-0 flex-1 bg-transparent text-sm outline-none", boxed ? "h-10 px-3" : "h-12", dark ? "placeholder:text-on-brand-soft" : "placeholder:text-stone")}
+          className={cx("w-0 min-w-0 flex-1 bg-transparent text-sm outline-none", boxed ? "h-10 px-3" : "h-12", dark ? "placeholder:text-on-brand-soft" : "placeholder:text-stone")}
         />
         <button
           type="submit"

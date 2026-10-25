@@ -76,6 +76,17 @@ describe("designs", () => {
     expect(parseOptions({ buttons: "pill", hero: 3 })).toEqual({ buttons: "pill" });
   });
 
+  it("move as the design says, unless the store picks otherwise", () => {
+    expect(DESIGNS.atelier.motion).toBe("none");
+    expect(DESIGNS.nordic.motion).toBe("subtle");
+    expect(DESIGNS.cinema.motion).toBe("cinematic");
+    expect(resolveDesign("cinema", { motion: "none" }).motion).toBe("none");
+    expect(resolveDesign("atelier", { motion: "subtle" }).motion).toBe("subtle");
+    expect(resolveDesign("atelier", { motion: "warp" }).motion).toBe("none");
+    // The scrolling sections belong to the cinematic designs.
+    for (const k of ["cinema", "neon"] as const) expect(DESIGNS[k].sections).toEqual(expect.arrayContaining(["spotlight", "statement"]));
+  });
+
   it("turns corners and buttons into radius tokens", () => {
     expect(radiusTokens({ corners: "sharp", buttons: "square" })).toMatchObject({ "--radius-card": "0px", "--radius-btn": "0px" });
     expect(radiusTokens({ corners: "round", buttons: "pill" })).toMatchObject({ "--radius-card": "20px", "--radius-btn": "999px", "--radius-badge": "999px" });
@@ -107,7 +118,10 @@ describe("looks", () => {
   });
 
   it("a fresh look picks the design fewest stores use, and a palette none of them has", () => {
-    const others = [taken("atelier", "wine"), taken("nordic", "snow"), taken("bazaar", "tangerine"), taken("boutique", "blush"), taken("noir", "onyx")];
+    const others = [
+      taken("atelier", "wine"), taken("nordic", "snow"), taken("bazaar", "tangerine"), taken("boutique", "blush"),
+      taken("noir", "onyx"), taken("cinema", "linen"), taken("neon", "ultraviolet"),
+    ];
     for (let seed = 1; seed < 20; seed++) {
       const look = freshLook(others, seeded(seed));
       expect(look.design).toBe("heritage");

@@ -13,7 +13,7 @@ export default function DepartmentList({ departments }: { departments: Departmen
     <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_20rem] lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-16">
       <ul>
         {departments.map((d, i) => (
-          <li key={d.id} className="border-b border-line first:border-t">
+          <li key={d.id} className="border-b border-line first:border-t" data-reveal>
             <Link
               href={`/category/${d.slug}`}
               onMouseEnter={() => setActive(i)}

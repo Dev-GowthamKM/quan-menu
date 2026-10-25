@@ -215,3 +215,55 @@ export function SingleImageField({ label, value, onChange, folder, aspect = "asp
     </div>
   );
 }
+
+const VIDEO_TYPES = ["video/mp4", "video/webm"];
+const VIDEO_MAX = 50 * 1024 * 1024;
+
+/** A banner's film: an MP4 or WebM upload (up to 50 MB), or a link to one elsewhere. */
+export function SingleVideoField({ label, value, onChange, folder }: { label: string; value: string; onChange: (url: string) => void; folder: string }) {
+  const store = useAdminStore();
+  const input = useRef<HTMLInputElement>(null);
+  const [state, setState] = useState<{ progress?: number; error?: string }>({});
+  const pick = async (file: File) => {
+    if (!VIDEO_TYPES.includes(file.type)) return setState({ error: `${file.name} isn't an MP4 or WebM video.` });
+    if (file.size > VIDEO_MAX) return setState({ error: `${file.name} is over 50 MB. A 10 to 20 second clip at 1080p is plenty.` });
+    setState({ progress: 0 });
+    try {
+      const ext = file.type === "video/webm" ? "webm" : "mp4";
+      const { url } = await uploadFile(datedPath(store.id, folder, file.name, ext), file, file.type, (f) => setState({ progress: f }));
+      onChange(url);
+      setState({});
+    } catch (e) {
+      const message = (e as Error).message;
+      setState({
+        error: /mime|not supported/i.test(message)
+          ? "Uploading videos needs the database update in Admin › Setup. Until then, paste a link to the video instead."
+          : /too large|exceed/i.test(message)
+            ? "That video is too large: up to 50 MB."
+            : message,
+      });
+    }
+  };
+  return (
+    <div className="grid gap-1.5">
+      <span className="text-xs font-medium text-taupe">{label}</span>
+      {value && <video src={value} controls muted playsInline preload="metadata" className="aspect-[16/10] w-full rounded-lg border border-black/10 bg-bone object-cover" />}
+      {state.progress !== undefined && (
+        <span className="h-1 rounded bg-black/10"><span className="block h-1 rounded bg-ink" style={{ width: `${state.progress * 100}%` }} /></span>
+      )}
+      <div className="flex gap-3 text-xs">
+        <button type="button" className="underline" onClick={() => input.current?.click()}>{value ? "Replace video" : "Upload video"}</button>
+        {value && <button type="button" className="text-red-700 underline" onClick={() => onChange("")}>Remove video</button>}
+      </div>
+      <input
+        aria-label={`${label}: link`}
+        placeholder="or paste a link: https://…"
+        value={value}
+        onChange={(e) => onChange(e.target.value.trim())}
+        className="h-8 rounded border border-black/10 px-2 text-xs"
+      />
+      {state.error && <p className="text-xs text-red-700">{state.error}</p>}
+      <input ref={input} type="file" accept="video/mp4,video/webm" hidden aria-label={`${label}: file`} onChange={(e) => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = ""; }} />
+    </div>
+  );
+}

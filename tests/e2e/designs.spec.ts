@@ -1,7 +1,8 @@
-// Store designs: each of the six builds the storefront its own way and stays accessible;
+// Store designs: each of the eight builds the storefront its own way and stays accessible;
 // "Preview on the store" shows an unsaved look only in the browser that opens the signed
 // link; the home page follows the store's own section order; the WhatsApp chat button and
-// each store's own icon.
+// each store's own icon; a film in the opening banner; a product's 360° view.
+import { join } from "node:path";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { OWNER } from "./support/env";
 import { db, expectAccessible } from "./support/helpers";
@@ -69,6 +70,27 @@ const DESIGNS: { name: string; key: string; home: (p: Page) => Promise<void>; sh
       await expect(p.getByRole("button", { name: "Open menu" })).toBeVisible();
     },
   },
+  {
+    name: "Cinema",
+    key: "cinema",
+    home: async (p) => {
+      // A full-screen opening scene under a floating header, then chapters to scroll through.
+      await expect(p.locator('[data-hero="film"]')).toBeVisible();
+      await expect(p.locator("header").first()).toHaveClass(/overlay-clear/);
+      await expect(p.locator("[data-design]")).toHaveAttribute("data-motion", "cinematic");
+      await expect(p.getByRole("region", { name: "Spotlight" })).toBeVisible();
+    },
+  },
+  {
+    name: "Neon",
+    key: "neon",
+    home: async (p) => {
+      await expect(p.locator("[data-design]")).toHaveAttribute("data-scheme", "dark");
+      await expect(p.locator('[data-hero="glow"]')).toBeVisible();
+      // A glass header with a button of its own.
+      await expect(p.locator("header").first().getByRole("link", { name: "Shop now" })).toBeVisible();
+    },
+  },
 ];
 
 /** Picks a design in Settings › Appearance and opens "Preview on the store" in a new tab. */
@@ -112,7 +134,7 @@ test("each design builds the store its own way, and every one stays accessible",
   // Ending the preview brings back the saved look.
   const tab = await context.newPage();
   await tab.goto("/");
-  await expect(tab.locator("[data-design]")).toHaveAttribute("data-design", "noir");
+  await expect(tab.locator("[data-design]")).toHaveAttribute("data-design", "neon");
   await tab.getByRole("link", { name: "End preview" }).click();
   await expect(tab.locator("[data-design]")).toHaveAttribute("data-design", "atelier");
   await expect(tab.getByText("Preview of a look")).toHaveCount(0);
@@ -183,4 +205,85 @@ test("a WhatsApp chat button the owner can turn on, and the store's own icon", a
   const svg = await icon.text();
   expect(svg).toContain(">T</text>");
   expect(svg.toLowerCase()).toContain("#6b1d2e");
+});
+
+test("a film in the opening banner, and the picture for shoppers who ask for less motion", async ({ page, browser }) => {
+  const { data: before } = await db().from("store_settings").select("homepage").eq("id", 1).single();
+  try {
+    await page.goto("/admin/settings?tab=homepage");
+    await page.getByLabel("Video (optional): file").setInputFiles(join(__dirname, "fixtures/banner.webm"));
+    await expect(page.locator("form video")).toHaveAttribute("src", /\/homepage\/.+\.webm$/);
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Settings saved.").first()).toBeVisible();
+
+    // It plays, silently, beside the banner's heading, and can be paused.
+    await page.goto("/");
+    const film = page.locator("main video").first();
+    await expect(film).toHaveAttribute("src", /\/homepage\/.+\.webm$/);
+    await expect.poll(() => film.evaluate((v: HTMLVideoElement) => v.muted && !v.paused)).toBe(true);
+    const pause = page.getByRole("button", { name: "Pause the film" });
+    await pause.click();
+    await expect(pause).toHaveAttribute("aria-pressed", "true");
+    expect(await film.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+    await expectAccessible(page, "home with a film");
+
+    // Shoppers whose device asks for less motion see the picture alone.
+    const still = await browser.newContext({ reducedMotion: "reduce" });
+    const visit = await still.newPage();
+    await visit.goto("/");
+    await expect(visit.locator("main img").first()).toBeVisible();
+    await expect(visit.locator("main video")).toHaveCount(0);
+    await still.close();
+  } finally {
+    await db().from("store_settings").update({ homepage: before!.homepage }).eq("id", 1);
+  }
+});
+
+test("a product shown as a 360° view, turned by dragging or with the arrow keys", async ({ page }) => {
+  // A product of its own with nine photos taken all the way round.
+  const { data: photo } = await db().from("product_images").select("url, store_id").limit(1).single();
+  const slug = `spin-${Date.now()}`;
+  const { data: product } = await db()
+    .from("products")
+    .insert({ store_id: photo!.store_id, title: "Turning Jacket", slug, price: 499900, status: "active", published_at: new Date().toISOString() })
+    .select("id")
+    .single();
+  try {
+    await db().from("product_variants").insert({ store_id: photo!.store_id, product_id: product!.id, sku: `SPIN-${Date.now()}`, size: "M", stock_quantity: 5 });
+    await db().from("product_images").insert(Array.from({ length: 9 }, (_, i) => ({ store_id: photo!.store_id, product_id: product!.id, url: photo!.url, alt: `Angle ${i + 1}`, position: i })));
+
+    await page.goto(`/admin/products/${product!.id}`);
+    await page.getByLabel("Show as a 360° view").check();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByText("Product saved.").first()).toBeVisible();
+
+    await page.goto(`/products/${slug}`);
+    const spin = page.getByRole("slider", { name: "Turning Jacket: 360° view" });
+    await expect(spin).toBeVisible();
+    await expect(page.getByRole("button", { name: "360° view" })).toHaveAttribute("aria-pressed", "true");
+    await spin.focus();
+    await page.keyboard.press("Home");
+    await expect(spin).toHaveAttribute("aria-valuenow", "1");
+    await page.keyboard.press("ArrowRight");
+    await expect(spin).toHaveAttribute("aria-valuetext", "View 2 of 9");
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowLeft");
+    await expect(spin).toHaveAttribute("aria-valuenow", "9");
+
+    // Dragging across half the picture turns it half way round.
+    const box = (await spin.boundingBox())!;
+    await page.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.3, box.y + box.height / 2, { steps: 6 });
+    await page.mouse.up();
+    await expect(spin).not.toHaveAttribute("aria-valuenow", "9");
+    await expectAccessible(page, "product: 360° view");
+
+    // The photos are a click away.
+    await page.getByRole("button", { name: "Photos" }).click();
+    await expect(spin).toHaveCount(0);
+    await expect(page.getByRole("list", { name: "Choose image" })).toBeVisible();
+  } finally {
+    await db().from("products").delete().eq("id", product!.id);
+  }
 });

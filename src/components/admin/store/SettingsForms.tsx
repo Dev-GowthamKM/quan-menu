@@ -14,7 +14,7 @@ import {
 import { Button, cx, Notice } from "../../ui/controls";
 import { ArrowDown, ArrowUp, CloseIcon, ExternalIcon, PlusIcon } from "../../ui/icons";
 import { SelectField, TextArea, TextField, Toggle } from "../fields";
-import { SingleImageField } from "../ImageManager";
+import { SingleImageField, SingleVideoField } from "../ImageManager";
 import { useToast } from "../Toaster";
 import { adminInput, Card } from "../ui";
 import DesignThumb from "./DesignThumb";
@@ -401,7 +401,16 @@ export function HomepageForm({ s, design }: { s: StoreSettings; design: Design }
         <div className="grid gap-5">
           {v.hero.map((h, i) => (
             <div key={i} className="grid gap-4 rounded-md border border-black/10 p-3 md:grid-cols-[14rem_1fr]">
-              <SingleImageField label={`Slide ${i + 1} image`} value={h.image_url || null} onChange={(url) => setSlide(i, { image_url: url ?? "" })} folder="homepage" aspect="aspect-[16/10]" />
+              <div className="grid content-start gap-4">
+                <SingleImageField label={`Slide ${i + 1} image`} value={h.image_url || null} onChange={(url) => setSlide(i, { image_url: url ?? "" })} folder="homepage" aspect="aspect-[16/10]" />
+                {/* Only the opening banner plays a film; the picture stays as its poster and fallback. */}
+                {i === 0 && (
+                  <>
+                    <SingleVideoField label="Video (optional)" value={h.video_url ?? ""} onChange={(url) => setSlide(i, { video_url: url })} folder="homepage" />
+                    <p className="-mt-2 text-xs text-stone">Plays silently on a loop in the opening banner. The picture shows instead on slow connections and for shoppers who turn off motion.</p>
+                  </>
+                )}
+              </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <TextField label="Small heading" value={h.eyebrow ?? ""} onChange={(e) => setSlide(i, { eyebrow: e.target.value })} maxLength={80} placeholder="Autumn / Winter 2026" />
                 <TextField label="Heading" value={h.heading} onChange={(e) => setSlide(i, { heading: e.target.value })} maxLength={120} required />

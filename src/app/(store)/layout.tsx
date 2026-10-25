@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import ChatButton from "@/components/store/ChatButton";
 import Footer from "@/components/store/Footer";
 import Header from "@/components/store/Header";
+import Motion from "@/components/store/Motion";
 import SetupNotice from "@/components/store/SetupNotice";
 import StoreProvider from "@/components/store/StoreProvider";
 import { getDepartments, searchProducts } from "@/lib/catalog";
@@ -54,18 +55,20 @@ export default async function StoreLayout({ children }: { children: React.ReactN
     colorScheme: light ? "light" : "dark",
   } as React.CSSProperties;
 
-  // Noir's header sits see-through over the home page's opening photograph, when there is one.
+  // See-through and floating headers sit over the home page's opening full-screen banner (a
+  // photograph, or Neon's glowing scene), when the home page opens with one.
   const overlayHero =
-    design.header === "overlay" &&
-    design.hero === "cinema" &&
+    ["overlay", "floating", "glass"].includes(design.header) &&
+    ["cinema", "film", "glow"].includes(design.hero) &&
     homeSections(design, home.sections)[0] === "hero" &&
-    !!home.hero?.[0]?.image_url &&
+    (design.hero === "glow" || !!home.hero?.[0]?.image_url) &&
     (await searchProducts({ sort: "newest", limit: 12 })).items.length > 0;
 
   return (
     <div
       style={theme}
       data-design={design.key}
+      data-motion={design.motion}
       data-card={design.card}
       data-title={design.title}
       data-scheme={light ? "light" : "dark"}
@@ -89,6 +92,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         <main id="main" className="flex-1">{children}</main>
         <Footer settings={settings} departments={departments} variant={design.footer} />
         {contact.chat_button && contact.whatsapp && <ChatButton number={contact.whatsapp} storeName={settings.store_name} />}
+        <Motion level={design.motion} />
       </StoreProvider>
     </div>
   );

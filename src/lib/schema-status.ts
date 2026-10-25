@@ -92,6 +92,7 @@ export const MIGRATION_NOTES: Record<string, string> = {
   store_lookup_and_secrets: "Store web addresses, and each store's own Razorpay keys",
   store_starter: "Starter policies for new stores, and the one-click sample catalog",
   designs: "Saving a store design (six layouts), and a look of its own for every new store",
+  motion: "Video banners on the home page, and a 360° view of products",
 };
 
 /**

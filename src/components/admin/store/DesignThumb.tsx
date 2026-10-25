@@ -46,8 +46,30 @@ export default function DesignThumb({
     </span>
   );
 
+  const overHero = ["film", "cinema", "glow"].includes(design.hero);
+  // A floating or glass header sits over a full-screen banner, so both are drawn in one box.
+  const overlaid = overHero && (design.header === "floating" || design.header === "glass");
+  const bigHero = overlaid ? "100%" : "56%";
   const header = (() => {
     switch (design.header) {
+      case "floating":
+        return (
+          <div style={{ position: overHero ? "absolute" : "relative", insetInline: 0, top: 0, zIndex: 2, padding: "5px 8% 3px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, height: 15, padding: "0 7px", borderRadius: 99, background: c("paper"), opacity: 0.94, border: `1px solid ${c("line")}` }}>
+              {logo(8)}
+              <span style={{ display: "flex", flex: 1, justifyContent: "center", gap: 5 }}>{[0, 1, 2, 3].map((i) => line("10%", 2, c("ink"), { opacity: 0.55 }, i))}</span>
+              {line("8%", 3)}
+            </div>
+          </div>
+        );
+      case "glass":
+        return (
+          <div style={{ position: overHero ? "absolute" : "relative", insetInline: 0, top: 0, zIndex: 2, display: "flex", alignItems: "center", gap: 6, height: 18, padding: "0 5%", background: overHero ? "transparent" : c("ivory"), borderBottom: `1px solid ${c("line")}` }}>
+            {logo(9, design.hero === "film" || design.hero === "cinema" ? "#fff" : c("ink"))}
+            <span style={{ display: "flex", flex: 1, justifyContent: "center", gap: 5 }}>{[0, 1, 2, 3].map((i) => line("8%", 2, c("ink"), { opacity: 0.55 }, i))}</span>
+            <span style={{ width: 20, height: 7, borderRadius: 99, background: c("brand"), boxShadow: `0 0 8px ${c("brand")}` }} />
+          </div>
+        );
       case "inline":
         return (
           <div style={{ display: "flex", alignItems: "center", gap: "6%", height: "11%", padding: "0 5%", borderBottom: `1px solid ${c("line")}` }}>
@@ -152,9 +174,29 @@ export default function DesignThumb({
             <span style={{ width: "30%", height: "84%", background: photo, borderRadius: "999px 999px 0 0", outline: `1px solid ${c("accent")}`, outlineOffset: 2 }} />
           </div>
         );
+      case "film":
+        return (
+          <div style={{ position: "relative", height: bigHero, background: `linear-gradient(180deg, rgb(0 0 0 / 0.35), rgb(0 0 0 / 0.05) 45%, rgb(0 0 0 / 0.4)), ${photo}` }}>
+            <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", textAlign: "center" }}>
+              <div style={{ display: "grid", gap: 4, justifyItems: "center" }}>
+                {line("26%", 1.5, "#fff", { opacity: 0.8 })}
+                <span style={{ ...face, fontSize: 19, lineHeight: 0.95, color: "#fff" }}>{storeName ? "Simply here" : "Aa Bb"}</span>
+                <span style={{ width: 30, height: 7, borderRadius: pill, background: "rgb(255 255 255 / 0.9)", marginTop: 2 }} />
+              </div>
+            </div>
+          </div>
+        );
+      case "glow":
+        return (
+          <div style={{ position: "relative", height: bigHero, overflow: "hidden", background: `radial-gradient(60% 55% at 50% 42%, ${mix(colors.background, colors.brand, 0.6)}, ${colors.background} 75%)` }}>
+            <span style={{ ...face, position: "absolute", insetInline: 0, top: "26%", textAlign: "center", fontSize: 40, fontWeight: 800, lineHeight: 1, whiteSpace: "nowrap", color: c("ink"), opacity: 0.1 }}>{storeName ? "Glow" : "AA"}</span>
+            <span style={{ position: "absolute", left: "38%", top: "16%", width: "24%", height: "52%", borderRadius: radius + 2, background: photo, boxShadow: `0 10px 30px -6px ${colors.brand}` }} />
+            <span style={{ ...face, position: "absolute", insetInline: 0, bottom: "8%", textAlign: "center", fontSize: 12, fontWeight: 800, color: c("ink") }}>{storeName ? "New drop" : "Aa Bb"}</span>
+          </div>
+        );
       case "cinema":
         return (
-          <div style={{ position: "relative", height: "56%", background: dark }}>
+          <div style={{ position: "relative", height: bigHero, background: dark }}>
             {design.header === "overlay" && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", height: 20 }}>{logo(9, "#fff")}</div>}
             <div style={{ position: "absolute", left: "6%", bottom: "10%" }}>
               <span style={{ ...face, fontSize: 20, lineHeight: 0.95, color: "#fff" }}>{storeName ? "Night edit" : "Aa Bb"}</span>
@@ -206,6 +248,22 @@ export default function DesignThumb({
             {line("28%", 2, c("accent"))}
           </div>
         );
+      case "gallery":
+        return (
+          <div style={{ display: "grid", gap: 3, justifyItems: "center" }}>
+            {img("2 / 3", radius, { width: "100%" })}
+            <span style={{ ...face, fontSize: 7, lineHeight: 1, color: c("ink") }}>Aa</span>
+            {line("30%", 2, c("stone"))}
+          </div>
+        );
+      case "glow":
+        return (
+          <div style={{ display: "grid", gap: 3, padding: 3, borderRadius: radius + 2, border: `1px solid ${c("line")}`, background: c("paper"), boxShadow: i === 1 ? `0 4px 14px -4px ${colors.brand}` : undefined }}>
+            {img("4 / 5", radius, { background: `radial-gradient(circle at 50% 40%, ${mix(c("bone"), colors.brand, 0.35)}, ${c("bone")} 75%)` })}
+            {line("60%", 2)}
+            {line("30%", 3, c("ink"))}
+          </div>
+        );
       case "overlay":
         return (
           <div style={{ position: "relative" }}>
@@ -230,8 +288,17 @@ export default function DesignThumb({
       style={{ position: "relative", aspectRatio: "4 / 3", overflow: "hidden", background: c("ivory"), color: c("ink"), borderRadius: 4, border: "1px solid rgb(0 0 0 / 0.08)" }}
       aria-hidden
     >
-      {header}
-      {hero}
+      {overlaid ? (
+        <div style={{ position: "relative", height: "56%" }}>
+          {header}
+          {hero}
+        </div>
+      ) : (
+        <>
+          {header}
+          {hero}
+        </>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "4%", padding: "4% 5%" }}>{[0, 1, 2].map((i) => <div key={i}>{card(i)}</div>)}</div>
     </div>
   );

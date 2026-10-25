@@ -11,6 +11,7 @@ import ChipsInput from "../ChipsInput";
 import ImageManager, { type EditorImage } from "../ImageManager";
 import { useToast } from "../Toaster";
 import { adminInput, Card } from "../ui";
+import { SPIN_MIN } from "../../store/product/SpinViewer";
 import VariantsEditor, { makeSku, newVariant, type ColorOption, type VariantRow } from "./VariantsEditor";
 
 export interface EditorProduct {
@@ -39,6 +40,8 @@ export interface EditorProduct {
   return_window_days: number | null;
   seo_title: string;
   seo_description: string;
+  /** The 360° view; null before the motion database update, which adds it. */
+  spin?: boolean | null;
   is_sample?: boolean;
   created_at?: string;
   updated_at?: string;
@@ -126,6 +129,7 @@ interface State {
   seo_title: string;
   seo_description: string;
   images: EditorImage[];
+  spin: boolean;
   sizes: string[];
   colors: ColorOption[];
   skuPrefix: string;
@@ -172,6 +176,7 @@ function initialState(p: EditorProduct): State {
     seo_title: p.seo_title,
     seo_description: p.seo_description,
     images: p.images.map((i) => ({ ...i, key: i.id })),
+    spin: !!p.spin,
     sizes,
     colors,
     skuPrefix: prefix,
@@ -189,7 +194,7 @@ function initialState(p: EditorProduct): State {
 }
 
 /** Turns the form into the payload saveProduct expects, or an error to show. */
-function toPayload(s: State, id: string | null, wasPublishedAt: string | null): { payload?: ProductInput; error?: string } {
+function toPayload(s: State, id: string | null, wasPublishedAt: string | null, canSpin: boolean): { payload?: ProductInput; error?: string } {
   if (!s.title.trim()) return { error: "Enter a product title." };
   const price = toMinor(s.price);
   if (price === null) return { error: "Enter a price, such as 2499 or 2499.50." };
@@ -268,6 +273,7 @@ function toPayload(s: State, id: string | null, wasPublishedAt: string | null): 
       seo_description: s.seo_description,
       variants,
       images: s.images.map((i) => ({ id: i.id ?? null, url: i.url, storage_path: i.storage_path ?? null, alt: i.alt, color: i.color ?? null, width: i.width ?? null, height: i.height ?? null })),
+      ...(canSpin ? { spin: s.spin } : {}),
       collection_ids: s.collection_ids,
     },
   };
@@ -283,6 +289,7 @@ export default function ProductEditor({ product, options, settings }: { product:
   const [conflicts, setConflicts] = useState<Record<string, string>>({});
   const [saving, startSave] = useTransition();
   const [busy, startBusy] = useTransition();
+  const canSpin = product.spin !== null && product.spin !== undefined;
 
   const dirty = useMemo(() => JSON.stringify(s, (k, v) => (k === "skuPrefix" || k === "prefixTouched" ? undefined : v)) !== baseline.current, [s]);
   const set = useCallback(<K extends keyof State>(key: K, value: State[K]) => setS((x) => ({ ...x, [key]: value })), []);
@@ -302,7 +309,7 @@ export default function ProductEditor({ product, options, settings }: { product:
   }, [s.variants, product.id]);
 
   const save = useCallback(() => {
-    const { payload, error: e } = toPayload(s, product.id, product.published_at);
+    const { payload, error: e } = toPayload(s, product.id, product.published_at, canSpin);
     if (!payload) {
       setError(e ?? "Check the form.");
       toast(e ?? "Check the form.", "error");
@@ -319,11 +326,11 @@ export default function ProductEditor({ product, options, settings }: { product:
       }
       removedPaths.current.clear();
       baseline.current = JSON.stringify(s, (k, v) => (k === "skuPrefix" || k === "prefixTouched" ? undefined : v));
-      toast("Product saved.");
+      toast(res.message ?? "Product saved.");
       if (!product.id) router.replace(`/admin/products/${res.data.id}`);
       else router.refresh();
     });
-  }, [s, product.id, router, toast, checkSkus]);
+  }, [s, product.id, product.published_at, canSpin, router, toast, checkSkus]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -406,6 +413,21 @@ export default function ProductEditor({ product, options, settings }: { product:
 
           <Card title="Images" actions={<span className="text-xs text-stone">The first image is the main one. Drag to reorder.</span>}>
             <ImageManager images={s.images} onChange={setImages} colors={s.colors.map((c) => c.name)} />
+            <div className="mt-4 border-t border-black/10 pt-3">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={s.spin} disabled={!canSpin} onChange={(e) => set("spin", e.target.checked)} className="size-4 accent-ink" />
+                Show as a 360° view
+              </label>
+              <p className="mt-1 text-xs text-stone">
+                {!canSpin ? (
+                  <>Needs the database update in <Link href="/admin/setup" className="underline">Admin › Setup</Link>.</>
+                ) : s.spin && s.images.length < SPIN_MIN ? (
+                  <>Add at least {SPIN_MIN} photos for the 360° view (there {s.images.length === 1 ? "is 1" : `are ${s.images.length}`}). Until then shoppers see the photos as usual.</>
+                ) : (
+                  <>For photos taken all the way round the piece, in order, at least {SPIN_MIN}. Shoppers drag the picture to turn it.</>
+                )}
+              </p>
+            </div>
           </Card>
 
           <Card title="Pricing">

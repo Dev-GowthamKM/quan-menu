@@ -78,6 +78,8 @@ const productSchema = z.object({
   variants: z.array(variantSchema).min(1, "Add at least one variant.").max(250),
   images: z.array(imageSchema).max(30).default([]),
   collection_ids: z.array(z.string().uuid()).optional(),
+  /** Sent only once the database has the column (the motion update). */
+  spin: z.boolean().optional(),
 });
 export type ProductInput = z.input<typeof productSchema>;
 
@@ -89,8 +91,14 @@ export async function saveProduct(input: ProductInput, removedPaths: string[] = 
     const issue = parsed.error.issues[0];
     return fail(`${issue?.path.join(".") ? `${issue.path.join(".")}: ` : ""}${issue?.message ?? "Check the form."}`);
   }
-  const { data, error } = await ctx.supabase.rpc("admin_save_product", { p: parsed.data as unknown as Json });
+  const { spin, ...product } = parsed.data;
+  const { data, error } = await ctx.supabase.rpc("admin_save_product", { p: product as unknown as Json });
   if (error) return fail(friendlyError(error, "The product couldn't be saved."));
+  // The 360° switch lives outside admin_save_product, so stores without the update can still save.
+  if (spin !== undefined) {
+    const res = await ctx.supabase.from("products").update({ spin }).eq("id", data as string);
+    if (res.error) return ok({ id: data as string }, `Product saved, but not the 360° view: ${friendlyError(res.error)}`);
+  }
   await cleanupMedia(removedPaths);
   refreshStore(["/admin/products"]);
   return ok({ id: data as string }, "Product saved.");

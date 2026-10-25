@@ -15,27 +15,30 @@ import {
   type ThemeColors,
 } from "./theme";
 
-export const DESIGN_KEYS = ["atelier", "nordic", "bazaar", "boutique", "heritage", "noir"] as const;
+export const DESIGN_KEYS = ["atelier", "nordic", "bazaar", "boutique", "heritage", "noir", "cinema", "neon"] as const;
 export type DesignKey = (typeof DESIGN_KEYS)[number];
 
-export const HEADER_STYLES = ["classic", "inline", "bold", "centered", "heritage", "overlay"] as const;
-export const HERO_STYLES = ["split", "full", "type", "framed", "arch", "cinema"] as const;
-export const CARD_STYLES = ["classic", "minimal", "sticker", "soft", "framed", "overlay"] as const;
+export const HEADER_STYLES = ["classic", "inline", "bold", "centered", "heritage", "overlay", "floating", "glass"] as const;
+export const HERO_STYLES = ["split", "full", "type", "framed", "arch", "cinema", "film", "glow"] as const;
+export const CARD_STYLES = ["classic", "minimal", "sticker", "soft", "framed", "overlay", "gallery", "glow"] as const;
 export const CORNER_STYLES = ["sharp", "soft", "round"] as const;
 export const BUTTON_STYLES = ["square", "soft", "pill"] as const;
+/** How much the store moves: not at all, sections easing in as they scroll into view, or that plus parallax and scroll-driven scenes. */
+export const MOTION_STYLES = ["none", "subtle", "cinematic"] as const;
 export type HeaderStyle = (typeof HEADER_STYLES)[number];
 export type HeroStyle = (typeof HERO_STYLES)[number];
 export type CardStyle = (typeof CARD_STYLES)[number];
 export type CornerStyle = (typeof CORNER_STYLES)[number];
 export type ButtonStyle = (typeof BUTTON_STYLES)[number];
-export type DepartmentStyle = "tiles" | "list" | "chips" | "circles" | "arches" | "mosaic";
-export type TitleStyle = "editorial" | "minimal" | "bold" | "soft" | "ornament" | "giant";
-export type FooterStyle = "columns" | "minimal" | "bold" | "soft" | "heritage" | "wordmark";
+export type MotionStyle = (typeof MOTION_STYLES)[number];
+export type DepartmentStyle = "tiles" | "list" | "chips" | "circles" | "arches" | "mosaic" | "panels" | "lineup";
+export type TitleStyle = "editorial" | "minimal" | "bold" | "soft" | "ornament" | "giant" | "statement" | "glow";
+export type FooterStyle = "columns" | "minimal" | "bold" | "soft" | "heritage" | "wordmark" | "grand" | "neon";
 export type AnnouncementStyle = "band" | "slim" | "marquee";
 export type GalleryStyle = "thumbs" | "stack" | "grid";
 
 /** Homepage sections, in the order a design shows them unless the store reorders them. */
-export const SECTION_KEYS = ["hero", "trust", "departments", "new", "promos", "best", "seasonal", "collections", "brands", "campaign", "story", "recommended", "newsletter"] as const;
+export const SECTION_KEYS = ["hero", "trust", "departments", "new", "promos", "best", "seasonal", "collections", "brands", "campaign", "spotlight", "statement", "story", "recommended", "newsletter"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 export const SECTION_LABELS: Record<SectionKey, string> = {
@@ -49,6 +52,8 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
   collections: "Featured collections",
   brands: "Featured brands",
   campaign: "Second banner",
+  spotlight: "Spotlight: your collections, one by one as you scroll",
+  statement: "Statement: big words with a photo (the second banner, or your tagline)",
   story: "Your story (from Policies › About)",
   recommended: "Recommended for each shopper",
   newsletter: "Newsletter sign-up",
@@ -77,6 +82,7 @@ export interface Design {
   headingTracking: string;
   /** Overrides the heading font's own weight, within what the font has. */
   headingWeight?: number;
+  motion: MotionStyle;
   sections: SectionKey[];
   /** Palettes (lib/theme.ts) and fonts that suit the design; the first of each is its default. */
   palettes: string[];
@@ -103,6 +109,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     filters: "sidebar",
     headingCase: "none",
     headingTracking: "normal",
+    motion: "none",
     sections: ["hero", "departments", "new", "promos", "best", "seasonal", "collections", "brands", "campaign", "recommended", "newsletter"],
     palettes: ["wine", "indigo", "emerald", "rose", "ivory", "noir"],
     headings: ["cormorant", "playfair", "bodoni", "dm-serif", "fraunces"],
@@ -127,6 +134,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingCase: "none",
     headingTracking: "-0.01em",
     headingWeight: 500,
+    motion: "subtle",
     sections: ["hero", "new", "departments", "seasonal", "best", "collections", "campaign", "recommended", "newsletter"],
     palettes: ["snow", "oat", "fog", "sage", "clay"],
     headings: ["space-grotesk", "outfit", "tenor", "josefin", "italiana"],
@@ -151,6 +159,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingCase: "uppercase",
     headingTracking: "-0.01em",
     headingWeight: 800,
+    motion: "subtle",
     sections: ["hero", "departments", "trust", "best", "promos", "new", "collections", "brands", "recommended", "newsletter"],
     palettes: ["tangerine", "bubblegum", "cobalt", "cherry", "acid"],
     headings: ["unbounded", "bricolage", "archivo", "syne"],
@@ -174,6 +183,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     filters: "sidebar",
     headingCase: "none",
     headingTracking: "normal",
+    motion: "subtle",
     sections: ["hero", "departments", "new", "promos", "best", "collections", "campaign", "trust", "recommended", "newsletter"],
     palettes: ["blush", "lavender", "mint", "butter", "sky"],
     headings: ["fraunces", "dm-serif", "playfair", "josefin"],
@@ -197,6 +207,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     filters: "sidebar",
     headingCase: "uppercase",
     headingTracking: "0.06em",
+    motion: "subtle",
     sections: ["hero", "trust", "departments", "best", "story", "collections", "promos", "brands", "seasonal", "newsletter"],
     palettes: ["maharani", "peacock", "marigold", "temple", "royal"],
     headings: ["cinzel", "marcellus", "cormorant", "playfair"],
@@ -221,10 +232,60 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingCase: "uppercase",
     headingTracking: "0.05em",
     headingWeight: 400,
+    motion: "cinematic",
     sections: ["hero", "new", "departments", "seasonal", "campaign", "collections", "best", "recommended", "newsletter"],
     palettes: ["onyx", "midnight", "bordeaux", "graphite"],
     headings: ["italiana", "bodoni", "syne", "tenor", "cinzel"],
     bodies: ["inter", "manrope", "work-sans", "figtree"],
+    italic: false,
+  },
+  cinema: {
+    key: "cinema",
+    name: "Cinema",
+    summary: "Cinematic and calm: a floating header, a full-screen film or photo, sections that drift in as you scroll, a pinned story and big serif lines.",
+    header: "floating",
+    hero: "film",
+    card: "gallery",
+    corners: "soft",
+    buttons: "pill",
+    departments: "panels",
+    title: "statement",
+    footer: "grand",
+    announcement: "slim",
+    gallery: "stack",
+    filters: "drawer",
+    headingCase: "none",
+    headingTracking: "-0.01em",
+    motion: "cinematic",
+    sections: ["hero", "statement", "spotlight", "new", "departments", "best", "story", "recommended"],
+    palettes: ["linen", "stone", "sandstone", "mist"],
+    headings: ["bodoni", "cormorant", "italiana", "fraunces"],
+    bodies: ["inter", "manrope", "figtree", "work-sans"],
+    italic: true,
+  },
+  neon: {
+    key: "neon",
+    name: "Neon",
+    summary: "Electric and bold: a glass header, products glowing on dark backgrounds, giant words behind them and colours that change as you scroll.",
+    header: "glass",
+    hero: "glow",
+    card: "glow",
+    corners: "round",
+    buttons: "pill",
+    departments: "lineup",
+    title: "glow",
+    footer: "neon",
+    announcement: "marquee",
+    gallery: "grid",
+    filters: "drawer",
+    headingCase: "uppercase",
+    headingTracking: "-0.01em",
+    headingWeight: 800,
+    motion: "cinematic",
+    sections: ["hero", "spotlight", "best", "departments", "statement", "new", "brands", "recommended"],
+    palettes: ["ultraviolet", "cyber", "magma", "toxic"],
+    headings: ["archivo", "unbounded", "syne", "bricolage"],
+    bodies: ["inter", "dm-sans", "figtree", "outfit"],
     italic: false,
   },
 };
@@ -239,6 +300,7 @@ export interface DesignOptions {
   card?: CardStyle;
   corners?: CornerStyle;
   buttons?: ButtonStyle;
+  motion?: MotionStyle;
 }
 
 export const OPTION_CHOICES = {
@@ -247,23 +309,31 @@ export const OPTION_CHOICES = {
   card: CARD_STYLES,
   corners: CORNER_STYLES,
   buttons: BUTTON_STYLES,
+  motion: MOTION_STYLES,
 } as const;
 
 export const OPTION_LABELS: { [K in keyof DesignOptions]-?: { label: string; names: Record<NonNullable<DesignOptions[K]>, string> } } = {
   header: {
     label: "Header",
-    names: { classic: "Centred name, large menu", inline: "Slim, name on the left", bold: "Search bar and category chips", centered: "Centred name, round menu", heritage: "Ornamented, with a contact bar", overlay: "See-through, menu button" },
+    names: {
+      classic: "Centred name, large menu", inline: "Slim, name on the left", bold: "Search bar and category chips", centered: "Centred name, round menu",
+      heritage: "Ornamented, with a contact bar", overlay: "See-through, menu button", floating: "Floating capsule", glass: "Dark glass with a shop button",
+    },
   },
   hero: {
     label: "Main banner",
-    names: { split: "Photo beside the words", full: "Full-width photo", type: "Big words and a photo collage", framed: "Rounded photo with a card", arch: "Arched photo", cinema: "Full-screen photo" },
+    names: {
+      split: "Photo beside the words", full: "Full-width photo", type: "Big words and a photo collage", framed: "Rounded photo with a card",
+      arch: "Arched photo", cinema: "Full-screen photo", film: "Full-screen film, centred title", glow: "Glowing product, giant words",
+    },
   },
   card: {
     label: "Product cards",
-    names: { classic: "Classic", minimal: "Minimal", sticker: "Outlined, with stickers", soft: "Soft and rounded", framed: "Framed", overlay: "Words on the photo" },
+    names: { classic: "Classic", minimal: "Minimal", sticker: "Outlined, with stickers", soft: "Soft and rounded", framed: "Framed", overlay: "Words on the photo", gallery: "Tall gallery prints", glow: "Glowing tiles" },
   },
   corners: { label: "Corners", names: { sharp: "Sharp", soft: "Softened", round: "Round" } },
   buttons: { label: "Buttons", names: { square: "Square", soft: "Softened", pill: "Pill" } },
+  motion: { label: "Motion", names: { none: "Still", subtle: "Sections ease in", cinematic: "Cinematic: ease in, parallax and scenes" } },
 };
 
 /** Only the known options, with known values (the column is free-form JSON). */

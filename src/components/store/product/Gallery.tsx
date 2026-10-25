@@ -6,14 +6,27 @@ import CatalogImage from "../../ui/CatalogImage";
 import { cx } from "../../ui/controls";
 import { Dialog } from "../../ui/Dialog";
 import { ChevronLeft, ChevronRight, ZoomIcon } from "../../ui/icons";
+import SpinViewer, { SPIN_MIN } from "./SpinViewer";
 
 /**
  * Product images: on desktop, thumbnails beside a hover-zoom main image, or (as the design
  * chooses) every image stacked or in a grid beside the details; a swipeable strip on phones;
  * and a full-screen viewer with 2x zoom on any device. Images tagged with the selected
- * colour come first.
+ * colour come first. A product marked for it (and with enough photos) opens as a 360° view.
  */
-export default function Gallery({ images, title, color, layout = "thumbs" }: { images: PageImage[]; title: string; color: string | null; layout?: GalleryStyle }) {
+export default function Gallery({
+  images,
+  title,
+  color,
+  layout = "thumbs",
+  spin = false,
+}: {
+  images: PageImage[];
+  title: string;
+  color: string | null;
+  layout?: GalleryStyle;
+  spin?: boolean;
+}) {
   const ordered = useMemo(() => {
     if (!color) return images;
     const mine = images.filter((i) => i.color === color);
@@ -25,6 +38,14 @@ export default function Gallery({ images, title, color, layout = "thumbs" }: { i
   const [viewer, setViewer] = useState(false);
   const [viewerZoom, setViewerZoom] = useState(false);
   const strip = useRef<HTMLDivElement>(null);
+  // The 360° view turns through the selected colour's photos when it has a full set, else all of them.
+  const frames = useMemo(() => {
+    const mine = color ? images.filter((i) => i.color === color) : [];
+    return mine.length >= SPIN_MIN ? mine : images;
+  }, [images, color]);
+  const canSpin = spin && frames.length >= SPIN_MIN;
+  const [mode, setMode] = useState<"spin" | "photos">("spin");
+  const spinning = canSpin && mode === "spin";
 
   useEffect(() => {
     setActive(0);
@@ -39,8 +60,25 @@ export default function Gallery({ images, title, color, layout = "thumbs" }: { i
 
   return (
     <div>
+      {canSpin && (
+        <div role="group" aria-label="How to see the product" className="mb-3 inline-flex rounded-btn border border-line p-0.5 text-xs">
+          {(["spin", "photos"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={mode === m}
+              onClick={() => setMode(m)}
+              className={cx("rounded-btn px-3.5 py-1.5 transition-colors", mode === m ? "bg-ink text-ivory" : "hover:bg-bone")}
+            >
+              {m === "spin" ? "360° view" : "Photos"}
+            </button>
+          ))}
+        </div>
+      )}
+      {spinning && <SpinViewer key={color ?? ""} frames={frames} title={title} />}
+
       {/* Phones: swipe through every image */}
-      <div className="lg:hidden">
+      <div className={cx("lg:hidden", spinning && "hidden")}>
         <div
           ref={strip}
           className="scrollbar-none relative -mx-4 flex snap-x snap-mandatory overflow-x-auto sm:-mx-6"
@@ -66,7 +104,7 @@ export default function Gallery({ images, title, color, layout = "thumbs" }: { i
       </div>
 
       {/* Desktop, stacked or grid: every image at once */}
-      {layout !== "thumbs" && (
+      {layout !== "thumbs" && !spinning && (
         <ul className={cx("hidden gap-3 lg:grid", layout === "grid" && "lg:grid-cols-2")} aria-label={`${title} images`}>
           {ordered.map((img, i) => (
             <li key={img.id} className={cx(layout === "grid" && i === 0 && "lg:col-span-2")}>
@@ -84,7 +122,7 @@ export default function Gallery({ images, title, color, layout = "thumbs" }: { i
       )}
 
       {/* Desktop: thumbnails + zoomable main image */}
-      <div className={cx("hidden gap-4 lg:grid-cols-[4.5rem_1fr]", layout === "thumbs" && "lg:grid")}>
+      <div className={cx("hidden gap-4 lg:grid-cols-[4.5rem_1fr]", layout === "thumbs" && !spinning && "lg:grid")}>
         <ul className="grid content-start gap-3" aria-label="Choose image">
           {ordered.map((img, i) => (
             <li key={img.id}>

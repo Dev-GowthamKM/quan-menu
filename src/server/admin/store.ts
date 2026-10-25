@@ -2,6 +2,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { AccessError, requireRole } from "@/lib/auth";
+import { storageUrl } from "@/lib/env";
 import { fail, friendlyError, ok, type ActionResult } from "@/lib/errors";
 import { authProviderStatus, msg91Configured } from "@/lib/login-codes";
 import { SMS_HOOK_SECRET } from "@/lib/server-env";
@@ -133,6 +134,8 @@ const text = (max: number) => z.string().max(max);
 /** Button links: a page on this site or an http(s) address, never javascript: or data:. */
 const link = z.string().trim().max(300).refine((v) => v === "" || /^\/(?!\/)/.test(v) || /^https?:\/\/\S+$/i.test(v), "Links must be a page on this site (starting with /) or start with https://");
 const webUrl = z.string().trim().max(300).refine((v) => v === "" || /^https?:\/\/\S+$/i.test(v), "Use a full address starting with https://");
+/** A banner's film: a file uploaded to the store's storage, or an https address. */
+const videoLink = z.string().trim().max(1000).refine((v) => v === "" || /^https:\/\/\S+$/i.test(v) || v.startsWith(storageUrl("")), "Video links must start with https://");
 
 const SECTIONS = {
   general: z.object({
@@ -150,7 +153,7 @@ const SECTIONS = {
       hero: z.array(z.object({
         image_url: z.string().max(1000), image_alt: text(200).optional(), eyebrow: text(80).optional(), heading: z.string().trim().min(1).max(120),
         subheading: text(300).optional(), cta_label: text(40).optional(), cta_href: link.optional(), secondary_label: text(40).optional(),
-        secondary_href: link.optional(), sample: z.boolean().optional(),
+        secondary_href: link.optional(), video_url: videoLink.optional(), sample: z.boolean().optional(),
       })).max(6),
       promos: z.array(z.object({
         image_url: z.string().max(1000), image_alt: text(200).optional(), eyebrow: text(80).optional(), heading: z.string().trim().min(1).max(120),

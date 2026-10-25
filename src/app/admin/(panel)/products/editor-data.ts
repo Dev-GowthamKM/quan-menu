@@ -28,3 +28,14 @@ export async function editorContext(sb: SupabaseClient<Database>): Promise<{ opt
     },
   };
 }
+
+/**
+ * A product's 360° switch (false for a new one), or null when the database doesn't have it
+ * yet (before the motion update), so the editor can say what's needed instead of failing.
+ */
+export async function productSpin(sb: SupabaseClient<Database>, id: string | null): Promise<boolean | null> {
+  const query = sb.from("products").select("spin").limit(1);
+  const { data, error } = id ? await query.eq("id", id).maybeSingle() : await query;
+  if (error) return null;
+  return Array.isArray(data) ? false : !!data?.spin;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BODY_FONTS, contrast, HEADING_FONTS, mix, onColor, PALETTES, paletteOf, readable, themeOf, themeTokens, themeWarnings } from "./theme";
+import { BODY_FONTS, chapterColors, contrast, HEADING_FONTS, mix, onColor, PALETTES, paletteOf, readable, themeOf, themeTokens, themeWarnings } from "./theme";
 
 describe("colour arithmetic", () => {
   it("measures contrast the WCAG way", () => {
@@ -52,6 +52,15 @@ describe("palettes", () => {
       expect(contrast(t["--color-ink"], t["--color-field"])).toBeGreaterThanOrEqual(4.5);
       expect(contrast(t["--color-on-brand"], t["--color-brand"])).toBeGreaterThanOrEqual(4.5);
       expect(contrast(t["--color-on-brand-soft"], t["--color-brand"])).toBeGreaterThanOrEqual(4.5);
+      // The Spotlight's backgrounds change as the shopper scrolls, and every one stays readable.
+      const chapters = chapterColors(p.colors, 4);
+      expect(chapters[0]).toBe(p.colors.background.toLowerCase());
+      expect(new Set(chapters).size).toBeGreaterThan(1);
+      for (const bg of chapters) {
+        expect(contrast(t["--color-ink"], bg)).toBeGreaterThanOrEqual(7);
+        expect(contrast(t["--color-taupe"], bg)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(t["--color-accent"], bg)).toBeGreaterThanOrEqual(4.5);
+      }
     });
   }
 

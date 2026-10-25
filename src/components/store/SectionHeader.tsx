@@ -5,8 +5,8 @@ import { ArrowRight } from "../ui/icons";
 /** A section's title. Its look follows the store's design (data-title, styled in globals.css). */
 export function SectionHeader({ eyebrow, title, href, linkLabel = "View all", className }: { eyebrow?: string; title: string; href?: string; linkLabel?: string; className?: string }) {
   return (
-    <div className={cx("sh mb-8 flex items-end justify-between gap-6", className)}>
-      <div className="sh-text">
+    <div className={cx("sh mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-4", className)} data-reveal>
+      <div className="sh-text min-w-0">
         {eyebrow && <p className="sh-eyebrow label-caps text-accent">{eyebrow}</p>}
         <h2 className="sh-title mt-2 font-serif text-3xl leading-tight md:text-4xl"><span>{title}</span></h2>
       </div>

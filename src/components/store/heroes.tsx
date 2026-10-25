@@ -5,9 +5,11 @@ import { safeHref } from "@/lib/urls";
 import CatalogImage from "../ui/CatalogImage";
 import { buttonClass, cx } from "../ui/controls";
 import { ArrowRight } from "../ui/icons";
+import HeroMedia from "./HeroMedia";
 
 // The home page's main banner, in each design's hero style (lib/designs.ts). Each works from
-// the same banner (Settings › Homepage) and has a version for stores without one yet.
+// the same banner (Settings › Homepage), plays its film where the style has room for one, and
+// has a version for stores without a banner yet.
 
 interface HeroProps {
   variant: HeroStyle;
@@ -49,6 +51,7 @@ function SpinBadge({ text, className }: { text: string; className?: string }) {
 
 export default function Hero({ variant, slide, storeName, tagline, extras = [] }: HeroProps) {
   const image = slide?.image_url || null;
+  const video = slide?.video_url || null;
   const heading = slide?.heading || tagline || storeName;
 
   switch (variant) {
@@ -67,7 +70,7 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [] }
       return (
         <section className="relative">
           <div className="relative h-[72svh] min-h-[26rem] overflow-hidden bg-bone md:h-[86svh]">
-            <CatalogImage src={image} alt={slide.image_alt || ""} fill priority sizes="100vw" className="object-cover" />
+            <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="100vw" parallax={0.12} />
           </div>
           <div className="container-page relative -mt-24 md:absolute md:inset-x-0 md:bottom-10 md:mt-0">
             <div className="max-w-md bg-ivory p-6 md:p-9">
@@ -128,8 +131,8 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [] }
           <div className="relative overflow-hidden rounded-[calc(var(--radius-card)*1.5)] bg-bone">
             {image && slide ? (
               <>
-                <div className="relative aspect-[4/5] sm:aspect-[16/10] md:aspect-auto md:h-[min(78svh,44rem)]">
-                  <CatalogImage src={image} alt={slide.image_alt || ""} fill priority sizes="(min-width: 1408px) 84rem, 100vw" className="object-cover" />
+                <div className="relative aspect-[4/5] overflow-hidden sm:aspect-[16/10] md:aspect-auto md:h-[min(78svh,44rem)]">
+                  <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="(min-width: 1408px) 84rem, 100vw" parallax={0.08} />
                 </div>
                 <div className="absolute inset-x-3 bottom-3 md:inset-x-auto md:bottom-10 md:left-10 md:max-w-md">
                   <div className="rounded-card bg-paper/90 p-6 shadow-lg backdrop-blur md:p-8">
@@ -171,7 +174,7 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [] }
                 <div className="relative mx-auto aspect-[3/4] w-full max-w-sm">
                   <div aria-hidden className="absolute -inset-3 rounded-t-full border border-accent" />
                   <div className="relative size-full overflow-hidden rounded-t-full bg-sand">
-                    <CatalogImage src={image} alt={slide?.image_alt || ""} fill priority sizes="(min-width: 768px) 24rem, 90vw" className="object-cover" />
+                    <HeroMedia image={image} video={video} alt={slide?.image_alt || ""} priority sizes="(min-width: 768px) 24rem, 90vw" />
                   </div>
                 </div>
               </div>
@@ -192,7 +195,7 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [] }
       }
       return (
         <section data-hero="cinema" className="relative h-[100svh] min-h-[32rem] overflow-hidden bg-black text-white">
-          <CatalogImage src={image} alt={slide.image_alt || ""} fill priority sizes="100vw" className="object-cover" />
+          <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="100vw" parallax={0.15} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/45" />
           <div className="container-page absolute inset-x-0 bottom-0 pb-14 md:pb-20">
             {slide.eyebrow && <p className="text-[11px] tracking-[0.4em] uppercase opacity-80">{slide.eyebrow}</p>}
@@ -208,6 +211,86 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [] }
           <span aria-hidden className="absolute right-6 bottom-8 hidden text-[10px] tracking-[0.4em] uppercase opacity-70 [writing-mode:vertical-rl] md:block">Scroll</span>
         </section>
       );
+
+    case "film":
+      if (!slide || !image) {
+        return (
+          <section className="relative grid min-h-[80svh] place-items-center overflow-hidden bg-bone px-6 py-28 text-center">
+            <div>
+              <p className="text-[11px] tracking-[0.35em] text-taupe uppercase">{storeName}</p>
+              <h1 className="mx-auto mt-6 max-w-5xl font-serif text-[clamp(2.75rem,8vw,7.5rem)] leading-[0.98]">{heading}</h1>
+              <Link href="/shop?sort=newest" className={buttonClass("primary", "lg", "mt-10")}>Shop new arrivals</Link>
+            </div>
+          </section>
+        );
+      }
+      return (
+        <section data-hero="film" className="relative h-[100svh] min-h-[34rem] overflow-hidden bg-neutral-900 text-white">
+          <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="100vw" parallax={0.18} />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/50" />
+          <div className="absolute inset-0 grid place-items-center px-6 text-center">
+            <div>
+              {slide.eyebrow && <p className="animate-fade-in text-[11px] tracking-[0.35em] uppercase opacity-90">{slide.eyebrow}</p>}
+              <h1 className="mt-5 animate-fade-in font-serif text-[clamp(3rem,9vw,8.5rem)] leading-[0.95] [animation-delay:150ms]">{slide.heading}</h1>
+              {slide.subheading && <p className="mx-auto mt-6 max-w-md animate-fade-in text-sm leading-relaxed opacity-90 [animation-delay:300ms]">{slide.subheading}</p>}
+              <Ctas
+                slide={slide}
+                className="mt-9 animate-fade-in justify-center [animation-delay:450ms]"
+                primary="inline-flex h-12 items-center rounded-btn bg-white/90 px-7 text-[12px] tracking-[0.2em] text-black uppercase backdrop-blur transition-colors hover:bg-white"
+                secondary="inline-flex h-12 items-center rounded-btn border border-white/70 px-7 text-[12px] tracking-[0.2em] text-white uppercase transition-colors hover:bg-white hover:text-black"
+              />
+            </div>
+          </div>
+          <span aria-hidden className="absolute bottom-7 left-1/2 flex -translate-x-1/2 flex-col items-center gap-3 text-[10px] tracking-[0.4em] uppercase opacity-80">
+            Scroll
+            <span className="h-10 w-px bg-white/70" />
+          </span>
+        </section>
+      );
+
+    case "glow": {
+      const picture = image ?? extras.find((x): x is string => !!x) ?? null;
+      const glow = "shadow-[0_0_36px_-6px_var(--color-brand)]";
+      return (
+        <section data-hero="glow" className="relative overflow-hidden bg-ivory">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{ background: "radial-gradient(60% 50% at 50% 50%, color-mix(in oklab, var(--color-brand) 55%, transparent), transparent 72%)" }}
+          />
+          <p aria-hidden data-drift="0.25" className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center font-serif text-[clamp(4.5rem,19vw,17rem)] leading-none whitespace-nowrap text-ink/10">
+            {heading}
+          </p>
+          {/* The heading, the glowing picture and the buttons: stacked on phones, side by side on wide screens. */}
+          <div className="container-page relative grid min-h-[100svh] content-center items-center gap-8 pt-28 pb-14 text-center lg:grid-cols-[1fr_auto_1fr] lg:gap-12 lg:text-left">
+            <div>
+              <p className="inline-block rounded-btn border border-line px-3 py-1 text-[11px] tracking-[0.2em] uppercase">{slide?.eyebrow || "New drop"}</p>
+              <h1 className="mt-5 font-serif text-[clamp(2.4rem,5vw,5.5rem)] leading-[0.95]">{heading}</h1>
+            </div>
+            {picture ? (
+              <div className="relative mx-auto aspect-[3/4] w-[min(52vw,15rem)] animate-float overflow-hidden rounded-card shadow-[0_34px_120px_-24px_var(--color-brand)] lg:w-[min(26vw,22rem)]">
+                <CatalogImage src={picture} alt={slide?.image_alt || ""} fill priority sizes="(min-width: 1024px) 22rem, 52vw" className="object-cover" />
+              </div>
+            ) : (
+              <div aria-hidden className="mx-auto size-40 animate-float rounded-full bg-brand/40 blur-2xl lg:size-72" />
+            )}
+            <div className="lg:max-w-xs lg:justify-self-end">
+              {slide?.subheading && <p className="mx-auto max-w-md text-sm leading-relaxed text-taupe lg:mx-0">{slide.subheading}</p>}
+              {slide ? (
+                <Ctas
+                  slide={slide}
+                  className="mt-6 justify-center lg:justify-start"
+                  primary={buttonClass("primary", "lg", `font-bold ${glow}`)}
+                  secondary={buttonClass("secondary", "lg", "font-bold")}
+                />
+              ) : (
+                <Link href="/shop?sort=newest" className={buttonClass("primary", "lg", `mt-6 font-bold ${glow}`)}>Shop new arrivals</Link>
+              )}
+            </div>
+          </div>
+        </section>
+      );
+    }
 
     default:
       if (!slide) {
@@ -225,7 +308,7 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [] }
         <section className="relative">
           <div className="grid md:grid-cols-2">
             <div className="relative order-1 aspect-[4/5] overflow-hidden bg-bone md:order-2 md:aspect-auto md:min-h-[min(88vh,56rem)]">
-              <CatalogImage src={slide.image_url} alt={slide.image_alt || ""} fill priority sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+              <HeroMedia image={slide.image_url} video={video} alt={slide.image_alt || ""} priority sizes="(min-width: 768px) 50vw, 100vw" />
             </div>
             <div className="order-2 flex items-center bg-bone md:order-1">
               <div className="w-full px-6 py-14 md:px-12 lg:px-20 xl:px-28">

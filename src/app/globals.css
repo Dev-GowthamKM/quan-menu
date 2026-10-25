@@ -51,6 +51,11 @@
     to { transform: translateX(-50%); }
   }
   --animate-spin-slow: spin 18s linear infinite;
+  --animate-float: float 7s ease-in-out infinite;
+  @keyframes float {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -14px; }
+  }
 }
 
 @layer base {
@@ -81,7 +86,9 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .animate-marquee,
-    .animate-spin-slow {
+    .animate-spin-slow,
+    .animate-float,
+    .animate-fade-in {
       animation: none;
     }
   }
@@ -202,6 +209,24 @@
 [data-card="overlay"] .pc-brand { color: rgb(255 255 255 / 0.85); }
 [data-card="overlay"] .pc-swatches { display: none; }
 
+[data-card="gallery"] .pc-media { aspect-ratio: 2 / 3; }
+[data-card="gallery"] .pc-media img { transition-duration: 1.4s; }
+[data-card="gallery"] .pc-info { justify-items: center; gap: 0.25rem; margin-top: 1rem; text-align: center; }
+[data-card="gallery"] .pc-brand { font-size: 0.625rem; letter-spacing: 0.3em; }
+[data-card="gallery"] .pc-title { font-family: var(--font-serif); font-style: var(--heading-style, normal); font-size: 1.125rem; }
+[data-card="gallery"] .pc-price,
+[data-card="gallery"] .pc-swatches { justify-content: center; }
+[data-card="gallery"] .pc-price { font-size: 0.75rem; letter-spacing: 0.12em; }
+[data-card="gallery"] .pc-badge { border-radius: 999px; padding-inline: 0.625rem; }
+
+[data-card="glow"] .pc { border: 1px solid var(--color-line); border-radius: var(--radius-card); padding: 0.625rem; background: linear-gradient(180deg, var(--color-paper), var(--color-ivory)); transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+[data-card="glow"] .pc:hover { transform: translateY(-4px); border-color: color-mix(in oklab, var(--color-brand) 60%, transparent); box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-brand) 35%, transparent), 0 22px 60px -20px var(--color-brand); }
+[data-card="glow"] .pc-media { border-radius: max(0px, calc(var(--radius-card) - 0.375rem)); background: radial-gradient(circle at 50% 40%, color-mix(in oklab, var(--color-brand) 28%, var(--color-bone)), var(--color-bone) 72%); }
+[data-card="glow"] .pc-info { padding: 0 0.25rem 0.25rem; }
+[data-card="glow"] .pc-title { font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+[data-card="glow"] .pc-price { font-size: 1rem; font-weight: 700; }
+[data-card="glow"] .pc-badge { border-radius: 999px; padding-inline: 0.625rem; background: var(--color-brand); color: var(--color-on-brand); box-shadow: 0 0 18px color-mix(in oklab, var(--color-brand) 70%, transparent); }
+
 [data-title="minimal"] .sh { align-items: center; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--color-line); }
 [data-title="minimal"] .sh-eyebrow { display: none; }
 [data-title="minimal"] .sh-title { margin: 0; font-family: var(--font-sans); font-style: normal; font-weight: 500; font-size: 0.8125rem; line-height: 1.25rem; letter-spacing: 0.14em; text-transform: uppercase; }
@@ -224,13 +249,61 @@
 [data-title="giant"] .sh-title { font-size: clamp(2.25rem, 6.5vw, 5rem); line-height: 0.95; }
 [data-title="giant"] .sh-eyebrow::before { content: "— "; }
 
+[data-title="statement"] .sh { flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 2.75rem; text-align: center; }
+[data-title="statement"] .sh-eyebrow { color: var(--color-taupe); letter-spacing: 0.32em; }
+[data-title="statement"] .sh-title { margin-top: 0; font-size: clamp(2.25rem, 5vw, 4.25rem); line-height: 1.02; }
+[data-title="statement"] .sh-link { padding-bottom: 2px; border-bottom: 1px solid currentColor; font-size: 0.6875rem; letter-spacing: 0.22em; text-decoration: none; text-transform: uppercase; }
+
+[data-title="glow"] .sh-eyebrow { display: inline-block; padding: 0.25rem 0.75rem; border: 1px solid var(--color-line); border-radius: 999px; color: var(--color-ink); }
+[data-title="glow"] .sh-title { margin-top: 0.75rem; font-size: clamp(2.25rem, 6vw, 4.75rem); line-height: 0.95; }
+[data-title="glow"] .sh-title span { background: linear-gradient(100deg, var(--color-ink) 15%, var(--color-accent) 55%, var(--color-brand) 95%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+[data-title="glow"] .sh-link { padding: 0.5rem 1rem; border: 1px solid var(--color-line); border-radius: var(--radius-btn); text-decoration: none; }
+
+/*
+ * Motion (src/components/store/Motion.tsx). Parts marked data-reveal ease in when they reach
+ * the screen; an animation rather than a transition, so their own hover effects keep working.
+ * In cinematic designs, data-parallax pictures drift and data-drift words slide with the scroll.
+ */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    translate: 0 32px;
+  }
+}
+.motion-ready [data-reveal]:not(.is-in):not(.is-shown) {
+  opacity: 0;
+}
+.motion-ready [data-reveal].is-in {
+  animation: reveal 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  animation-delay: var(--reveal-delay, 0s);
+}
+[data-reveal]:nth-child(4n + 2) { --reveal-delay: 0.08s; }
+[data-reveal]:nth-child(4n + 3) { --reveal-delay: 0.16s; }
+[data-reveal]:nth-child(4n + 4) { --reveal-delay: 0.24s; }
+.motion-ready [data-motion="cinematic"] [data-parallax] {
+  transform: translate3d(0, var(--parallax, 0px), 0) scale(1.12);
+  transition-property: scale, opacity, filter;
+}
+.motion-ready [data-motion="cinematic"] [data-drift] {
+  transform: translate3d(var(--drift, 0px), 0, 0);
+}
+
+/* Giant words filled with the brand's colours, glowing (Neon). */
+.wordmark-glow {
+  background: linear-gradient(90deg, var(--color-brand), var(--color-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 28px color-mix(in oklab, var(--color-brand) 45%, transparent));
+}
+
 /* Brand tiles show the brand colour through the photograph; on dark looks, black. */
 [data-scheme="dark"] .brand-tile {
   background-color: #0b0b0b;
 }
 
-/* Noir's see-through header over the home page photograph: its announcement too. */
-.overlay-clear .announce {
+/* A see-through header over the home page photograph (Noir, Cinema): its announcement too. */
+.overlay-clear.on-photo .announce {
   border-color: rgb(255 255 255 / 0.2);
   background: transparent;
   color: #fff;

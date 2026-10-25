@@ -14,6 +14,8 @@ export type StoreSettings = Tables<"store_settings">;
 
 export interface HeroSlide {
   image_url: string;
+  /** A short film (MP4 or WebM) played over the picture, muted and looping, where it suits the shopper's connection. */
+  video_url?: string;
   image_alt?: string;
   eyebrow?: string;
   heading: string;
@@ -173,6 +175,8 @@ export interface ProductPage {
   seo_title: string;
   seo_description: string;
   updated_at: string;
+  /** Show the photos as a 360° view (after the motion database update). */
+  spin?: boolean;
   brand: { name: string; slug: string; logo_url: string | null } | null;
   category: { name: string; slug: string } | null;
   breadcrumbs: { name: string; slug: string }[];

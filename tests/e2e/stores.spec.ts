@@ -27,6 +27,8 @@ async function useStore(page: Page, name: string) {
   await expect(page.getByLabel("Store")).toHaveValue(/.+/);
   await page.waitForURL("**/admin");
   await expect(page.getByLabel("Store").locator("option:checked")).toHaveText(name);
+  // The switch ends with a refresh of the page; a click made before it lands can be undone by it.
+  await page.waitForLoadState("networkidle");
 }
 
 test("the platform's administrator creates a store, which opens at its own address with its own look", async ({ browser }) => {

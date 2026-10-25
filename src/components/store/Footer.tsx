@@ -141,6 +141,37 @@ export default function Footer({ settings, departments, variant = "columns" }: {
         </footer>
       );
 
+    case "grand":
+      return (
+        <footer className="mt-24 border-t border-line">
+          <div className="container-page py-20 text-center md:py-28" data-reveal>
+            <p className="mx-auto max-w-4xl font-serif text-[clamp(2.5rem,6.5vw,5.5rem)] leading-[1.02]">{settings.tagline || join}</p>
+            <p className="mx-auto mt-6 max-w-md text-sm leading-relaxed text-taupe">{pitch}</p>
+            <div className="mx-auto max-w-md text-left">
+              <NewsletterForm boxed />
+            </div>
+          </div>
+          <div className="container-page grid gap-10 border-t border-line py-12 text-center sm:grid-cols-3">{columns}</div>
+          <div className="container-page border-t border-line text-center">{legal}</div>
+        </footer>
+      );
+
+    case "neon":
+      return (
+        <footer className="mt-24 overflow-hidden border-t border-line">
+          <div className="container-page grid gap-12 py-16 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
+            <div className="max-w-md">
+              <p className="font-serif text-4xl leading-none">{join}</p>
+              <p className="mt-4 text-sm leading-relaxed text-taupe">{pitch}</p>
+              <NewsletterForm boxed />
+            </div>
+            {columns}
+          </div>
+          <p aria-hidden className="wordmark-glow container-page font-serif text-[clamp(3rem,15vw,12rem)] leading-[0.9] whitespace-nowrap uppercase">{settings.store_name}</p>
+          <div className="container-page border-t border-line">{legal}</div>
+        </footer>
+      );
+
     case "wordmark":
       return (
         <footer className="mt-24 overflow-hidden border-t border-line">

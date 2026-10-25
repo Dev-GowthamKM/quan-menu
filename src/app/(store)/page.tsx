@@ -2,6 +2,7 @@ import { Fragment, type ReactNode } from "react";
 import NewsletterForm from "@/components/store/NewsletterForm";
 import RecentlyViewed from "@/components/store/RecentlyViewed";
 import Hero from "@/components/store/heroes";
+import Spotlight, { type Chapter } from "@/components/store/Spotlight";
 import {
   BrandStrip,
   CampaignBand,
@@ -13,6 +14,7 @@ import {
   PromoGrid,
   SectionHeader,
   SeasonalFeature,
+  Statement,
   StorySection,
   TrustStrip,
 } from "@/components/store/sections";
@@ -20,12 +22,14 @@ import { getHomeData } from "@/lib/catalog";
 import { homeSections, type SectionKey } from "@/lib/designs";
 import { storefrontLook } from "@/lib/look";
 import { getSettings, homepageOf, socialOf } from "@/lib/settings";
-import { jsonLd } from "@/lib/seo";
+import { excerpt, jsonLd } from "@/lib/seo";
+import { safeHref } from "@/lib/urls";
+import { chapterColors } from "@/lib/theme";
 import { contextOrigin } from "@/lib/store";
 
 export default async function Home() {
   const [settings, data, origin] = await Promise.all([getSettings(), getHomeData(), contextOrigin()]);
-  const { design } = await storefrontLook(settings);
+  const { design, look } = await storefrontLook(settings);
   const home = homepageOf(settings);
   const [hero, campaign] = home.hero ?? [];
 
@@ -72,6 +76,14 @@ export default async function Home() {
     );
   }
 
+  // Spotlight chapters: the featured collections, or else the departments.
+  const chapters: Chapter[] = (
+    data.trending.length >= 2
+      ? data.trending.map((c) => ({ title: c.title, text: c.description ? excerpt(c.description, 180) : null, image: c.image_url || c.banner_url, href: `/collections/${c.slug}`, eyebrow: c.season || "Collection" }))
+      : data.departments.map((d) => ({ title: d.name, text: d.description ? excerpt(d.description, 180) : null, image: d.image_url, href: `/category/${d.slug}`, eyebrow: "Department" }))
+  ).slice(0, 4);
+  const statementImage = campaign?.image_url || home.promos?.[0]?.image_url || data.departments[0]?.image_url || null;
+
   // Every section the home page can show; the design (or the store's own arrangement in
   // Settings › Homepage) decides which appear, and in what order.
   const sections: Record<SectionKey, () => ReactNode> = {
@@ -111,6 +123,16 @@ export default async function Home() {
     collections: () => <CollectionCards collections={data.trending} />,
     brands: () => <BrandStrip brands={data.brands} />,
     campaign: () => campaign && <CampaignBand slide={campaign} />,
+    spotlight: () => chapters.length >= 2 && <Spotlight chapters={chapters} colors={chapterColors(look.colors, chapters.length)} />,
+    statement: () => (
+      <Statement
+        heading={campaign?.heading || settings.tagline || settings.store_name}
+        image={statementImage}
+        href={safeHref(campaign?.cta_href) ?? "/shop"}
+        label={campaign?.cta_label || "Shop now"}
+        glow={design.title === "glow"}
+      />
+    ),
     story: () => <StorySection settings={settings} variant={design.key} />,
     recommended: () => <RecentlyViewed title="Recommended for you" mode="recommend" />,
     newsletter: () => <NewsletterSection variant={design.key} />,
