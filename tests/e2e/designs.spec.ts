@@ -89,6 +89,16 @@ const DESIGNS: { name: string; key: string; home: (p: Page) => Promise<void>; sh
       await expect(p.locator('[data-hero="glow"]')).toBeVisible();
       // A glass header with a button of its own.
       await expect(p.locator("header").first().getByRole("link", { name: "Shop now" })).toBeVisible();
+      // The Showcase: one piece at a time, the next one brought forward by the arrows or its dot.
+      const show = p.getByRole("region", { name: "Pieces we love" });
+      const piece = show.getByRole("heading", { level: 3 });
+      const first = (await piece.textContent())!;
+      await show.getByRole("button", { name: "Next piece" }).click();
+      await expect(piece).not.toHaveText(first);
+      await expect(show.getByRole("button", { name: `Show ${await piece.textContent()}` })).toHaveAttribute("aria-current", "true");
+      await show.getByRole("button", { name: `Show ${first}` }).click();
+      await expect(piece).toHaveText(first);
+      await expect(show.getByRole("link", { name: `Shop now: ${first}` })).toHaveAttribute("href", /^\/products\//);
     },
   },
 ];

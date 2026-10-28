@@ -38,7 +38,7 @@ export type AnnouncementStyle = "band" | "slim" | "marquee";
 export type GalleryStyle = "thumbs" | "stack" | "grid";
 
 /** Homepage sections, in the order a design shows them unless the store reorders them. */
-export const SECTION_KEYS = ["hero", "trust", "departments", "new", "promos", "best", "seasonal", "collections", "brands", "campaign", "spotlight", "statement", "story", "recommended", "newsletter"] as const;
+export const SECTION_KEYS = ["hero", "trust", "departments", "new", "promos", "best", "seasonal", "collections", "brands", "campaign", "spotlight", "statement", "showcase", "story", "recommended", "newsletter"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 export const SECTION_LABELS: Record<SectionKey, string> = {
@@ -54,6 +54,7 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
   campaign: "Second banner",
   spotlight: "Spotlight: your collections, one by one as you scroll",
   statement: "Statement: big words with a photo (the second banner, or your tagline)",
+  showcase: "Showcase: your featured pieces one at a time, each lit in its own colour",
   story: "Your story (from Policies › About)",
   recommended: "Recommended for each shopper",
   newsletter: "Newsletter sign-up",
@@ -266,7 +267,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
   neon: {
     key: "neon",
     name: "Neon",
-    summary: "Electric and bold: a glass header, products glowing on dark backgrounds, giant words behind them and colours that change as you scroll.",
+    summary: "Electric and bold: a glass header, a showcase of products each lit in its own colour, giant words behind them and colours that change as you scroll.",
     header: "glass",
     hero: "glow",
     card: "glow",
@@ -282,7 +283,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingTracking: "-0.01em",
     headingWeight: 800,
     motion: "cinematic",
-    sections: ["hero", "spotlight", "best", "departments", "statement", "new", "brands", "recommended"],
+    sections: ["hero", "showcase", "departments", "spotlight", "statement", "new", "brands", "recommended"],
     palettes: ["ultraviolet", "cyber", "magma", "toxic"],
     headings: ["archivo", "unbounded", "syne", "bricolage"],
     bodies: ["inter", "dm-sans", "figtree", "outfit"],

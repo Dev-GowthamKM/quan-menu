@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BODY_FONTS, chapterColors, contrast, HEADING_FONTS, mix, onColor, PALETTES, paletteOf, readable, themeOf, themeTokens, themeWarnings } from "./theme";
+import { BODY_FONTS, chapterColors, contrast, HEADING_FONTS, mix, onColor, PALETTES, paletteOf, readable, showcaseColors, themeOf, themeTokens, themeWarnings } from "./theme";
 
 describe("colour arithmetic", () => {
   it("measures contrast the WCAG way", () => {
@@ -61,8 +61,22 @@ describe("palettes", () => {
         expect(contrast(t["--color-taupe"], bg)).toBeGreaterThanOrEqual(4.5);
         expect(contrast(t["--color-accent"], bg)).toBeGreaterThanOrEqual(4.5);
       }
+      // So do the Showcase's, whatever colour the product is.
+      for (const { stage } of showcaseColors(p.colors, ["#c0392b", "#2f80ff", "#f2c94c", "#ffffff", "#111111", null])) {
+        expect(contrast(t["--color-ink"], stage)).toBeGreaterThanOrEqual(7);
+        for (const k of ["--color-taupe", "--color-accent", "--color-sale", "--color-stone"]) expect(contrast(t[k], stage), k).toBeGreaterThanOrEqual(4.5);
+      }
     });
   }
+
+  it("light each product in the Showcase in its own colour, and whites, greys and blacks in the store's", () => {
+    const c = PALETTES[0].colors;
+    const [red, grey, none] = showcaseColors(c, ["#C0392B", "#888888", undefined]);
+    expect(red.glow).toBe("#c0392b");
+    expect(red.stage).not.toBe(c.background.toLowerCase());
+    expect([c.brand.toLowerCase(), c.accent.toLowerCase()]).toContain(grey.glow);
+    expect([c.brand.toLowerCase(), c.accent.toLowerCase()]).toContain(none.glow);
+  });
 
   it("recognises a palette from its colours, in any letter case", () => {
     const wine = PALETTES[0];

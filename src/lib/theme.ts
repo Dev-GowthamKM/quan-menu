@@ -311,6 +311,37 @@ export function chapterColors(c: ThemeColors, count: number): string[] {
   });
 }
 
+/** How colourful a colour is (OKLab chroma): about 0 for whites, greys and blacks. */
+export function chroma(hex: string) {
+  const [, a, b] = toLab(parse(hex));
+  return Math.hypot(a, b);
+}
+
+/**
+ * The Showcase's stage behind each product: the page's background leaning toward the product's
+ * own colour (its first swatch) as far as text, prices and labels stay readable, and a glow in
+ * that colour. Whites, greys and blacks glow in the store's brand and accent colours instead.
+ */
+export function showcaseColors(c: ThemeColors, hexes: (string | null | undefined)[]): { stage: string; glow: string }[] {
+  const t = themeTokens(c);
+  const words: [string, number][] = [
+    [c.text, 7],
+    [t["--color-taupe"], 4.5],
+    [t["--color-accent"], 4.5],
+    [t["--color-sale"], 4.5],
+    [t["--color-stone"], 4.5],
+  ];
+  const plain = [c.brand, c.accent];
+  return hexes.map((hex, i) => {
+    const own = (hex && isHexColor(hex) && chroma(hex) >= 0.04 ? hex : plain[i % plain.length]).toLowerCase();
+    for (let a = isLight(c) ? 0.3 : 0.4; a > 0; a -= 0.02) {
+      const stage = mix(c.background, own, a);
+      if (words.every(([fg, min]) => contrast(fg, stage) >= min)) return { stage, glow: own };
+    }
+    return { stage: c.background.toLowerCase(), glow: own };
+  });
+}
+
 /** What would make the store hard to read with these colours, in words for the admin. */
 export function themeWarnings(c: ThemeColors) {
   const out: string[] = [];

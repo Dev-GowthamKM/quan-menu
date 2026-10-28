@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from "react";
 import NewsletterForm from "@/components/store/NewsletterForm";
 import RecentlyViewed from "@/components/store/RecentlyViewed";
+import Showcase from "@/components/store/Showcase";
 import Hero from "@/components/store/heroes";
 import Spotlight, { type Chapter } from "@/components/store/Spotlight";
 import {
@@ -24,7 +25,7 @@ import { storefrontLook } from "@/lib/look";
 import { getSettings, homepageOf, socialOf } from "@/lib/settings";
 import { excerpt, jsonLd } from "@/lib/seo";
 import { safeHref } from "@/lib/urls";
-import { chapterColors } from "@/lib/theme";
+import { chapterColors, showcaseColors } from "@/lib/theme";
 import { contextOrigin } from "@/lib/store";
 
 export default async function Home() {
@@ -83,6 +84,11 @@ export default async function Home() {
       : data.departments.map((d) => ({ title: d.name, text: d.description ? excerpt(d.description, 180) : null, image: d.image_url, href: `/category/${d.slug}`, eyebrow: "Department" }))
   ).slice(0, 4);
   const statementImage = campaign?.image_url || home.promos?.[0]?.image_url || data.departments[0]?.image_url || null;
+  // The Showcase: the store's featured pieces, then best sellers and new arrivals, those with a
+  // picture; each is lit in its first colour.
+  const showcase = [...data.featured, ...data.bestSellers, ...data.newArrivals]
+    .filter((p, i, all) => p.image_url && all.findIndex((q) => q.id === p.id) === i)
+    .slice(0, 8);
 
   // Every section the home page can show; the design (or the store's own arrangement in
   // Settings › Homepage) decides which appear, and in what order.
@@ -124,6 +130,14 @@ export default async function Home() {
     brands: () => <BrandStrip brands={data.brands} />,
     campaign: () => campaign && <CampaignBand slide={campaign} />,
     spotlight: () => chapters.length >= 2 && <Spotlight chapters={chapters} colors={chapterColors(look.colors, chapters.length)} />,
+    showcase: () =>
+      showcase.length >= 3 && (
+        <Showcase
+          title="Pieces we love"
+          products={showcase}
+          colors={showcaseColors(look.colors, showcase.map((p) => p.swatches?.[0]?.hex))}
+        />
+      ),
     statement: () => (
       <Statement
         heading={campaign?.heading || settings.tagline || settings.store_name}

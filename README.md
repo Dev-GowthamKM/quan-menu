@@ -642,7 +642,7 @@ can be read at `http://localhost:4014/__test/messages`.
   | Heritage | Traditional: arched frames, ornaments, jewel tones and classical capitals, the store's story on the home page |
   | Noir | Dark: a see-through header over a full-screen photograph, a full-screen menu, cards with words on the photo |
   | Cinema | Cinematic and calm: a floating header over a full-screen film or photograph, big serif lines, a pinned Spotlight, departments as full-width scenes, tall gallery cards |
-  | Neon | Electric: a glass header with its own shop button, a glowing product in front of giant words, colours that change as you scroll, glowing cards on dark backgrounds |
+  | Neon | Electric: a glass header with its own shop button, a glowing product in front of giant words, a showcase of featured pieces each lit in its own colour, colours that change as you scroll, glowing cards on dark backgrounds |
 
 - **Colours:** 38 palettes, four to six made for each design (any works with any), or your own
   four colours: text; buttons and bands; accent; background (light or dark). Everything else
@@ -666,8 +666,13 @@ can be read at `http://localhost:4014/__test/messages`.
 
 **Settings › Homepage › Sections** reorders or hides the home page's sections (the design's
 order until you change it), including the **Spotlight** (featured collections, or else
-departments, one at a time with a pinned picture) and the **Statement** (the second banner's
-heading in giant letters behind its picture). The first banner can play a **video**: upload an
+departments, one at a time with a pinned picture), the **Statement** (the second banner's
+heading in giant letters behind its picture) and the **Showcase** (the store's featured pieces,
+then best sellers and new arrivals, those with a photo, lined up on a stage: the piece in front glows in its own colour, taken from its first
+swatch, with its name huge behind it, and the arrows, its dot, a swipe or a click on a neighbour
+bring the next one forward; the stage's colours always keep words readable, from
+`showcaseColors` in `src/lib/theme.ts`). Any design can show them. The first banner can play a
+**video**: upload an
 MP4 or WebM (up to 50 MB; 10 to 20 seconds at 1080p is plenty) or paste a link. It plays muted
 on a loop, with a pause button; the banner's picture shows until it can play, and instead of it
 for shoppers who ask for less motion or are on a slow or data-saving connection. Several
@@ -775,17 +780,17 @@ checklist and the dashboard's pointer to it, a shopper's order showing only in t
 admin, a payment going to the store's own Razorpay account with its own webhook secret, and
 suspending and reopening the store.
 
-**Theme and design tests (63 unit, 4 database, 6 Playwright)** cover the colour arithmetic; that
+**Theme and design tests (64 unit, 4 database, 6 Playwright)** cover the colour arithmetic; that
 every one of the 38 palettes keeps text, labels, secondary text, sale and error colours, fields
-and the words on buttons readable on every surface, and the Spotlight's changing backgrounds
-too; fonts' weights; that the eight designs differ in every part and suggest real palettes,
+and the words on buttons readable on every surface, and on the Spotlight's and the Showcase's
+changing backgrounds too, whatever colour a product is; fonts' weights; that the eight designs differ in every part and suggest real palettes,
 fonts and sections; mixed-in parts, motion and defaults; that new stores get different looks
 until the designs and palettes run out, and Shuffle always shows something new; the home page's
 own section order; store icons' initials; the database saving a new store's design and
 rejecting malformed names, taking banner films only from staff and nothing but pictures and
 videos, and the 360° switch (staff only) reaching the product page; and, in the browser, every
 design built its own way and accessible on its home, product and shop pages through **Preview on
-the store**, a forged preview link doing nothing and customers seeing the saved look meanwhile,
+the store** (Neon's Showcase turned with its arrows and dots), a forged preview link doing nothing and customers seeing the saved look meanwhile,
 an owner changing palette, fonts and design (and back), reordering the home page, the chat
 button and icon, a banner film uploaded, playing and pausing (and the photo instead for shoppers
 who ask for less motion), and a 360° view switched on in the editor and turned with the keys and
@@ -814,7 +819,7 @@ and the design tests on the home, product and shop pages of all eight designs, a
 a film and a product page with a 360° view. Automated checks
 don't replace testing with a keyboard and a screen reader.
 
-Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 86/86,
+Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 87/87,
 integration 93/93, Playwright 34/34 against the production build (`next build`), and the home,
 shop, product, bag, sign-in and collections pages of all eight designs checked at 360, 390, 768,
 1024 and 1280 px wide without horizontal scrolling. The update from the live database's version

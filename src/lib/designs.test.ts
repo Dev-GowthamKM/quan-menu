@@ -83,8 +83,9 @@ describe("designs", () => {
     expect(resolveDesign("cinema", { motion: "none" }).motion).toBe("none");
     expect(resolveDesign("atelier", { motion: "subtle" }).motion).toBe("subtle");
     expect(resolveDesign("atelier", { motion: "warp" }).motion).toBe("none");
-    // The scrolling sections belong to the cinematic designs.
+    // The scrolling sections belong to the cinematic designs, and Neon shows its pieces one at a time.
     for (const k of ["cinema", "neon"] as const) expect(DESIGNS[k].sections).toEqual(expect.arrayContaining(["spotlight", "statement"]));
+    expect(DESIGNS.neon.sections).toContain("showcase");
   });
 
   it("turns corners and buttons into radius tokens", () => {

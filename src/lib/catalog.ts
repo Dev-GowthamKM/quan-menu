@@ -258,6 +258,7 @@ export async function getHomeData() {
   const bestSellers = bestIds.length >= 4 ? await productCardsByIds(bestIds) : [];
   return {
     newArrivals: newArrivals.items,
+    featured: featured.items,
     bestSellers: bestSellers.length >= 4 ? bestSellers : featured.items,
     bestSellersAreFeatured: bestSellers.length < 4,
     brands: brands.filter((b) => b.is_featured),
