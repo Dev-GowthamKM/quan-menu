@@ -395,6 +395,94 @@
   }
 }
 
+/*
+ * The Rack (components/store/Rack.tsx): a rail the hangers hang from, which swing when touched,
+ * or a shelf the pieces stand on, which lift.
+ */
+.rack-bar {
+  border-radius: 999px;
+  background: linear-gradient(to bottom, color-mix(in oklab, var(--color-stone) 35%, var(--color-ivory)), var(--color-stone));
+  box-shadow: 0 3px 8px -3px rgb(0 0 0 / 0.45);
+}
+.rack-shelf {
+  background: linear-gradient(to bottom, var(--color-sand), color-mix(in oklab, var(--color-sand) 72%, var(--color-ink)));
+  box-shadow: 0 18px 28px -16px rgb(0 0 0 / 0.5);
+}
+.rack-hang {
+  transform-origin: 50% 0.4rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .rack-hang:hover,
+  .rack-hang:focus-visible {
+    animation: rack-sway 1.6s ease-in-out;
+  }
+  .rack-stand {
+    transition: translate 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .rack-stand:hover,
+  .rack-stand:focus-visible {
+    translate: 0 -10px;
+  }
+}
+@keyframes rack-sway {
+  20% { rotate: 4deg; }
+  45% { rotate: -3deg; }
+  70% { rotate: 1.5deg; }
+}
+
+/*
+ * The Aisle (components/store/Aisle.tsx): products along a shop's aisle in 3D, walked as the
+ * page scrolls (--cam, from the component). Its floor and shelving are drawn in the store's
+ * colours. Shoppers who ask for less motion get the products as a grid instead.
+ */
+.aisle {
+  --aisle-x: clamp(8.5rem, 25vw, 28rem);
+  --aisle-card: clamp(8rem, 18vw, 14.5rem);
+}
+.aisle-item {
+  width: var(--aisle-card);
+}
+.aisle-floor {
+  top: 0;
+  left: 0;
+  width: calc(2 * var(--aisle-x) + 3 * var(--aisle-card));
+  height: var(--aisle-len, 6000px);
+  transform-origin: 50% 0;
+  transform: translate3d(-50%, calc(var(--aisle-card) * 0.78 + 2.5rem), 700px) rotateX(-90deg);
+  background:
+    repeating-linear-gradient(to bottom, color-mix(in oklab, var(--color-ink) 9%, transparent) 0 3px, transparent 3px 260px),
+    linear-gradient(to right, color-mix(in oklab, var(--color-ink) 10%, transparent) 0 4px, transparent 4px calc(100% - 4px), color-mix(in oklab, var(--color-ink) 10%, transparent) calc(100% - 4px)),
+    var(--color-sand);
+}
+.aisle-wall {
+  top: 0;
+  left: 0;
+  width: var(--aisle-len, 6000px);
+  height: calc(var(--aisle-card) * 3.6);
+  transform-origin: 0 50%;
+  transform: translate3d(calc(var(--side) * (var(--aisle-x) + var(--aisle-card) * 0.7)), -50%, 700px) rotateY(90deg);
+  background:
+    repeating-linear-gradient(to right, color-mix(in oklab, var(--color-ink) 12%, transparent) 0 8px, transparent 8px 680px),
+    repeating-linear-gradient(to bottom, transparent 0 calc(25% - 12px), color-mix(in oklab, var(--color-sand) 75%, var(--color-ink)) calc(25% - 12px) 25%),
+    linear-gradient(to bottom, var(--color-paper), var(--color-bone));
+}
+.aisle-fog {
+  background:
+    radial-gradient(ellipse 26% 22% at 50% 42%, var(--color-bone) 0%, color-mix(in oklab, var(--color-bone) 75%, transparent) 45%, transparent 100%),
+    linear-gradient(to bottom, var(--color-bone), transparent 16%, transparent 84%, var(--color-bone));
+}
+.aisle-still {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aisle-still {
+    display: grid;
+  }
+  .aisle-walk {
+    display: none;
+  }
+}
+
 /* Giant words filled with the brand's colours, glowing (Neon). */
 .wordmark-glow {
   background: linear-gradient(90deg, var(--color-brand), var(--color-accent));

@@ -210,6 +210,85 @@ test("cinematic designs open with a curtain once a visit, zoom the banner, raise
   await still.close();
 });
 
+test("a rail brings a piece forward, an aisle walks past the products, and moving bands and numbers tell the rest", async ({ page, context, browser }) => {
+  test.setTimeout(180_000);
+  await page.goto("/admin/settings?tab=appearance");
+
+  // Neon: the promises on moving bands, the pieces on a rail, the store in numbers.
+  const neon = await preview(page, context, "Neon");
+  await expect(neon.locator("html")).toHaveClass(/intro-seen/);
+  const band = neon.getByRole("region", { name: "What we promise" });
+  await expect(band.getByRole("listitem").first()).toHaveText(/\S/);
+  const rail = neon.getByRole("region", { name: "Take your pick" });
+  const pieces = rail.getByRole("button", { name: /: take a closer look$/ });
+  await rail.scrollIntoViewIfNeeded();
+  const name = (await pieces.nth(1).getAttribute("aria-label"))!.replace(/: take a closer look$/, "");
+  await pieces.nth(1).click();
+  const look = neon.getByRole("dialog", { name });
+  await expect(look.getByRole("heading", { name })).toBeVisible();
+  await expect(look.getByRole("link", { name: "Shop now" })).toHaveAttribute("href", /^\/products\//);
+  // Its back, where it has a second photo, and the next piece without going back to the rail.
+  const back = look.getByRole("button", { name: "Back", exact: true });
+  if (await back.count()) {
+    await back.click();
+    await expect(back).toHaveAttribute("aria-pressed", "true");
+  }
+  await expectAccessible(neon, "Neon: a piece brought forward from the rail");
+  await look.getByRole("button", { name: "Next piece" }).click();
+  await expect(neon.getByRole("dialog").getByRole("heading", { level: 2 })).not.toHaveText(name);
+  await neon.keyboard.press("Escape");
+  await expect(neon.getByRole("dialog")).toHaveCount(0);
+  // Back on the rail, at the piece last looked at.
+  await expect(pieces.nth(2)).toBeFocused();
+  const numbers = neon.getByRole("region", { name: "By the numbers" });
+  await numbers.scrollIntoViewIfNeeded();
+  await expect(numbers.locator("dd").first()).toContainText(/\d/);
+  await expect(numbers.locator("dt").first()).toHaveText(/to choose from/);
+  await expectAccessible(neon, "Neon: bands, rail and numbers");
+  await neon.close();
+
+  // Cinema: the aisle, walked by scrolling, naming the next piece on the way.
+  const cinema = await preview(page, context, "Cinema");
+  const aisle = cinema.getByRole("region", { name: "Walk the aisle" });
+  await expect(aisle.getByRole("link", { name: /^01 \/ \d\d/ })).toBeAttached();
+  await aisle.evaluate((el: HTMLElement) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY + el.offsetHeight * 0.55));
+  await expect(aisle.getByRole("link", { name: /^\d\d \/ \d\d/ })).toBeVisible();
+  await expect(aisle.getByRole("link", { name: /^01 \/ \d\d/ })).toHaveCount(0);
+  await expect(aisle.getByRole("link", { name: "Shop all" })).toBeAttached();
+  await expectAccessible(cinema, "Cinema: the aisle");
+  await cinema.close();
+
+  // Shoppers who ask for less motion get the aisle's products as a grid, still.
+  const still = await browser.newContext({ reducedMotion: "reduce", storageState: OWNER.state });
+  const quiet = await still.newPage();
+  await quiet.goto("/admin/settings?tab=appearance");
+  const calm = await preview(quiet, still, "Cinema");
+  const stillAisle = calm.getByRole("region", { name: "Walk the aisle" });
+  await expect(stillAisle.locator(".aisle-walk")).toBeHidden();
+  await expect(stillAisle.locator(".aisle-still article").first()).toBeVisible();
+  await still.close();
+});
+
+test("the store's own numbers, set in Settings › Homepage", async ({ page }) => {
+  const { data: before } = await db().from("store_settings").select("homepage").eq("id", 1).single();
+  try {
+    await page.goto("/admin/settings?tab=homepage");
+    await page.getByLabel("Show Numbers: your store in figures, counting up (your own below, or the store's)").check();
+    await page.getByRole("button", { name: "Add a number" }).click();
+    await page.getByLabel("Number 1").fill("12,000+");
+    await page.getByLabel("What it counts").fill("happy customers");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Settings saved.").first()).toBeVisible();
+    await page.goto("/");
+    const numbers = page.getByRole("region", { name: "By the numbers" });
+    await numbers.scrollIntoViewIfNeeded();
+    await expect(numbers.getByText("happy customers")).toBeVisible();
+    await expect(numbers.locator("dd")).toContainText("12,000+");
+  } finally {
+    await db().from("store_settings").update({ homepage: before!.homepage }).eq("id", 1);
+  }
+});
+
 test("the home page follows the store's own order of sections", async ({ page }) => {
   const { data: before } = await db().from("store_settings").select("homepage").eq("id", 1).single();
   try {

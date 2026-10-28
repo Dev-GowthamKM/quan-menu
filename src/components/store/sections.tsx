@@ -540,3 +540,38 @@ export function Statement({ heading, image, href, label, glow }: { heading: stri
     </section>
   );
 }
+
+/**
+ * The store's promises in big type on two bands crossing the page, sliding past in opposite
+ * directions (as the announcement bar's marquee does, larger). Still for shoppers who ask for
+ * less motion; screen readers get the promises once, as a list.
+ */
+export function PromiseBand({ words }: { words: string[] }) {
+  if (!words.length) return null;
+  // Each half of a band is the promises twice over, so it always covers the widest screen.
+  const half = [...words, ...words];
+  const run = (sep: string) =>
+    [0, 1].map((k) => (
+      <span key={k} className="flex shrink-0 items-center">
+        {half.map((w, i) => (
+          <span key={i} className="flex items-center">
+            <span className="px-[0.45em]">{w}</span>
+            <span className="text-[0.6em] opacity-70">{sep}</span>
+          </span>
+        ))}
+      </span>
+    ));
+  return (
+    <section aria-label="What we promise" className="relative mt-20 overflow-hidden py-8 md:mt-28 md:py-12">
+      <ul className="sr-only">
+        {words.map((w) => <li key={w}>{w}</li>)}
+      </ul>
+      <div aria-hidden className="relative z-10 -mx-4 -rotate-2 bg-brand py-3 text-on-brand shadow-lg md:py-4">
+        <div className="flex w-max animate-marquee font-serif text-[clamp(1.6rem,4.6vw,3.75rem)] leading-none whitespace-nowrap [--marquee-duration:46s]">{run("✦")}</div>
+      </div>
+      <div aria-hidden className="relative -mx-4 -mt-3 rotate-[1.5deg] border-y border-line bg-paper py-2.5 md:-mt-4 md:py-3">
+        <div className="flex w-max animate-marquee text-[11px] font-medium tracking-[0.3em] whitespace-nowrap uppercase [--marquee-duration:60s] [animation-direction:reverse]">{run("·")}</div>
+      </div>
+    </section>
+  );
+}

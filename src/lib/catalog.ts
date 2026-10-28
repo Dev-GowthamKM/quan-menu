@@ -259,6 +259,9 @@ export async function getHomeData() {
   return {
     newArrivals: newArrivals.items,
     featured: featured.items,
+    /** How many products are on sale, and how many brands the store has, for the Numbers section. */
+    productCount: newArrivals.total,
+    brandCount: brands.length,
     bestSellers: bestSellers.length >= 4 ? bestSellers : featured.items,
     bestSellersAreFeatured: bestSellers.length < 4,
     brands: brands.filter((b) => b.is_featured),

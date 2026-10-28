@@ -41,7 +41,7 @@ export type AnnouncementStyle = "band" | "slim" | "marquee";
 export type GalleryStyle = "thumbs" | "stack" | "grid";
 
 /** Homepage sections, in the order a design shows them unless the store reorders them. */
-export const SECTION_KEYS = ["hero", "trust", "departments", "new", "promos", "best", "seasonal", "collections", "brands", "campaign", "spotlight", "statement", "showcase", "story", "recommended", "newsletter"] as const;
+export const SECTION_KEYS = ["hero", "trust", "departments", "new", "promos", "best", "seasonal", "collections", "brands", "campaign", "spotlight", "statement", "showcase", "rack", "aisle", "marquee", "numbers", "story", "recommended", "newsletter"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 export const SECTION_LABELS: Record<SectionKey, string> = {
@@ -58,6 +58,10 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
   spotlight: "Spotlight: your collections, one by one as you scroll",
   statement: "Statement: big words with a photo (the second banner, or your tagline)",
   showcase: "Showcase: your featured pieces one at a time, each lit in its own colour",
+  rack: "The rail: your pieces on hangers (on a shelf, for goods that don't hang), each brought forward with a tap",
+  aisle: "The aisle: walk past your products as you scroll, as down a shop's aisle",
+  marquee: "Moving band: your promises in big type, crossing the page",
+  numbers: "Numbers: your store in figures, counting up (your own below, or the store's)",
   story: "Your story (from Policies › About)",
   recommended: "Recommended for each shopper",
   newsletter: "Newsletter sign-up",
@@ -269,7 +273,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingTracking: "-0.01em",
     motion: "cinematic",
     intro: "name",
-    sections: ["hero", "statement", "spotlight", "new", "departments", "best", "story", "recommended"],
+    sections: ["hero", "statement", "spotlight", "new", "aisle", "departments", "best", "story", "numbers", "recommended"],
     palettes: ["linen", "stone", "sandstone", "mist"],
     headings: ["bodoni", "cormorant", "italiana", "fraunces"],
     bodies: ["inter", "manrope", "figtree", "work-sans"],
@@ -295,7 +299,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingWeight: 800,
     motion: "cinematic",
     intro: "name",
-    sections: ["hero", "showcase", "departments", "spotlight", "statement", "new", "brands", "recommended"],
+    sections: ["hero", "showcase", "marquee", "departments", "rack", "spotlight", "statement", "new", "numbers", "brands", "recommended"],
     palettes: ["ultraviolet", "cyber", "magma", "toxic"],
     headings: ["archivo", "unbounded", "syne", "bricolage"],
     bodies: ["inter", "dm-sans", "figtree", "outfit"],

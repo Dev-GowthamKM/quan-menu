@@ -85,6 +85,10 @@ payment account and web address, and the platform's administrators create them f
   and a product can be shown as a 360° view the shopper turns by dragging. Nothing moves for
   shoppers whose device asks for less motion, and films give way to the photo on slow or
   data-saving connections.
+- Home page sections in the manner of today's most talked-about shop sites: pieces hanging on a
+  clothes rail (standing on a shelf, for goods that don't hang), each brought forward with a tap
+  and turned to see its back; an aisle the shopper walks down by scrolling, past products on both
+  sides; the store's promises in big type on moving bands; and its figures counting up.
 - An announcement bar whose messages take turns (or scroll past), an add-to-bag bar that stays in
   reach on phones, free-delivery progress in the bag, an optional WhatsApp "Chat with us" button,
   and each store's own icon in browser tabs.
@@ -688,8 +692,8 @@ can be read at `http://localhost:4014/__test/messages`.
   | Boutique | Soft: rounded shapes, round category bubbles, pastel colours, a rounded banner with a card |
   | Heritage | Traditional: arched frames, ornaments, jewel tones and classical capitals, the store's story on the home page |
   | Noir | Dark: a see-through header over a full-screen photograph, a full-screen menu, cards with words on the photo |
-  | Cinema | Cinematic and calm: a floating header over a full-screen film or photograph, big serif lines, a pinned Spotlight, departments as full-width scenes, tall gallery cards |
-  | Neon | Electric: a glass header with its own shop button, a glowing product in front of giant words, a showcase of featured pieces each lit in its own colour, colours that change as you scroll, glowing cards on dark backgrounds |
+  | Cinema | Cinematic and calm: a floating header over a full-screen film or photograph, big serif lines, a pinned Spotlight, an aisle to walk down, departments as full-width scenes, tall gallery cards, the store in numbers |
+  | Neon | Electric: a glass header with its own shop button, a glowing product in front of giant words, a showcase of featured pieces each lit in its own colour, promises on moving bands, pieces on a rail, colours that change as you scroll, glowing cards on dark backgrounds |
 
 - **Colours:** 38 palettes, four to six made for each design (any works with any), or your own
   four colours: text; buttons and bands; accent; background (light or dark). Everything else
@@ -728,7 +732,26 @@ heading in giant letters behind its picture) and the **Showcase** (the store's f
 then best sellers and new arrivals, those with a photo, lined up on a stage: the piece in front glows in its own colour, taken from its first
 swatch, with its name huge behind it, and the arrows, its dot, a swipe or a click on a neighbour
 bring the next one forward; the stage's colours always keep words readable, from
-`showcaseColors` in `src/lib/theme.ts`). Any design can show them. The first banner can play a
+`showcaseColors` in `src/lib/theme.ts`), and four more:
+
+- **The rail** (`Rack.tsx`): new arrivals hanging on a clothes rail, each on its hanger, which
+  swings when the pointer touches it; for stores whose goods don't hang (see
+  [Store types](#store-types)) they stand on a shelf instead. A tap brings a piece forward, large,
+  with the rest of the page blurred behind it: **Front** and **Back** turn it to its second photo,
+  the arrows go on to the next piece and Escape (or the cross) goes back to the rail.
+- **The aisle** (`Aisle.tsx`): best sellers and new arrivals along both sides of a shop's aisle,
+  drawn in 3D in the store's colours. Scrolling walks down it, a label at the bottom names the
+  next piece and its price, and the aisle ends at a way into the shop. Every piece is a link, and
+  reaching one with the keyboard walks up to it; shoppers who ask for less motion get the same
+  products as a grid.
+- **Moving band** (`PromiseBand` in `sections.tsx`): the store's promises (delivery, returns,
+  cash on delivery, secure payments) and tagline in big type on two bands crossing the page,
+  sliding in opposite directions.
+- **Numbers** (`Numbers.tsx`): up to four figures that count up when the shopper reaches them.
+  **Settings › Homepage › Numbers** sets them ("12,000+" "happy customers"); without them the
+  store's own: products on sale, brands, days to return and the free-delivery threshold.
+
+Any design can show them. The first banner can play a
 **video**: upload an
 MP4 or WebM (up to 50 MB; 10 to 20 seconds at 1080p is plenty) or paste a link. It plays muted
 on a loop, with a pause button; the banner's picture shows until it can play, and instead of it
@@ -837,20 +860,24 @@ checklist and the dashboard's pointer to it, a shopper's order showing only in t
 admin, a payment going to the store's own Razorpay account with its own webhook secret, and
 suspending and reopening the store.
 
-**Theme and design tests (65 unit, 4 database, 7 Playwright)** cover the colour arithmetic; that
+**Theme and design tests (68 unit, 4 database, 9 Playwright)** cover the colour arithmetic; that
 every one of the 38 palettes keeps text, labels, secondary text, sale and error colours, fields
 and the words on buttons readable on every surface, and on the Spotlight's and the Showcase's
 changing backgrounds too, whatever colour a product is; fonts' weights; that the eight designs differ in every part and suggest real palettes,
 fonts and sections; mixed-in parts, motion, openings and defaults; that new stores get different looks
 until the designs and palettes run out, and Shuffle always shows something new; the home page's
-own section order; store icons' initials; the database saving a new store's design and
+own section order; store icons' initials; figures counting up in their own format (prefix,
+grouping, decimals and suffix kept); the database saving a new store's design and
 rejecting malformed names, taking banner films only from staff and nothing but pictures and
 videos, and the 360° switch (staff only) reaching the product page; and, in the browser, every
 design built its own way and accessible on its home, product and shop pages through **Preview on
 the store** (Neon's Showcase turned with its arrows and dots), a forged preview link doing nothing and customers seeing the saved look meanwhile,
 a cinematic store's opening curtain (once a visit, lifted by a tap, never for shoppers who ask
 for less motion), its banner zooming as the page scrolls, headlines rising line by line and the
-Spotlight's dots,
+Spotlight's dots, Neon's moving bands, a piece brought forward from its rail (turned to its back,
+on to the next, back to the rail with the keyboard where it left off) and its numbers, Cinema's
+aisle naming the next piece as it's walked (a grid instead for shoppers who ask for less
+motion), an owner's own numbers on the home page,
 an owner changing palette, fonts and design (and back), reordering the home page, the chat
 button and icon, a banner film uploaded, playing and pausing (and the photo instead for shoppers
 who ask for less motion), and a 360° view switched on in the editor and turned with the keys and

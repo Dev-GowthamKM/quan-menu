@@ -86,6 +86,10 @@ describe("designs", () => {
     // The scrolling sections belong to the cinematic designs, and Neon shows its pieces one at a time.
     for (const k of ["cinema", "neon"] as const) expect(DESIGNS[k].sections).toEqual(expect.arrayContaining(["spotlight", "statement"]));
     expect(DESIGNS.neon.sections).toContain("showcase");
+    // The reel's sections: Neon hangs its pieces on a rail between moving bands and counts its figures; Cinema walks an aisle.
+    expect(DESIGNS.neon.sections).toEqual(expect.arrayContaining(["rack", "marquee", "numbers"]));
+    expect(DESIGNS.cinema.sections).toEqual(expect.arrayContaining(["aisle", "numbers"]));
+    expect(DESIGNS.atelier.sections).not.toContain("aisle");
   });
 
   it("open with the store's name only where they move, and only if the store wants it", () => {

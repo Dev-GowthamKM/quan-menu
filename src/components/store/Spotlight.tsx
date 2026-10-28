@@ -40,7 +40,7 @@ export default function Spotlight({ chapters, colors }: { chapters: Chapter[]; c
   return (
     <section aria-label="Spotlight" className="relative mt-20 transition-colors duration-700 motion-reduce:transition-none md:mt-28" style={{ backgroundColor: colors[active] }}>
       <nav aria-label="Spotlight chapters" className="pointer-events-none absolute inset-y-0 right-3 z-10 hidden lg:block xl:right-6">
-        <ol className="pointer-events-auto sticky top-[50svh] flex -translate-y-1/2 flex-col items-center gap-1">
+        <ol className="pointer-events-auto sticky top-[42svh] flex flex-col items-center gap-1">
           {chapters.map((c, i) => (
             <li key={c.href}>
               <button type="button" onClick={() => goTo(i)} aria-label={`${c.title}, ${i + 1} of ${chapters.length}`} aria-current={i === active ? "step" : undefined} className="group grid min-h-6 w-6 place-items-center py-1">

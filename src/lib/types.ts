@@ -44,6 +44,8 @@ export interface Homepage {
   promos?: Promo[];
   /** The store's own order of home page sections (lib/designs.ts); without it, the design's. */
   sections?: { key: string; on: boolean }[];
+  /** The Numbers section's figures ("12,000+", "happy customers"); without them, the store's own. */
+  stats?: { value: string; label: string }[];
 }
 
 export interface Policies {

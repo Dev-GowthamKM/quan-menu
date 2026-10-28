@@ -162,6 +162,7 @@ const SECTIONS = {
         cta_label: text(40).optional(), cta_href: link.optional(), sample: z.boolean().optional(),
       })).max(6),
       sections: z.array(z.object({ key: z.enum(SECTION_KEYS), on: z.boolean() })).max(SECTION_KEYS.length).optional(),
+      stats: z.array(z.object({ value: z.string().trim().min(1, "Give each number a figure.").max(16), label: z.string().trim().min(1, "Give each number a label.").max(60) })).max(4).optional(),
     }),
   }),
   checkout: z.object({

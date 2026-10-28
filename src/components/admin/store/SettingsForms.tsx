@@ -350,7 +350,8 @@ function sectionList(design: Design, saved: Homepage["sections"]): { key: Sectio
 export function HomepageForm({ s, design }: { s: StoreSettings; design: Design }) {
   const { pending, error, save } = useSave("homepage");
   const initial = (s.homepage ?? {}) as Homepage;
-  const [v, setV] = useState<Omit<Required<Homepage>, "sections">>({ announcement: initial.announcement ?? "", hero: initial.hero ?? [], promos: initial.promos ?? [] });
+  const [v, setV] = useState<Omit<Required<Homepage>, "sections">>({ announcement: initial.announcement ?? "", hero: initial.hero ?? [], promos: initial.promos ?? [], stats: initial.stats ?? [] });
+  const setStat = (i: number, p: Partial<{ value: string; label: string }>) => setV({ ...v, stats: v.stats.map((x, j) => (j === i ? { ...x, ...p } : x)) });
   // null: the design's own order (it changes with the design); a list once the store arranges its own.
   const [order, setOrder] = useState<{ key: SectionKey; on: boolean }[] | null>(initial.sections?.length ? sectionList(design, initial.sections) : null);
   const sections = order ?? sectionList(design, undefined);
@@ -362,12 +363,12 @@ export function HomepageForm({ s, design }: { s: StoreSettings; design: Design }
     next.splice(Math.max(0, Math.min(next.length, i + d)), 0, x);
     return next;
   };
-  const valid = () => [...v.hero, ...v.promos].every((x) => x.image_url && x.heading.trim());
+  const valid = () => [...v.hero, ...v.promos].every((x) => x.image_url && x.heading.trim()) && v.stats.every((x) => x.value.trim() && x.label.trim());
   return (
     <Form
       onSubmit={() => (valid() ? save({ homepage: { ...v, ...(order ? { sections: order } : {}) } }) : undefined)}
       pending={pending}
-      error={error ?? (valid() ? null : "Every banner needs an image and a heading.")}
+      error={error ?? (valid() ? null : "Every banner needs an image and a heading, and every number a figure and what it counts.")}
       note="Departments, new arrivals, best sellers, brands and collections fill in from your catalog."
     >
       <Card title="Announcement bar">
@@ -407,6 +408,23 @@ export function HomepageForm({ s, design }: { s: StoreSettings; design: Design }
             </li>
           ))}
         </ol>
+      </Card>
+      <Card
+        title="Numbers"
+        actions={v.stats.length < 4 && <button type="button" className="inline-flex items-center gap-1 text-xs underline" onClick={() => setV({ ...v, stats: [...v.stats, { value: "", label: "" }] })}><PlusIcon size={11} /> Add a number</button>}
+      >
+        <p className="mb-3 text-sm text-taupe">
+          For the Numbers section, which counts each figure up as shoppers reach it. Without your own, it shows the store&apos;s: products on sale, brands, days to return and free delivery.
+        </p>
+        <div className="grid gap-3">
+          {v.stats.map((st, i) => (
+            <div key={i} className="grid items-end gap-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto]">
+              <TextField label={`Number ${i + 1}`} value={st.value} onChange={(e) => setStat(i, { value: e.target.value })} maxLength={16} placeholder="12,000+" />
+              <TextField label="What it counts" value={st.label} onChange={(e) => setStat(i, { label: e.target.value })} maxLength={60} placeholder="happy customers" />
+              <button type="button" className="pb-2 text-xs text-red-700 underline" onClick={() => setV({ ...v, stats: v.stats.filter((_, j) => j !== i) })}>Remove</button>
+            </div>
+          ))}
+        </div>
       </Card>
       <Card title="Hero campaign" actions={v.hero.length < 6 && <button type="button" className="inline-flex items-center gap-1 text-xs underline" onClick={() => setV({ ...v, hero: [...v.hero, { ...blankSlide }] })}><PlusIcon size={11} /> Add slide</button>}>
         {v.hero.length === 0 && <p className="text-sm text-stone">No hero slides. The homepage starts with your departments.</p>}

@@ -1,5 +1,8 @@
 import { Fragment, type ReactNode } from "react";
+import Aisle from "@/components/store/Aisle";
 import NewsletterForm from "@/components/store/NewsletterForm";
+import Numbers, { type Figure } from "@/components/store/Numbers";
+import Rack from "@/components/store/Rack";
 import RecentlyViewed from "@/components/store/RecentlyViewed";
 import Showcase from "@/components/store/Showcase";
 import Hero from "@/components/store/heroes";
@@ -12,16 +15,19 @@ import {
   NewsletterSection,
   ProductGrid,
   ProductRail,
+  PromiseBand,
   PromoGrid,
   SectionHeader,
   SeasonalFeature,
   Statement,
   StorySection,
   TrustStrip,
+  trustPoints,
 } from "@/components/store/sections";
 import { getHomeData } from "@/lib/catalog";
 import { homeSections, type SectionKey } from "@/lib/designs";
 import { storefrontLook } from "@/lib/look";
+import { formatMoney } from "@/lib/money";
 import { getSettings, homepageOf, socialOf } from "@/lib/settings";
 import { storeKind } from "@/lib/store-types";
 import { excerpt, jsonLd } from "@/lib/seo";
@@ -86,11 +92,22 @@ export default async function Home() {
       : data.departments.map((d) => ({ title: d.name, text: d.description ? excerpt(d.description, 180) : null, image: d.image_url, href: `/category/${d.slug}`, eyebrow: "Department" }))
   ).slice(0, 4);
   const statementImage = campaign?.image_url || home.promos?.[0]?.image_url || data.departments[0]?.image_url || null;
-  // The Showcase: the store's featured pieces, then best sellers and new arrivals, those with a
-  // picture; each is lit in its first colour.
-  const showcase = [...data.featured, ...data.bestSellers, ...data.newArrivals]
-    .filter((p, i, all) => p.image_url && all.findIndex((q) => q.id === p.id) === i)
-    .slice(0, 8);
+  // Products with a picture, each once, in the order given.
+  const pictured = (...lists: (typeof data.featured)[]) => lists.flat().filter((p, i, all) => p.image_url && all.findIndex((q) => q.id === p.id) === i);
+  // The Showcase: the store's featured pieces, then best sellers and new arrivals; each is lit in
+  // its first colour. The rail starts from what's new, the aisle from what sells.
+  const showcase = pictured(data.featured, data.bestSellers, data.newArrivals).slice(0, 8);
+  const rack = pictured(data.newArrivals, data.featured).slice(0, 10);
+  const aisle = pictured(data.bestSellers, data.newArrivals, data.featured).slice(0, 12);
+  // Numbers: the store's own, or what its catalog and promises say.
+  const figures: Figure[] = home.stats?.length
+    ? home.stats
+    : [
+        data.productCount > 0 && { value: data.productCount.toLocaleString("en-IN"), label: `${kind.many} to choose from` },
+        data.brandCount > 1 && { value: String(data.brandCount), label: "brands" },
+        settings.return_window_days > 0 && { value: String(settings.return_window_days), label: "days to change your mind" },
+        !!settings.free_shipping_threshold && { value: formatMoney(settings.free_shipping_threshold, settings.currency), label: "and over, delivered free" },
+      ].filter((f): f is Figure => !!f);
 
   // Every section the home page can show; the design (or the store's own arrangement in
   // Settings › Homepage) decides which appear, and in what order.
@@ -141,6 +158,14 @@ export default async function Home() {
           colors={showcaseColors(look.colors, showcase.map((p) => p.swatches?.[0]?.hex))}
         />
       ),
+    rack: () =>
+      rack.length >= 3 && (
+        <Rack eyebrow={kind.display === "hangers" ? "On the rail" : "On the shelf"} title="Take your pick" products={rack} display={kind.display} />
+      ),
+    aisle: () => aisle.length >= 4 && <Aisle eyebrow="Scroll to look around" title="Walk the aisle" products={aisle} />,
+    marquee: () => <PromiseBand words={[...trustPoints(settings).map((p) => p.title), settings.tagline].filter(Boolean)} />,
+    // Figures the owner set show however few they are; figures worked out from the store need two.
+    numbers: () => figures.length >= (home.stats?.length ? 1 : 2) && <Numbers title="By the numbers" figures={figures} />,
     statement: () => (
       <Statement
         heading={campaign?.heading || settings.tagline || settings.store_name}
