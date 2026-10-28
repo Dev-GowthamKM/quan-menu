@@ -30,13 +30,8 @@ export interface ColorOption {
   hex: string | null;
 }
 
-const SIZE_PRESETS: { label: string; sizes: string[] }[] = [
-  { label: "XS – XL", sizes: ["XS", "S", "M", "L", "XL"] },
-  { label: "S – XXL", sizes: ["S", "M", "L", "XL", "XXL"] },
-  { label: "Waist 28 – 38", sizes: ["28", "30", "32", "34", "36", "38"] },
-  { label: "UK 3 – 9", sizes: ["UK 3", "UK 4", "UK 5", "UK 6", "UK 7", "UK 8", "UK 9"] },
-  { label: "Free size", sizes: ["Free Size"] },
-];
+/** "Size" -> "Sizes", "Finish" -> "Finishes", "Pack size" -> "Pack sizes". */
+const plural = (word: string) => (/(s|sh|ch|x|z)$/i.test(word) ? `${word}es` : `${word}s`);
 
 export const COLOR_PRESETS: Record<string, string> = {
   black: "#111111", white: "#ffffff", ivory: "#f4efe6", cream: "#efe6d2", ecru: "#e9e0cc", beige: "#d9c7a7", sand: "#d8c3a0",
@@ -74,7 +69,7 @@ export function newVariant(patch: Partial<VariantRow>): VariantRow {
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 export default function VariantsEditor({
-  variants, onChange, sizes, colors, onOptions, skuPrefix, onSkuPrefix, conflicts, onCheckSkus, lowStockDefault,
+  variants, onChange, sizes, colors, onOptions, skuPrefix, onSkuPrefix, conflicts, onCheckSkus, lowStockDefault, names, sizeSets,
 }: {
   variants: VariantRow[];
   onChange: (next: VariantRow[]) => void;
@@ -86,6 +81,10 @@ export default function VariantsEditor({
   conflicts: Record<string, string>;
   onCheckSkus: () => void;
   lowStockDefault: number;
+  /** What the two options are called (lib/store-types.ts optionNames): size and colour, pack size and flavour... */
+  names: { size: string; color: string };
+  /** Ready-made sets of sizes for the store's kind of products. */
+  sizeSets: { label: string; sizes: string[] }[];
 }) {
   const [more, setMore] = useState(false);
   const [fill, setFill] = useState({ stock: "", price: "" });
@@ -189,9 +188,9 @@ export default function VariantsEditor({
     <div className="grid gap-5">
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <ChipsInput id="opt-sizes" label="Sizes" values={sizes} onChange={setSizes} placeholder="Type a size and press Enter" maxLength={30} />
+          <ChipsInput id="opt-sizes" label={plural(names.size)} values={sizes} onChange={setSizes} placeholder={`Type a ${names.size.toLowerCase()} and press Enter`} maxLength={30} />
           <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs">
-            {SIZE_PRESETS.map((p) => (
+            {sizeSets.map((p) => (
               <button key={p.label} type="button" className="rounded border border-black/10 px-1.5 py-0.5 text-taupe hover:border-black/30 hover:text-ink" onClick={() => setSizes([...sizes, ...p.sizes.filter((s) => !sizes.some((x) => same(x, s)))])}>
                 + {p.label}
               </button>
@@ -199,7 +198,14 @@ export default function VariantsEditor({
           </div>
         </div>
         <div>
-          <ChipsInput id="opt-colors" label="Colours" values={colors.map((c) => c.name)} onChange={setColorNames} placeholder="Type a colour and press Enter" suggestions={Object.keys(COLOR_PRESETS).map((c) => c[0].toUpperCase() + c.slice(1))} />
+          <ChipsInput
+            id="opt-colors"
+            label={plural(names.color)}
+            values={colors.map((c) => c.name)}
+            onChange={setColorNames}
+            placeholder={`Type a ${names.color.toLowerCase()} and press Enter`}
+            suggestions={Object.keys(COLOR_PRESETS).map((c) => c[0].toUpperCase() + c.slice(1))}
+          />
           {colors.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {colors.map((c) => (

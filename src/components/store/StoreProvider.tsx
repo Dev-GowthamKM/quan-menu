@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { toggleWishlist } from "@/server/account";
 import { addToCart as addAction, getCart, updateCartItem } from "@/server/cart";
 import { formatMoney } from "@/lib/money";
+import { storeKind, type StoreKind } from "@/lib/store-types";
 import type { AppRole, CartQuote } from "@/lib/types";
 import CatalogImage from "../ui/CatalogImage";
 import { buttonClass, cx, Spinner } from "../ui/controls";
@@ -36,6 +37,8 @@ interface StoreContext {
   toggleWish: (productId: string) => Promise<void>;
   toast: (text: string, tone?: Toast["tone"]) => void;
   currency: string;
+  /** What the store sells: its words and the names of a product's options (lib/store-types.ts). */
+  kind: StoreKind;
 }
 
 const Ctx = createContext<StoreContext | null>(null);
@@ -46,7 +49,8 @@ export function useStore() {
   return ctx;
 }
 
-export default function StoreProvider({ currency, children }: { currency: string; children: ReactNode }) {
+export default function StoreProvider({ currency, storeType, children }: { currency: string; storeType?: string; children: ReactNode }) {
+  const kind = useMemo(() => storeKind(storeType), [storeType]);
   const router = useRouter();
   const pathname = usePathname();
   const [session, setSession] = useState<Session | null>(null);
@@ -156,14 +160,15 @@ export default function StoreProvider({ currency, children }: { currency: string
       toggleWish,
       toast,
       currency,
+      kind,
     }),
-    [session, cart, openCart, refreshCart, addItem, setQuantity, wished, toggleWish, toast, currency],
+    [session, cart, openCart, refreshCart, addItem, setQuantity, wished, toggleWish, toast, currency, kind],
   );
 
   return (
     <Ctx.Provider value={value}>
       {children}
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} setQuantity={setQuantity} />
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} setQuantity={setQuantity} kind={kind} />
       <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-4 z-[60] flex flex-col items-center gap-2 px-4">
         {toasts.map((t) => (
           <div
@@ -187,11 +192,13 @@ function CartDrawer({
   onClose,
   cart,
   setQuantity,
+  kind,
 }: {
   open: boolean;
   onClose: () => void;
   cart: CartQuote | null;
   setQuantity: (variantId: string, quantity: number) => Promise<boolean>;
+  kind: StoreKind;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const change = async (variantId: string, quantity: number) => {
@@ -242,7 +249,7 @@ function CartDrawer({
       ) : empty ? (
         <div className="px-6 py-20 text-center">
           <p className="font-serif text-2xl">Your bag is empty</p>
-          <p className="mt-2 text-sm text-taupe">Discover new arrivals and pieces made to last.</p>
+          <p className="mt-2 text-sm text-taupe">{kind.words.emptyBag}</p>
           <Link href="/shop" onClick={onClose} className={buttonClass("primary", "md", "mt-6")}>Start shopping</Link>
         </div>
       ) : (
@@ -255,7 +262,7 @@ function CartDrawer({
               <div className="min-w-0 flex-1 text-sm">
                 <p className="label-caps text-stone">{line.brand}</p>
                 <Link href={`/products/${line.slug}`} onClick={onClose} className="mt-0.5 block truncate hover:underline">{line.title}</Link>
-                <p className="mt-0.5 text-xs text-taupe">{[line.color, line.size && `Size ${line.size}`].filter(Boolean).join(" · ")}</p>
+                <p className="mt-0.5 text-xs text-taupe">{[line.color, line.size && `${kind.options.size} ${line.size}`].filter(Boolean).join(" · ")}</p>
                 {line.issue && <p className="mt-1 text-xs text-sale">{line.issue === "insufficient_stock" ? `Only ${line.available} left` : "No longer available"}</p>}
                 <div className="mt-2 flex items-center justify-between">
                   <div className="flex items-center border border-line">

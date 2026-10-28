@@ -23,6 +23,7 @@ payment account and web address, and the platform's administrators create them f
 - [Run it locally](#run-it-locally)
 - [Set up the first owner](#set-up-the-first-owner)
 - [Stores](#stores)
+- [Store types](#store-types)
 - [Environment variables](#environment-variables)
 - [Deploy](#deploy)
 - [Payment providers](#payment-providers)
@@ -41,6 +42,12 @@ payment account and web address, and the platform's administrators create them f
 
 **Storefront** (`/`)
 
+- Stores of every kind, not just clothing: shoes and slippers, jewellery, beauty, pet supplies,
+  musical instruments, home, electronics, food, toys, books, or anything else. What a store sells
+  sets the words it uses ("Pairs we love", "Shop by pet", "Find your sound"), what a product's
+  options are called (size and colour; pack size and flavour; size and finish), what its details
+  are called (fabric and fit; ingredients and nutrition; specifications and what's in the box) and
+  the starter text and departments a new store begins with (see [Store types](#store-types)).
 - Homepage from the database: hero campaign, departments, new arrivals, best sellers, featured
   brands, seasonal and featured collections, promotional banners, recently viewed, newsletter.
 - Shop, category, brand and collection pages with filters (brand, size, colour, price, in stock,
@@ -90,8 +97,10 @@ payment account and web address, and the platform's administrators create them f
   feature, category, brand, prices, end sale, tags, collections, delete) and quick edit. Full editor
   with drafts, publishing and scheduled launches, image upload (drag and drop, resized in the
   browser, reorder, main image, alt text, per-colour images), pricing and sale prices, tax
-  override, sizes × colours variant generator with unique SKUs and per-variant prices and stock,
-  fabric/fit/care, weight and dimensions, returns, SEO with a search preview, preview on the store.
+  override, sizes × colours variant generator with unique SKUs and per-variant prices and stock
+  (each product can name its two options its own way, like pack size and flavour), the store's
+  kind of details (fabric/fit/care, ingredients, specifications...), weight and dimensions,
+  returns, SEO with a search preview, preview on the store.
 - CSV import and export: downloadable template, drag and drop the CSV with its images, a full
   check (dry run) with a row-by-row report before anything is saved, duplicate SKU detection,
   images matched by file name from the media library, batched saves with progress, and statuses
@@ -114,8 +123,9 @@ payment account and web address, and the platform's administrators create them f
   and COD limits, returns, reviews, policies, FAQ, SEO, email templates, WhatsApp templates,
   customer sign-in with mobile numbers, maintenance mode and sample data removal. Staff and
   roles. Audit log.
-- Stores (for the platform's administrators): create a store with its name, web address, owner
-  and starting look, empty or with the sample catalog to try it out; add or remove web addresses;
+- Stores (for the platform's administrators): create a store with its name, what it sells, web
+  address, owner and starting look, with departments for what it sells and, to try it out, the
+  sample catalog; add or remove web addresses;
   suspend and reopen it. A store switcher for anyone who works at more than one, and each store's
   own Razorpay account under **Settings › Payment accounts**.
 - Appearance: a gallery of the designs (each drawn in its colours), palettes and fonts, parts
@@ -239,6 +249,7 @@ All schema changes are SQL migrations in `supabase/migrations/` (run in order):
 | `20261025000100_store_starter` | Starter policies, FAQ and email templates for new stores, the one-click sample catalog, `app_schema_version()` |
 | `20261026000100_designs` | Each store's design and the parts it mixes in from others; font names checked by format, so adding a font needs no migration |
 | `20261027000100_motion` | Banner films: the catalog bucket also takes MP4 and WebM, up to 50 MB; `products.spin` for the 360° view, returned with the product page |
+| `20261028000100_store_types` | `store_settings.store_type` (what the store sells) and `products.option_names` (a product's own names for its options, staff only, returned with the product page); new stores start with departments and starter text for what they sell; the sample catalog files into departments a store already has |
 
 Every migration from `20261025000100` on ends by replacing `app_schema_version()` with its own
 version, so **Admin › Setup** can tell which updates a database is missing (older databases are
@@ -326,14 +337,17 @@ multi-store update ran; add others on the same page.
 
 **A new store:**
 
-1. **Admin › All stores › New store:** its name, the address customers will visit (a free
-   `name.vercel.app`, or your own domain), the owner's email (they need an account; leave it
-   empty to own it yourself) and a starting look: one no other store has (a design, palette and
-   fonts), with **Shuffle** for another or a design of your choice. It starts with a delivery
-   zone for all of India, Standard and Express rates, the usual couriers, sample policies, FAQ
-   and email templates to edit, and, if you tick **Start with the sample catalog**, a copy of the
-   sample products, brands, collections and discount codes (also on the store's page later, while
-   it has no products). Until something is on sale, its homepage says it is opening soon.
+1. **Admin › All stores › New store:** its name, what it sells (see [Store types](#store-types)),
+   the address customers will visit (a free `name.vercel.app`, or your own domain), the owner's
+   email (they need an account; leave it empty to own it yourself) and a starting look: one no
+   other store has (a design, palette and fonts), with **Shuffle** for another or a design of your
+   choice. It starts with a delivery zone for all of India, Standard and Express rates, the usual
+   couriers, sample policies, FAQ and email templates in the words of what it sells, to edit;
+   departments for what it sells (Dogs, Cats… for a pet shop), unless you untick them; and, if you
+   tick **Start with the sample catalog**, a copy of the sample clothing products, brands,
+   collections and discount codes (also on the store's page later, while it has no products),
+   filed under the departments it already has. Until something is on sale, its homepage says it
+   is opening soon.
 2. **Vercel › your project › Settings › Domains:** add the same address. With `VERCEL_API_TOKEN`
    and `VERCEL_PROJECT_ID` set, the app adds it for you. A `.vercel.app` name works straight away;
    your own domain also needs its DNS pointed at Vercel.
@@ -359,6 +373,36 @@ nothing is deleted and its staff can still sign in.
 
 Locally, stores can use addresses like `brand.localhost:3000` (browsers send any
 `*.localhost` name to your own computer).
+
+## Store types
+
+What a store sells is chosen when it's created and changed any time in **Settings › Store
+details › What the store sells** (`src/lib/store-types.ts`):
+
+| Type | Its words | A product's options | Its details |
+|---|---|---|---|
+| Clothing and fashion | Pieces we love · Find your fit | Size, Colour | Fabric & care, Fit |
+| Shoes and slippers | Pairs we love · Find your pair | Size (UK and EU sizes), Colour | Materials & care, Size & fit |
+| Jewellery and accessories | Pieces we love · Find your piece | Size, Finish | Materials & care, Size |
+| Beauty and personal care | Our favourites · Shop by need | Size (ml, g), Shade | Ingredients & care, How to use |
+| Pet supplies | Pet favourites · Shop by pet | Size (or packs by weight), Variant | Ingredients & care, Sizing & feeding |
+| Musical instruments | Instruments we love · Find your sound | Size (full, 3/4…), Finish | Specifications & care, Sound & playability |
+| Home and living | Pieces we love · Shop by room | Size (bed sizes too), Colour | Materials & care, Dimensions |
+| Electronics and gadgets | Top picks · Shop by category | Model (storage), Colour | Specifications & warranty, In the box |
+| Food and groceries | Customer favourites · Shop the aisles | Pack size, Flavour | Ingredients & storage, Nutrition |
+| Toys and kids | Favourites · Shop by age | Age, Colour | Materials & care, Age & safety |
+| Books and stationery | Staff picks · Browse the shelves | Format, Colour | Details, Format & size |
+| Something else | Our favourites · Shop by category | Size, Colour | Details & care, Size & fit |
+
+It also sets the newsletter's invitation, the line under a new store's banner, the bag's empty
+message, the review form's prompt, the sizes the product editor offers in one click, and, for a
+new store, the departments it starts with and its returns policy, About page and FAQ. A product
+can name its two options its own way (**First option is called** / **Second option is called**
+in the editor's Variants), for stores that sell more than one kind of thing: a pet shop's food in
+pack sizes and flavours beside its collars in sizes and colours. Options without swatch colours
+(flavours, formats) show as words rather than colour dots. Stores made before store types sell
+clothing, as they did. Store types need `20261028000100_store_types.sql` (Admin › Setup offers
+it); until then every store speaks as a clothing store and the editor doesn't offer option names.
 
 ## Environment variables
 
@@ -812,6 +856,16 @@ button and icon, a banner film uploaded, playing and pausing (and the photo inst
 who ask for less motion), and a 360° view switched on in the editor and turned with the keys and
 by dragging.
 
+**Store type tests (4 unit, 5 database, 1 Playwright)** cover every type having its words,
+options, details and sizes, a clothing store keeping its words, and a product naming its own
+options (blank, long and malformed names falling back to its store's); a pet shop created with
+its departments, starter text and FAQ, malformed types refused, the type changed by the store's
+admins only, the sample catalog filed under departments a store already has, and option names
+set by staff only, kept short and reaching the product page; and, in the browser, a pet shop made
+in Platform › New store speaking a pet shop's language on its home and product pages and in its
+returns policy, its food's pack sizes and flavours (shown as words), renamed in the editor, and
+its words changing when it sells instruments instead.
+
 **Acceptance tests (7, Playwright)** follow the brief:
 
 1. An admin creates a product with an uploaded image and size/colour variants and publishes it;
@@ -835,12 +889,10 @@ and the design tests on the home, product and shop pages of all eight designs, a
 a film and a product page with a 360° view. Automated checks
 don't replace testing with a keyboard and a screen reader.
 
-Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 87/87,
-integration 93/93, Playwright 34/34 against the production build (`next build`), and the home,
+Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 92/92,
+integration 98/98, Playwright 36/36 against the production build (`next build`), and the home,
 shop, product, bag, sign-in and collections pages of all eight designs checked at 360, 390, 768,
-1024 and 1280 px wide without horizontal scrolling. The update from the live database's version
-(`20261022000100`) through `20261027000100`, as Admin › Setup hands it out, applies in one
-transaction.
+1024 and 1280 px wide without horizontal scrolling.
 
 ## Running the store
 

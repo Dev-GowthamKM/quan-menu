@@ -82,7 +82,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <a href="#main" className="sr-only z-50 bg-ink px-4 py-2 text-ivory focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
         Skip to content
       </a>
-      <StoreProvider currency={settings.currency}>
+      <StoreProvider currency={settings.currency} storeType={settings.store_type}>
         {settings.unavailable && <div data-above-header><SetupNotice /></div>}
         {preview && (
           <div data-above-header className="relative z-50 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-amber-100 px-4 py-2 text-center text-xs text-amber-950">

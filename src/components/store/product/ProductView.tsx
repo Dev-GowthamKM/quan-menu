@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { checkDelivery, type DeliveryCheck } from "@/server/catalog";
 import { discountPercent, formatMoney } from "@/lib/money";
 import type { GalleryStyle } from "@/lib/designs";
+import { optionNames } from "@/lib/store-types";
 import type { PageVariant, ProductPage, SizeGuide } from "@/lib/types";
 import { Button, cx } from "../../ui/controls";
 import { Dialog } from "../../ui/Dialog";
@@ -26,7 +27,10 @@ function sizeOrder(variants: PageVariant[]) {
 export default function ProductView({ product, currency, preview, stockAlerts, gallery = "thumbs" }: { product: ProductPage; currency: string; preview?: boolean; stockAlerts?: boolean; gallery?: GalleryStyle }) {
   const router = useRouter();
   const search = useSearchParams();
-  const { addItem } = useStore();
+  const { addItem, kind } = useStore();
+  // What this product's options are called: its own names, or its store's (size and colour, pack size and flavour...).
+  const names = optionNames(kind, product.option_names);
+  const sizeWord = names.size.toLowerCase();
 
   const colors = useMemo(() => {
     const list: { name: string; hex: string | null; available: number }[] = [];
@@ -39,6 +43,8 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
     return list;
   }, [product.variants]);
   const sizes = useMemo(() => sizeOrder(product.variants), [product.variants]);
+  // The second option as colour swatches when it has swatch colours, else as words (flavours, formats).
+  const swatched = colors.some((c) => c.hex);
 
   const initialColor = (() => {
     const wanted = search.get("color");
@@ -103,11 +109,11 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
   };
 
   const submit = async (mode: "add" | "buy") => {
-    if (needsSize) return setError("Please choose a size.");
-    if (colors.length && !color) return setError("Please choose a colour.");
+    if (needsSize) return setError(`Please choose a ${sizeWord}.`);
+    if (colors.length && !color) return setError(`Please choose a ${names.color.toLowerCase()}.`);
     if (!selected) return setError("That combination isn't available.");
-    if (selected.available <= 0) return setError("This size is sold out.");
-    if (qty > selected.available) return setError(`Only ${selected.available} left in this size.`);
+    if (selected.available <= 0) return setError(`This ${sizeWord} is sold out.`);
+    if (qty > selected.available) return setError(`Only ${selected.available} left in this ${sizeWord}.`);
     setError(null);
     setBusy(mode);
     const ok = await addItem(selected.id, qty);
@@ -174,26 +180,43 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
         {colors.length > 0 && (
           <fieldset className="mt-8">
             <legend className="text-sm">
-              Colour: <span className="text-taupe">{color}</span>
+              {names.color}: <span className="text-taupe">{color}</span>
             </legend>
             <div className="mt-3 flex flex-wrap gap-2.5">
-              {colors.map((c) => (
-                <button
-                  key={c.name}
-                  type="button"
-                  onClick={() => pickColor(c.name)}
-                  aria-pressed={color === c.name}
-                  aria-label={`${c.name}${c.available <= 0 ? " (sold out)" : ""}`}
-                  title={c.name}
-                  className={cx(
-                    "relative size-9 rounded-full ring-offset-2 ring-offset-ivory transition",
-                    color === c.name ? "ring-2 ring-ink" : "ring-1 ring-black/15 hover:ring-ink/50",
-                  )}
-                  style={{ background: c.hex || "#ccc" }}
-                >
-                  {c.available <= 0 && <span className="absolute inset-0 m-auto h-px w-10 -rotate-45 bg-ink/70" aria-hidden />}
-                </button>
-              ))}
+              {colors.map((c) =>
+                swatched ? (
+                  <button
+                    key={c.name}
+                    type="button"
+                    onClick={() => pickColor(c.name)}
+                    aria-pressed={color === c.name}
+                    aria-label={`${c.name}${c.available <= 0 ? " (sold out)" : ""}`}
+                    title={c.name}
+                    className={cx(
+                      "relative size-9 rounded-full ring-offset-2 ring-offset-ivory transition",
+                      color === c.name ? "ring-2 ring-ink" : "ring-1 ring-black/15 hover:ring-ink/50",
+                    )}
+                    style={{ background: c.hex || "#ccc" }}
+                  >
+                    {c.available <= 0 && <span className="absolute inset-0 m-auto h-px w-10 -rotate-45 bg-ink/70" aria-hidden />}
+                  </button>
+                ) : (
+                  <button
+                    key={c.name}
+                    type="button"
+                    onClick={() => pickColor(c.name)}
+                    aria-pressed={color === c.name}
+                    aria-label={`${c.name}${c.available <= 0 ? " (sold out)" : ""}`}
+                    className={cx(
+                      "h-11 rounded-btn border px-4 text-sm transition",
+                      color === c.name ? "border-brand bg-brand text-on-brand" : "border-line bg-paper hover:border-ink",
+                      c.available <= 0 && "text-stone/70 line-through",
+                    )}
+                  >
+                    {c.name}
+                  </button>
+                ),
+              )}
             </div>
           </fieldset>
         )}
@@ -202,7 +225,7 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
           <fieldset className="mt-7">
             <div className="flex items-center justify-between">
               <legend className="text-sm">
-                Size{size ? <>: <span className="text-taupe">{size}</span></> : null}
+                {names.size}{size ? <>: <span className="text-taupe">{size}</span></> : null}
               </legend>
               {product.size_guide && (
                 <button type="button" onClick={() => setGuideOpen(true)} className="inline-flex items-center gap-1.5 text-xs underline underline-offset-4">
@@ -220,7 +243,7 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
                     type="button"
                     disabled={out}
                     aria-pressed={size === s}
-                    aria-label={`Size ${s}${out ? " (sold out)" : ""}`}
+                    aria-label={`${names.size} ${s}${out ? " (sold out)" : ""}`}
                     onClick={() => {
                       setSize(s);
                       setError(null);
@@ -238,12 +261,12 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
               })}
             </div>
             {selected && selected.available > 0 && selected.available <= LOW_STOCK && (
-              <p className="mt-3 text-sm text-sale">Only {selected.available} left in this size</p>
+              <p className="mt-3 text-sm text-sale">Only {selected.available} left in this {sizeWord}</p>
             )}
-            {stockAlerts && !soldOut && !preview && <BackInStock key={color ?? ""} options={soldOutSizes} />}
+            {stockAlerts && !soldOut && !preview && <BackInStock key={color ?? ""} options={soldOutSizes} label={names.size} />}
           </fieldset>
         )}
-        {stockAlerts && soldOut && !preview && <BackInStock key={`all-${color ?? ""}`} options={soldOutSizes} open />}
+        {stockAlerts && soldOut && !preview && <BackInStock key={`all-${color ?? ""}`} options={soldOutSizes} label={names.size} open />}
 
         <div ref={buyRow} className="mt-8 flex items-stretch gap-3">
           <div className="flex items-center rounded-btn border border-line bg-paper" role="group" aria-label="Quantity">
@@ -305,7 +328,7 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
               <p className="truncate text-sm">{product.title}</p>
               <p className={cx("text-sm tabular-nums", pct > 0 && "text-sale")}>
                 {formatMoney(price, currency)}
-                {size ? <span className="text-taupe"> · Size {size}</span> : null}
+                {size ? <span className="text-taupe"> · {names.size} {size}</span> : null}
               </p>
             </div>
             <Button
@@ -314,11 +337,11 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
               busy={busy === "add"}
               onClick={() => {
                 if (!needsSize) return submit("add");
-                setError("Please choose a size.");
+                setError(`Please choose a ${sizeWord}.`);
                 buyRow.current?.scrollIntoView({ behavior: "smooth", block: "center" });
               }}
             >
-              {needsSize ? "Choose a size" : "Add to bag"}
+              {needsSize ? `Choose a ${sizeWord}` : "Add to bag"}
             </Button>
           </div>
         </div>

@@ -80,6 +80,8 @@ const productSchema = z.object({
   collection_ids: z.array(z.string().uuid()).optional(),
   /** Sent only once the database has the column (the motion update). */
   spin: z.boolean().optional(),
+  /** The product's own names for its two options; sent only once the database has them (the store types update). */
+  option_names: z.object({ size: z.string().trim().max(30), color: z.string().trim().max(30) }).optional(),
 });
 export type ProductInput = z.input<typeof productSchema>;
 
@@ -91,13 +93,18 @@ export async function saveProduct(input: ProductInput, removedPaths: string[] = 
     const issue = parsed.error.issues[0];
     return fail(`${issue?.path.join(".") ? `${issue.path.join(".")}: ` : ""}${issue?.message ?? "Check the form."}`);
   }
-  const { spin, ...product } = parsed.data;
+  const { spin, option_names, ...product } = parsed.data;
   const { data, error } = await ctx.supabase.rpc("admin_save_product", { p: product as unknown as Json });
   if (error) return fail(friendlyError(error, "The product couldn't be saved."));
-  // The 360° switch lives outside admin_save_product, so stores without the update can still save.
-  if (spin !== undefined) {
-    const res = await ctx.supabase.from("products").update({ spin }).eq("id", data as string);
-    if (res.error) return ok({ id: data as string }, `Product saved, but not the 360° view: ${friendlyError(res.error)}`);
+  // The 360° switch and the option names live outside admin_save_product, so stores without
+  // those updates can still save. Empty names mean the store's own.
+  const extras = {
+    ...(spin !== undefined ? { spin } : {}),
+    ...(option_names ? { option_names: Object.fromEntries(Object.entries(option_names).filter(([, v]) => v)) } : {}),
+  };
+  if (Object.keys(extras).length) {
+    const res = await ctx.supabase.from("products").update(extras).eq("id", data as string);
+    if (res.error) return ok({ id: data as string }, `Product saved, but not its 360° view or option names: ${friendlyError(res.error)}`);
   }
   await cleanupMedia(removedPaths);
   refreshStore(["/admin/products"]);

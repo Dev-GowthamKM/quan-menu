@@ -25,8 +25,21 @@ export async function editorContext(sb: SupabaseClient<Database>): Promise<{ opt
       taxMode: settings.tax_mode,
       returnWindowDays: settings.return_window_days,
       lowStockThreshold: settings.low_stock_threshold,
+      storeType: settings.store_type,
     },
   };
+}
+
+/**
+ * A product's own names for its two options ({} for a new one), or null when the database
+ * doesn't have them yet (before the store types update), so the editor offers them only then.
+ */
+export async function productOptionNames(sb: SupabaseClient<Database>, id: string | null): Promise<{ size?: string; color?: string } | null> {
+  const query = sb.from("products").select("option_names").limit(1);
+  const { data, error } = id ? await query.eq("id", id).maybeSingle() : await query;
+  if (error) return null;
+  const names = Array.isArray(data) ? {} : data?.option_names;
+  return names && typeof names === "object" && !Array.isArray(names) ? (names as { size?: string; color?: string }) : {};
 }
 
 /**

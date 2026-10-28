@@ -8,6 +8,7 @@ import type { Facets } from "@/lib/types";
 import { Button, cx, Select } from "../../ui/controls";
 import { Dialog } from "../../ui/Dialog";
 import { ChevronDown, CloseIcon, FilterIcon } from "../../ui/icons";
+import { useStore } from "../StoreProvider";
 
 export interface CategoryLink {
   name: string;
@@ -68,6 +69,7 @@ function Section({ title, children, open = true }: { title: string; children: Re
 
 export function FilterPanel({ facets, hide = [], categories }: Omit<Props, "total">) {
   const { params, getList, update, toggle } = useListingUrl();
+  const { kind } = useStore();
   const [min, setMin] = useState(params.get("min") ?? "");
   const [max, setMax] = useState(params.get("max") ?? "");
   const brands = getList("brand");
@@ -107,7 +109,7 @@ export function FilterPanel({ facets, hide = [], categories }: Omit<Props, "tota
       )}
 
       {facets && facets.sizes.length > 0 && (
-        <Section title="Size">
+        <Section title={kind.options.size}>
           <div className="flex flex-wrap gap-2">
             {facets.sizes.map((s) => (
               <button
@@ -128,7 +130,7 @@ export function FilterPanel({ facets, hide = [], categories }: Omit<Props, "tota
       )}
 
       {facets && facets.colors.length > 0 && (
-        <Section title="Colour">
+        <Section title={kind.options.color}>
           <ul className="grid grid-cols-2 gap-2.5">
             {facets.colors.map((c) => (
               <li key={c.value}>
@@ -216,9 +218,10 @@ export function SortSelect({ className }: { className?: string }) {
 
 export function ActiveFilters({ facets }: { facets: Facets | null }) {
   const { getList, params, toggle, update } = useListingUrl();
+  const { kind } = useStore();
   const chips: { label: string; onRemove: () => void }[] = [];
   for (const b of getList("brand")) chips.push({ label: facets?.brands.find((x) => x.slug === b)?.name ?? b, onRemove: () => toggle("brand", b) });
-  for (const s of getList("size")) chips.push({ label: `Size ${s}`, onRemove: () => toggle("size", s) });
+  for (const s of getList("size")) chips.push({ label: `${kind.options.size} ${s}`, onRemove: () => toggle("size", s) });
   for (const c of getList("color")) chips.push({ label: c, onRemove: () => toggle("color", c) });
   const min = params.get("min");
   const max = params.get("max");

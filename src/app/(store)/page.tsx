@@ -23,6 +23,7 @@ import { getHomeData } from "@/lib/catalog";
 import { homeSections, type SectionKey } from "@/lib/designs";
 import { storefrontLook } from "@/lib/look";
 import { getSettings, homepageOf, socialOf } from "@/lib/settings";
+import { storeKind } from "@/lib/store-types";
 import { excerpt, jsonLd } from "@/lib/seo";
 import { safeHref } from "@/lib/urls";
 import { chapterColors, showcaseColors } from "@/lib/theme";
@@ -31,6 +32,7 @@ import { contextOrigin } from "@/lib/store";
 export default async function Home() {
   const [settings, data, origin] = await Promise.all([getSettings(), getHomeData(), contextOrigin()]);
   const { design, look } = await storefrontLook(settings);
+  const kind = storeKind(settings.store_type);
   const home = homepageOf(settings);
   const [hero, campaign] = home.hero ?? [];
 
@@ -100,10 +102,11 @@ export default async function Home() {
         storeName={settings.store_name}
         tagline={settings.tagline}
         extras={[...(home.promos ?? []).map((p) => p.image_url), ...data.departments.map((d) => d.image_url)]}
+        text={kind.words.heroText}
       />
     ),
     trust: () => <TrustStrip settings={settings} variant={design.key} />,
-    departments: () => <Departments departments={data.departments} variant={design.departments} />,
+    departments: () => <Departments departments={data.departments} variant={design.departments} browse={kind.words.browse} />,
     new: () =>
       design.key === "nordic" ? (
         <section className="container-page mt-20 md:mt-28">
@@ -119,7 +122,7 @@ export default async function Home() {
         <section className="container-page mt-20 md:mt-28">
           <SectionHeader
             eyebrow={data.bestSellersAreFeatured ? "Our edit" : "Most loved"}
-            title={data.bestSellersAreFeatured ? "Pieces we love" : "Best sellers"}
+            title={data.bestSellersAreFeatured ? kind.words.favourites : "Best sellers"}
             href={data.bestSellersAreFeatured ? "/shop" : "/shop?sort=popular"}
           />
           <ProductGrid products={data.bestSellers} />
@@ -133,7 +136,7 @@ export default async function Home() {
     showcase: () =>
       showcase.length >= 3 && (
         <Showcase
-          title="Pieces we love"
+          title={kind.words.favourites}
           products={showcase}
           colors={showcaseColors(look.colors, showcase.map((p) => p.swatches?.[0]?.hex))}
         />
@@ -149,7 +152,7 @@ export default async function Home() {
     ),
     story: () => <StorySection settings={settings} variant={design.key} />,
     recommended: () => <RecentlyViewed title="Recommended for you" mode="recommend" />,
-    newsletter: () => <NewsletterSection variant={design.key} />,
+    newsletter: () => <NewsletterSection variant={design.key} title={kind.words.newsletter} text={kind.words.newsletterText} />,
   };
 
   return (

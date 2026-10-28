@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ProductEditor, { type EditorProduct } from "@/components/admin/products/ProductEditor";
 import { requireRole } from "@/lib/auth";
-import { editorContext, productSpin } from "../editor-data";
+import { editorContext, productOptionNames, productSpin } from "../editor-data";
 
 export const metadata: Metadata = { title: "Edit product" };
 
@@ -12,7 +12,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
   const { id } = await params;
   if (!UUID.test(id)) notFound();
   const { supabase } = await requireRole("staff");
-  const [{ data }, ctx, spin] = await Promise.all([
+  const [{ data }, ctx, spin, optionNames] = await Promise.all([
     supabase
       .from("products")
       .select(
@@ -29,10 +29,11 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
       .maybeSingle(),
     editorContext(supabase),
     productSpin(supabase, id),
+    productOptionNames(supabase, id),
   ]);
   if (!data) notFound();
   const { collections, ...rest } = data;
-  const product: EditorProduct = { ...rest, spin, collection_ids: (collections ?? []).map((c) => c.collection_id) };
+  const product: EditorProduct = { ...rest, spin, option_names: optionNames, collection_ids: (collections ?? []).map((c) => c.collection_id) };
   // Remount after each save so the form starts from what was stored (including fresh stock).
   return <ProductEditor key={data.updated_at} product={product} options={ctx.options} settings={ctx.settings} />;
 }

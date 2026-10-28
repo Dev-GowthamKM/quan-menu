@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { deleteProducts, duplicateProduct, saveProduct, skuConflicts, type ProductInput } from "@/server/admin/catalog";
 import { formatDateTime } from "@/lib/format";
 import { discountPercent, fromMinor, toMinor } from "@/lib/money";
+import { optionNames, storeKind } from "@/lib/store-types";
 import { Badge, Button, cx } from "../../ui/controls";
 import { ExternalIcon } from "../../ui/icons";
 import ChipsInput from "../ChipsInput";
@@ -42,6 +43,8 @@ export interface EditorProduct {
   seo_description: string;
   /** The 360° view; null before the motion database update, which adds it. */
   spin?: boolean | null;
+  /** Its own names for its two options; null before the store types update, which adds them. */
+  option_names?: { size?: string; color?: string } | null;
   is_sample?: boolean;
   created_at?: string;
   updated_at?: string;
@@ -68,6 +71,8 @@ export interface EditorSettings {
   taxMode: string;
   returnWindowDays: number;
   lowStockThreshold: number;
+  /** What the store sells (lib/store-types.ts): the editor's words, suggested sizes and option names. */
+  storeType?: string;
 }
 
 const slugify = (s: string) =>
@@ -130,6 +135,9 @@ interface State {
   seo_description: string;
   images: EditorImage[];
   spin: boolean;
+  /** The product's own names for its options; empty for the store's. */
+  optionSize: string;
+  optionColor: string;
   sizes: string[];
   colors: ColorOption[];
   skuPrefix: string;
@@ -177,6 +185,8 @@ function initialState(p: EditorProduct): State {
     seo_description: p.seo_description,
     images: p.images.map((i) => ({ ...i, key: i.id })),
     spin: !!p.spin,
+    optionSize: p.option_names?.size ?? "",
+    optionColor: p.option_names?.color ?? "",
     sizes,
     colors,
     skuPrefix: prefix,
@@ -194,7 +204,7 @@ function initialState(p: EditorProduct): State {
 }
 
 /** Turns the form into the payload saveProduct expects, or an error to show. */
-function toPayload(s: State, id: string | null, wasPublishedAt: string | null, canSpin: boolean): { payload?: ProductInput; error?: string } {
+function toPayload(s: State, id: string | null, wasPublishedAt: string | null, canSpin: boolean, canName: boolean): { payload?: ProductInput; error?: string } {
   if (!s.title.trim()) return { error: "Enter a product title." };
   const price = toMinor(s.price);
   if (price === null) return { error: "Enter a price, such as 2499 or 2499.50." };
@@ -274,6 +284,7 @@ function toPayload(s: State, id: string | null, wasPublishedAt: string | null, c
       variants,
       images: s.images.map((i) => ({ id: i.id ?? null, url: i.url, storage_path: i.storage_path ?? null, alt: i.alt, color: i.color ?? null, width: i.width ?? null, height: i.height ?? null })),
       ...(canSpin ? { spin: s.spin } : {}),
+      ...(canName ? { option_names: { size: s.optionSize.trim(), color: s.optionColor.trim() } } : {}),
       collection_ids: s.collection_ids,
     },
   };
@@ -290,6 +301,9 @@ export default function ProductEditor({ product, options, settings }: { product:
   const [saving, startSave] = useTransition();
   const [busy, startBusy] = useTransition();
   const canSpin = product.spin !== null && product.spin !== undefined;
+  const canName = product.option_names !== null && product.option_names !== undefined;
+  const kind = storeKind(settings.storeType);
+  const names = optionNames(kind, { size: s.optionSize, color: s.optionColor });
 
   const dirty = useMemo(() => JSON.stringify(s, (k, v) => (k === "skuPrefix" || k === "prefixTouched" ? undefined : v)) !== baseline.current, [s]);
   const set = useCallback(<K extends keyof State>(key: K, value: State[K]) => setS((x) => ({ ...x, [key]: value })), []);
@@ -309,7 +323,7 @@ export default function ProductEditor({ product, options, settings }: { product:
   }, [s.variants, product.id]);
 
   const save = useCallback(() => {
-    const { payload, error: e } = toPayload(s, product.id, product.published_at, canSpin);
+    const { payload, error: e } = toPayload(s, product.id, product.published_at, canSpin, canName);
     if (!payload) {
       setError(e ?? "Check the form.");
       toast(e ?? "Check the form.", "error");
@@ -461,7 +475,22 @@ export default function ProductEditor({ product, options, settings }: { product:
             </div>
           </Card>
 
-          <Card title="Variants" actions={<span className="text-xs text-stone">Sizes × colours, each with its own SKU and stock</span>}>
+          <Card title="Variants" actions={<span className="text-xs text-stone">{names.size} × {names.color.toLowerCase()}, each with its own SKU and stock</span>}>
+            {canName && (
+              <div className="mb-5 grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-xs font-medium text-taupe">
+                  First option is called
+                  <input value={s.optionSize} onChange={(e) => set("optionSize", e.target.value)} maxLength={30} placeholder={kind.options.size} className={adminInput} />
+                </label>
+                <label className="grid gap-1.5 text-xs font-medium text-taupe">
+                  Second option is called
+                  <input value={s.optionColor} onChange={(e) => set("optionColor", e.target.value)} maxLength={30} placeholder={kind.options.color} className={adminInput} />
+                </label>
+                <p className="text-xs text-stone sm:col-span-2">
+                  Leave empty for the store&apos;s own ({kind.options.size} and {kind.options.color.toLowerCase()}). Name them for this product when it&apos;s different, like Pack size and Flavour.
+                </p>
+              </div>
+            )}
             <VariantsEditor
               variants={s.variants}
               onChange={(v) => set("variants", v)}
@@ -473,20 +502,22 @@ export default function ProductEditor({ product, options, settings }: { product:
               conflicts={conflicts}
               onCheckSkus={checkSkus}
               lowStockDefault={settings.lowStockThreshold}
+              names={names}
+              sizeSets={kind.sizeSets}
             />
           </Card>
 
-          <Card title="Material, fit and care">
+          <Card title="Details">
             <div className="grid gap-4 md:grid-cols-3">
               {(["fabric", "fit", "care"] as const).map((k) => (
                 <label key={k} className="grid gap-1.5 text-xs font-medium text-taupe">
-                  {k === "fabric" ? "Fabric and composition" : k === "fit" ? "Fit and sizing" : "Care instructions"}
+                  {k === "fabric" ? kind.details.material : k === "fit" ? kind.details.fit : kind.details.care}
                   <textarea
                     value={s[k]}
                     onChange={(e) => set(k, e.target.value)}
                     rows={4}
                     maxLength={2000}
-                    placeholder={k === "fabric" ? "100% linen, 180 gsm" : k === "fit" ? "Relaxed fit. Model is 175 cm and wears S." : "Machine wash cold. Dry in shade."}
+                    placeholder={k === "fabric" ? kind.detailExamples.material : k === "fit" ? kind.detailExamples.fit : kind.detailExamples.care}
                     className="rounded-md border border-black/15 bg-white px-3 py-2 text-sm focus:border-ink focus:outline-none"
                   />
                 </label>

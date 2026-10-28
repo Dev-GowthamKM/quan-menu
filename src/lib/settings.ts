@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   body_font: "jost",
   design: "atelier",
   design_options: {},
+  store_type: "fashion",
   currency: "INR",
   timezone: "Asia/Kolkata",
   tax_mode: "inclusive",

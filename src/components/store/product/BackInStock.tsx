@@ -4,8 +4,8 @@ import { requestStockAlert } from "@/server/reminders";
 import { Button } from "../../ui/controls";
 import { useStore } from "../StoreProvider";
 
-/** "Notify me when it's back" for the sold-out sizes of the chosen colour. */
-export default function BackInStock({ options, open: startOpen = false }: { options: { id: string; label: string }[]; open?: boolean }) {
+/** "Notify me when it's back" for the sold-out sizes (or whatever the product's first option is called) of the chosen colour. */
+export default function BackInStock({ options, label = "Size", open: startOpen = false }: { options: { id: string; label: string }[]; label?: string; open?: boolean }) {
   const user = useStore().session?.user ?? null;
   const [open, setOpen] = useState(startOpen);
   const [variantId, setVariantId] = useState(options[0]?.id ?? "");
@@ -16,7 +16,7 @@ export default function BackInStock({ options, open: startOpen = false }: { opti
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className="mt-3 text-sm underline underline-offset-4">
-        Size sold out? Get an email when it&apos;s back
+        {label} sold out? Get an email when it&apos;s back
       </button>
     );
   }
@@ -38,7 +38,7 @@ export default function BackInStock({ options, open: startOpen = false }: { opti
         <>
           <div className="mt-3 grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)_auto]">
             <label className="grid gap-1 text-xs text-taupe">
-              Size
+              {label}
               <select value={variantId} onChange={(e) => setVariantId(e.target.value)} className="h-10 border border-line bg-ivory px-2 text-sm text-ink">
                 {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>

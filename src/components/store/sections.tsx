@@ -18,8 +18,8 @@ import { SectionHeader } from "./SectionHeader";
 
 export { SectionHeader };
 
-/** Departments, in the design's department style. */
-export function Departments({ departments, variant }: { departments: Department[]; variant: DepartmentStyle }) {
+/** Departments, in the design's department style; browse is their title where it has one ("Find your fit", "Shop by pet"). */
+export function Departments({ departments, variant, browse = "Find your fit" }: { departments: Department[]; variant: DepartmentStyle; browse?: string }) {
   if (!departments.length) return null;
   const image = (d: Department, sizes: string, className = "", priority = false) => (
     <CatalogImage src={d.image_url} alt={d.name} fill sizes={sizes} priority={priority} className={cx("object-cover transition duration-700 ease-out", className)} />
@@ -62,7 +62,7 @@ export function Departments({ departments, variant }: { departments: Department[
     case "circles":
       return (
         <section className="container-page mt-14 md:mt-20">
-          <SectionHeader eyebrow="Shop by department" title="Find your fit" />
+          <SectionHeader eyebrow="Shop by department" title={browse} />
           <ul className="scrollbar-none -mx-4 flex gap-5 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 md:justify-center md:gap-10 lg:mx-0 lg:px-0">
             {departments.map((d, i) => (
               <li key={d.id} className="shrink-0" data-reveal>
@@ -81,7 +81,7 @@ export function Departments({ departments, variant }: { departments: Department[
     case "arches":
       return (
         <section className="container-page mt-20 md:mt-28">
-          <SectionHeader eyebrow="Shop by department" title="Find your fit" />
+          <SectionHeader eyebrow="Shop by department" title={browse} />
           <ul className="grid grid-cols-2 gap-5 md:grid-cols-4 md:gap-8">
             {departments.map((d, i) => (
               <li key={d.id} data-reveal>
@@ -166,12 +166,12 @@ export function Departments({ departments, variant }: { departments: Department[
           </section>
         );
       }
-      return <Departments departments={departments} variant="tiles" />;
+      return <Departments departments={departments} variant="tiles" browse={browse} />;
 
     default:
       return (
         <section className="container-page mt-20 md:mt-28">
-          <SectionHeader eyebrow="Shop by department" title="Find your fit" />
+          <SectionHeader eyebrow="Shop by department" title={browse} />
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5">
             {departments.map((d, i) => (
               <Link key={d.id} href={`/category/${d.slug}`} className="group relative block aspect-[3/4] overflow-hidden rounded-img bg-bone" data-reveal>
@@ -413,10 +413,8 @@ export function StorySection({ settings, variant }: { settings: Settings; varian
   );
 }
 
-/** The newsletter sign-up at the foot of the home page, in the design's manner. */
-export function NewsletterSection({ variant }: { variant: DesignKey }) {
-  const title = "First to know, first to wear";
-  const text = "Early access to new collections and the sale, and stories from the people who make them.";
+/** The newsletter sign-up at the foot of the home page, in the design's manner and the words of what the store sells. */
+export function NewsletterSection({ variant, title, text }: { variant: DesignKey; title: string; text: string }) {
   switch (variant) {
     case "nordic":
       return (

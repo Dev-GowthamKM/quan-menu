@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { StoreKind } from "@/lib/store-types";
 import type { ProductPage } from "@/lib/types";
 import { ChevronDown } from "../../ui/icons";
 import Paragraphs from "../Paragraphs";
@@ -15,20 +16,22 @@ function Item({ title, open, children }: { title: string; open?: boolean; childr
   );
 }
 
-export default function ProductDetails({ product, shippingNote }: { product: ProductPage; shippingNote: string }) {
+/** The product's description and details, under the names its kind of store gives them (fabric and fit, ingredients and nutrition...). */
+export default function ProductDetails({ product, shippingNote, kind }: { product: ProductPage; shippingNote: string; kind: StoreKind }) {
+  const d = kind.details;
   return (
     <div className="border-t border-line">
       <Item title="Description" open>
         <Paragraphs text={product.description} />
       </Item>
       {(product.fabric || product.care) && (
-        <Item title="Fabric & care">
-          {product.fabric && <p><span className="text-ink">Fabric:</span> {product.fabric}</p>}
-          {product.care && <p className="mt-2"><span className="text-ink">Care:</span> {product.care}</p>}
+        <Item title={d.materialTitle}>
+          {product.fabric && <p><span className="text-ink">{d.material}:</span> {product.fabric}</p>}
+          {product.care && <p className="mt-2"><span className="text-ink">{d.care}:</span> {product.care}</p>}
         </Item>
       )}
       {product.fit && (
-        <Item title="Fit">
+        <Item title={d.fitTitle}>
           <p>{product.fit}</p>
         </Item>
       )}
@@ -36,8 +39,8 @@ export default function ProductDetails({ product, shippingNote }: { product: Pro
         <Paragraphs text={shippingNote} />
         <p className="mt-3">
           {product.is_returnable
-            ? `This item can be returned within ${product.return_window_days ?? 15} days of delivery if unworn and with tags.`
-            : "This item cannot be returned for hygiene reasons."}{" "}
+            ? `Returns are accepted within ${product.return_window_days ?? 15} days of delivery for ${kind.returnCondition}.`
+            : "This item cannot be returned."}{" "}
           <Link href="/pages/returns" className="underline underline-offset-4">Returns policy</Link>
         </p>
       </Item>

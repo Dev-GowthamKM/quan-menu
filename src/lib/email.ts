@@ -5,6 +5,7 @@ import { orderUrl } from "./order-link";
 import { EMAIL_FROM, RESEND_API_BASE, RESEND_API_KEY } from "./server-env";
 import { cartRestoreUrl, oneClickUnsubscribeUrl, unsubscribeUrl } from "./signed-links";
 import { contactOf, getSettings } from "./settings";
+import { storeKind } from "./store-types";
 import { storeById, storeOrigin } from "./store";
 import { supabaseService } from "./supabase/admin";
 import type { OrderDetail, StoreSettings, Tables } from "./types";
@@ -171,7 +172,7 @@ export function renderReminder(settings: StoreSettings, origin: string, template
   const rows = items
     .map((i) => {
       const img = thumb(i.image_url);
-      const details = [i.color, i.size ? `Size ${i.size}` : "", i.quantity ? `Qty ${i.quantity}` : ""].filter(Boolean).join(" · ");
+      const details = [i.color, i.size ? `${storeKind(settings.store_type).options.size} ${i.size}` : "", i.quantity ? `Qty ${i.quantity}` : ""].filter(Boolean).join(" · ");
       const price = i.now !== undefined
         ? `<span style="color:#8a8178;text-decoration:line-through">${formatMoney(i.was, currency)}</span> <strong>${formatMoney(i.now, currency)}</strong>`
         : i.price !== undefined && !Number.isNaN(i.price) ? formatMoney(i.price, currency) : "";

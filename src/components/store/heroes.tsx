@@ -21,6 +21,8 @@ interface HeroProps {
   tagline: string;
   /** More pictures for styles that use several (promotions, departments). */
   extras?: (string | null | undefined)[];
+  /** A line under the heading while the store has no banner yet, in the words of what it sells. */
+  text?: string;
 }
 
 function Ctas({ slide, primary, secondary, className }: { slide: HeroSlide; primary: string; secondary: string; className?: string }) {
@@ -52,7 +54,7 @@ function SpinBadge({ text, className }: { text: string; className?: string }) {
   );
 }
 
-export default function Hero({ variant, slide, storeName, tagline, extras = [] }: HeroProps) {
+export default function Hero({ variant, slide, storeName, tagline, extras = [], text = "New pieces every season, made to be worn for many more." }: HeroProps) {
   const image = slide?.image_url || null;
   const video = slide?.video_url || null;
   const heading = slide?.heading || tagline || storeName;
@@ -64,7 +66,7 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [] }
           <section className="container-page grid gap-8 py-20 md:grid-cols-[2fr_1fr] md:items-end md:py-32">
             <h1 className="font-serif text-5xl leading-[1.02] md:text-7xl">{heading}</h1>
             <div>
-              <p className="text-sm leading-relaxed text-taupe">New pieces every season, made to be worn for many more.</p>
+              <p className="text-sm leading-relaxed text-taupe">{text}</p>
               <Link href="/shop?sort=newest" className="mt-5 inline-flex items-center gap-2 border-b border-ink pb-0.5 text-sm font-medium">Shop new arrivals <ArrowRight size={14} /></Link>
             </div>
           </section>

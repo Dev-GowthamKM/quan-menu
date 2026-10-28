@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
 import { deleteSampleData, saveSettings, type SettingsSection } from "@/server/admin/store";
 import { formatMoney, fromMinor, toMinor } from "@/lib/money";
+import { STORE_KINDS, storeKind, type StoreType } from "@/lib/store-types";
 import type { ContactInfo, FaqItem, HeroSlide, Homepage, Policies, Promo, SocialLinks, StoreSettings } from "@/lib/types";
 import Link from "next/link";
 import { previewLook } from "@/server/admin/store";
@@ -59,16 +60,27 @@ function Form({ children, onSubmit, pending, error, note }: { children: ReactNod
 
 export function GeneralForm({ s }: { s: StoreSettings }) {
   const { pending, error, save } = useSave("general");
+  const savedType = storeKind(s.store_type).key;
   const [v, setV] = useState({ store_name: s.store_name, tagline: s.tagline, logo_url: s.logo_url, contact: (s.contact ?? {}) as ContactInfo, social: (s.social ?? {}) as SocialLinks });
+  const [type, setType] = useState<StoreType>(savedType);
   const contact = (k: Exclude<keyof ContactInfo, "chat_button">, val: string) => setV({ ...v, contact: { ...v.contact, [k]: val } });
   const social = (k: keyof SocialLinks, val: string) => setV({ ...v, social: { ...v.social, [k]: val } });
   return (
-    <Form onSubmit={() => save(v)} pending={pending} error={error}>
+    // What the store sells goes along only when it changes (before the store types update, there's no such column).
+    <Form onSubmit={() => save({ ...v, ...(type !== savedType ? { store_type: type } : {}) })} pending={pending} error={error}>
       <Card title="Store">
         <div className="grid gap-4 md:grid-cols-[1fr_14rem]">
           <div className="grid content-start gap-4">
             <TextField label="Store name" value={v.store_name} onChange={(e) => setV({ ...v, store_name: e.target.value })} maxLength={80} required />
             <TextField label="Tagline" value={v.tagline} onChange={(e) => setV({ ...v, tagline: e.target.value })} maxLength={160} hint="Shown in the footer and used for search results." />
+            <SelectField
+              label="What the store sells"
+              value={type}
+              onChange={(e) => setType(e.target.value as StoreType)}
+              hint="Sets the words the store uses (pieces or pairs, fabric or ingredients), what a product's options are called and the sizes the product editor suggests. A product can name its options its own way."
+            >
+              {STORE_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label} ({k.example})</option>)}
+            </SelectField>
           </div>
           <SingleImageField label="Logo (optional)" value={v.logo_url} onChange={(url) => setV({ ...v, logo_url: url })} folder="brand" aspect="aspect-[3/1]" />
         </div>

@@ -8,7 +8,7 @@ import { StarIcon } from "../../ui/icons";
 import { useStore } from "../StoreProvider";
 
 export default function ReviewForm({ productId }: { productId: string }) {
-  const { session } = useStore();
+  const { session, kind } = useStore();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
@@ -54,7 +54,7 @@ export default function ReviewForm({ productId }: { productId: string }) {
         <Input id="review-title" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} />
       </Field>
       <Field label="Review" htmlFor="review-body">
-        <Textarea id="review-body" rows={4} maxLength={3000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="How did it fit? How does the fabric feel?" />
+        <Textarea id="review-body" rows={4} maxLength={3000} value={body} onChange={(e) => setBody(e.target.value)} placeholder={kind.words.reviewPrompt} />
       </Field>
       {state.text && <p className={state.error ? "text-sm text-sale" : "text-sm text-ok"} role="alert">{state.text}</p>}
       <Button type="submit" busy={state.busy}>Post review</Button>

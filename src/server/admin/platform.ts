@@ -7,6 +7,7 @@ import { fail, friendlyError, ok, type ActionResult } from "@/lib/errors";
 import { ADMIN_STORE_COOKIE, isPlatformAdmin, myStores } from "@/lib/store";
 import { sessionClient } from "@/lib/supabase/session";
 import { freshLook } from "@/lib/designs";
+import { STORE_TYPES, storeKind } from "@/lib/store-types";
 import { lookColumns, lookSchema, takenLooks } from "@/lib/look";
 import { addVercelDomain, removeVercelDomain, vercelDomainsReady } from "@/lib/vercel";
 
@@ -60,6 +61,9 @@ const createSchema = z.object({
   /** The starting look; without one, a look no other store has. */
   look: lookSchema.optional(),
   tagline: z.string().trim().max(160).default(""),
+  /** What it sells (lib/store-types.ts): its words, starter text and departments. */
+  store_type: z.enum(STORE_TYPES).default("fashion"),
+  departments: z.boolean().default(false),
   samples: z.boolean().default(false),
 });
 
@@ -76,8 +80,9 @@ async function copySamples(sb: NonNullable<Awaited<ReturnType<typeof platform>>>
 }
 
 /**
- * Creates a store with its owner, look, starter policies, a delivery zone for India and the
- * usual couriers, and (if asked) a copy of the sample catalog.
+ * Creates a store with its owner, look, starter policies in the words of what it sells, a
+ * delivery zone for India and the usual couriers, and (if asked) departments for what it sells
+ * and a copy of the sample catalog.
  */
 export async function createStore(input: CreateStoreInput): Promise<ActionResult<{ id: string; domain: string | null; samples: string | null }>> {
   const sb = await platform();
@@ -86,6 +91,7 @@ export async function createStore(input: CreateStoreInput): Promise<ActionResult
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the form.");
   const p = parsed.data;
   const look = lookColumns(p.look ?? freshLook(await takenLooks()));
+  const kind = storeKind(p.store_type);
   const { data, error } = await sb.rpc("platform_create_store", {
     p: {
       name: p.name,
@@ -100,6 +106,9 @@ export async function createStore(input: CreateStoreInput): Promise<ActionResult
       heading_italic: look.heading_italic,
       design: look.design,
       design_options: { ...look.design_options },
+      store_type: kind.key,
+      kind: { about: kind.words.about, return_condition: kind.returnCondition, no_returns: kind.noReturns, faq_q: kind.faq.q, faq_a: kind.faq.a },
+      departments: p.departments ? kind.departments : [],
     },
   });
   if (error) return fail(friendlyError(error, "The store couldn't be created."));

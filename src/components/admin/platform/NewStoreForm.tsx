@@ -3,9 +3,10 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createStore } from "@/server/admin/platform";
 import { describeLook, DESIGN_LIST, freshLook, type Look, type TakenLook } from "@/lib/designs";
+import { STORE_KINDS, storeKind, type StoreType } from "@/lib/store-types";
 import { paletteOf } from "@/lib/theme";
 import { Button, cx } from "../../ui/controls";
-import { TextField, Toggle } from "../fields";
+import { SelectField, TextField, Toggle } from "../fields";
 import { useToast } from "../Toaster";
 import DesignThumb from "../store/DesignThumb";
 import { Card } from "../ui";
@@ -13,15 +14,17 @@ import { Card } from "../ui";
 const slugify = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "");
 
 /**
- * Platform › New store: name, web address, owner and a starting look. The look starts as one
- * no other store has (initial, worked out on the server); Shuffle finds another.
+ * Platform › New store: name, what it sells, web address, owner and a starting look. The look
+ * starts as one no other store has (initial, worked out on the server); Shuffle finds another.
+ * What it sells sets its words and starter text, and the departments it can start with.
  */
 export default function NewStoreForm({ vercel, taken, initial }: { vercel: boolean; taken: TakenLook[]; initial: Look }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [v, setV] = useState({ name: "", slug: "", order_prefix: "", hostname: "", owner_email: "", tagline: "", samples: false });
+  const [v, setV] = useState({ name: "", slug: "", order_prefix: "", hostname: "", owner_email: "", tagline: "", store_type: "fashion" as StoreType, departments: true, samples: false });
+  const kind = storeKind(v.store_type);
   const [look, setLook] = useState<Look>(initial);
   const palette = paletteOf(look.colors);
   const unique = !taken.some((t) => t.design === look.design && t.brand?.toLowerCase() === look.colors.brand.toLowerCase());
@@ -49,6 +52,15 @@ export default function NewStoreForm({ vercel, taken, initial }: { vercel: boole
         <div className="grid gap-4 md:grid-cols-2">
           <TextField label="Store name" required maxLength={80} value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="e.g. Kesar Studio" />
           <TextField label="Tagline" maxLength={160} value={v.tagline} onChange={(e) => setV({ ...v, tagline: e.target.value })} placeholder="Shown on the home page" />
+          <SelectField
+            label="What it sells"
+            value={v.store_type}
+            onChange={(e) => setV({ ...v, store_type: e.target.value as StoreType })}
+            hint="Sets the store's words (pieces or pairs, fabric or ingredients), what a product's options are called, and its starter policies and FAQ."
+            className="md:col-span-2"
+          >
+            {STORE_KINDS.map((k) => <option key={k.key} value={k.key}>{k.label} ({k.example})</option>)}
+          </SelectField>
           <TextField
             label="Short name"
             maxLength={40}
@@ -132,9 +144,19 @@ export default function NewStoreForm({ vercel, taken, initial }: { vercel: boole
       </Card>
 
       <Card title="Products">
+        {kind.departments.length > 0 && (
+          <div className="mb-4">
+            <Toggle
+              label={`Start with departments: ${kind.departments.join(", ")}`}
+              hint="Empty to begin with, ready for products; rename or remove them in Catalog › Categories."
+              checked={v.departments}
+              onChange={(x) => setV({ ...v, departments: x })}
+            />
+          </div>
+        )}
         <Toggle
           label="Start with the sample catalog"
-          hint="45 example products from six made-up labels, with photos, sizes, collections, discount codes and homepage banners, so the store looks complete straight away. They're marked as samples: remove them all in one click from the store's Settings › Maintenance and data."
+          hint={`45 example clothing products from six made-up labels, with photos, sizes, collections, discount codes and homepage banners, so the store looks complete straight away${v.store_type === "fashion" ? "" : " (they suit a clothing store best, or trying the store out)"}. They're marked as samples: remove them all in one click from the store's Settings › Maintenance and data.`}
           checked={v.samples}
           onChange={(x) => setV({ ...v, samples: x })}
         />

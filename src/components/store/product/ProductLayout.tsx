@@ -3,6 +3,7 @@ import { getRelatedProducts, getReviews } from "@/lib/catalog";
 import { storefrontLook } from "@/lib/look";
 import { absoluteUrl, excerpt, jsonLd } from "@/lib/seo";
 import { getSettings, policiesOf } from "@/lib/settings";
+import { storeKind, type StoreKind } from "@/lib/store-types";
 import type { ProductPage } from "@/lib/types";
 import { Breadcrumbs } from "../listing/ProductListing";
 import RecentlyViewed from "../RecentlyViewed";
@@ -11,7 +12,7 @@ import ProductDetails from "./ProductDetails";
 import ProductView from "./ProductView";
 import Reviews from "./Reviews";
 
-function productJsonLd(origin: string, product: ProductPage, currency: string) {
+function productJsonLd(origin: string, product: ProductPage, currency: string, kind: StoreKind) {
   const offers = product.variants.map((v) => ({
     "@type": "Offer",
     sku: v.sku,
@@ -30,7 +31,7 @@ function productJsonLd(origin: string, product: ProductPage, currency: string) {
       image: product.images.map((i) => i.url),
       sku: product.variants[0]?.sku,
       brand: product.brand ? { "@type": "Brand", name: product.brand.name } : undefined,
-      material: product.fabric || undefined,
+      material: (kind.details.madeOf && product.fabric) || undefined,
       color: [...new Set(product.variants.map((v) => v.color).filter(Boolean))].join(", ") || undefined,
       offers:
         offers.length > 1
@@ -79,9 +80,10 @@ export default async function ProductLayout({
 }) {
   const shipping = policiesOf(settings).shipping?.split(/\n{2,}/).slice(0, 2).join("\n\n") ?? "";
   const { design } = await storefrontLook(settings);
+  const kind = storeKind(settings.store_type);
   return (
     <>
-      {!preview && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(productJsonLd(origin, product, settings.currency)) }} />}
+      {!preview && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(productJsonLd(origin, product, settings.currency, kind)) }} />}
       <div className="container-page pt-6 md:pt-8">
         <Breadcrumbs
           items={[
@@ -97,7 +99,7 @@ export default async function ProductLayout({
         </div>
         <div className="mt-16 grid gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-14 xl:gap-20">
           <div className="lg:col-start-2">
-            <ProductDetails product={product} shippingNote={shipping} />
+            <ProductDetails product={product} shippingNote={shipping} kind={kind} />
           </div>
         </div>
       </div>

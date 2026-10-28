@@ -11,7 +11,7 @@ import RecentlyViewed from "../RecentlyViewed";
 import { useStore } from "../StoreProvider";
 
 export default function CartView({ initial, restored }: { initial: CartQuote; restored?: boolean }) {
-  const { toast } = useStore();
+  const { toast, kind } = useStore();
   const [quote, setQuote] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [code, setCode] = useState("");
@@ -40,7 +40,7 @@ export default function CartView({ initial, restored }: { initial: CartQuote; re
     return (
       <div className="container-page py-24 text-center">
         <h1 className="font-serif text-5xl">Your bag is empty</h1>
-        <p className="mt-4 text-taupe">Pieces you add will appear here.</p>
+        <p className="mt-4 text-taupe">{kind.words.emptyBag}</p>
         <ButtonLink href="/shop?sort=newest" size="lg" className="mt-8">Shop new arrivals</ButtonLink>
         <RecentlyViewed title="Recently viewed" />
       </div>
@@ -72,7 +72,7 @@ export default function CartView({ initial, restored }: { initial: CartQuote; re
                     <div className="min-w-0">
                       <p className="label-caps text-stone">{l.brand}</p>
                       <Link href={`/products/${l.slug}`} className="mt-1 block font-serif text-xl hover:underline">{l.title}</Link>
-                      <p className="mt-1 text-sm text-taupe">{[l.color, l.size && `Size ${l.size}`].filter(Boolean).join(" · ")}</p>
+                      <p className="mt-1 text-sm text-taupe">{[l.color, l.size && `${kind.options.size} ${l.size}`].filter(Boolean).join(" · ")}</p>
                       <p className="mt-1 text-xs text-stone">SKU {l.sku}</p>
                     </div>
                     <div className="text-right">

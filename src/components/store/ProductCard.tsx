@@ -26,7 +26,8 @@ export default function ProductCard({
 }) {
   const soldOut = product.available_stock <= 0;
   const isNew = Date.now() - new Date(product.published_at).getTime() < NEW_DAYS * 86_400_000;
-  const swatches = product.swatches ?? [];
+  // Dots for options that are colours (a flavour or a finish without a swatch colour has none).
+  const swatches = (product.swatches ?? []).filter((s) => s.hex);
   const pct = product.on_sale ? discountPercent(product.price, product.compare_at_price) : 0;
 
   return (

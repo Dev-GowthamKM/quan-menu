@@ -9,6 +9,7 @@ import { SMS_HOOK_SECRET } from "@/lib/server-env";
 import { SECTION_KEYS } from "@/lib/designs";
 import { lookColumns, lookSchema, signLookPreview } from "@/lib/look";
 import { storeOrigin } from "@/lib/store";
+import { STORE_TYPES } from "@/lib/store-types";
 import type { AppRole } from "@/lib/types";
 import { whatsappConnected } from "@/lib/whatsapp";
 import { WHATSAPP_EVENTS, type WhatsAppEvent } from "@/lib/whatsapp-format";
@@ -141,6 +142,7 @@ const SECTIONS = {
   general: z.object({
     store_name: z.string().trim().min(1).max(80),
     tagline: text(160),
+    store_type: z.enum(STORE_TYPES).optional(),
     logo_url: url,
     contact: z.object({ email: text(200), phone: text(40), whatsapp: text(40), chat_button: z.boolean(), address: text(500), hours: text(200) }).partial(),
     social: z.object({ instagram: webUrl, facebook: webUrl, x: webUrl, pinterest: webUrl, youtube: webUrl }).partial(),

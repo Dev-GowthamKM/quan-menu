@@ -177,6 +177,8 @@ export interface ProductPage {
   updated_at: string;
   /** Show the photos as a 360° view (after the motion database update). */
   spin?: boolean;
+  /** The product's own names for its two options, like {"size": "Pack size"} (after the store types update). */
+  option_names?: { size?: string; color?: string };
   brand: { name: string; slug: string; logo_url: string | null } | null;
   category: { name: string; slug: string } | null;
   breadcrumbs: { name: string; slug: string }[];
