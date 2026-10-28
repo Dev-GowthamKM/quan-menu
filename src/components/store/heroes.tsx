@@ -6,10 +6,13 @@ import CatalogImage from "../ui/CatalogImage";
 import { buttonClass, cx } from "../ui/controls";
 import { ArrowRight } from "../ui/icons";
 import HeroMedia from "./HeroMedia";
+import Rise from "./Rise";
 
 // The home page's main banner, in each design's hero style (lib/designs.ts). Each works from
 // the same banner (Settings › Homepage), plays its film where the style has room for one, and
-// has a version for stores without a banner yet.
+// has a version for stores without a banner yet. The full-screen styles open the page with a
+// zoom in cinematic designs (data-zoom, Motion.tsx): as the shopper scrolls, the banner moves at
+// half speed under the page while its picture zooms in and its words float away.
 
 interface HeroProps {
   variant: HeroStyle;
@@ -194,21 +197,23 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [] }
         );
       }
       return (
-        <section data-hero="cinema" className="relative h-[100svh] min-h-[32rem] overflow-hidden bg-black text-white">
-          <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="100vw" parallax={0.15} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/45" />
-          <div className="container-page absolute inset-x-0 bottom-0 pb-14 md:pb-20">
-            {slide.eyebrow && <p className="text-[11px] tracking-[0.4em] uppercase opacity-80">{slide.eyebrow}</p>}
-            <h1 className="mt-4 max-w-5xl font-serif text-[clamp(2.6rem,8vw,7.5rem)] leading-[0.92]">{slide.heading}</h1>
-            {slide.subheading && <p className="mt-5 max-w-lg text-sm leading-relaxed opacity-85">{slide.subheading}</p>}
-            <Ctas
-              slide={slide}
-              className="mt-8"
-              primary="inline-flex h-12 items-center rounded-btn bg-white px-7 text-[12px] tracking-[0.2em] text-black uppercase transition-colors hover:bg-white/85"
-              secondary="inline-flex h-12 items-center rounded-btn border border-white/70 px-7 text-[12px] tracking-[0.2em] text-white uppercase transition-colors hover:bg-white hover:text-black"
-            />
+        <section data-hero="cinema" data-zoom className="relative h-[100svh] min-h-[32rem] overflow-hidden bg-black text-white">
+          <div className="zoom-stage absolute inset-0">
+            <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="100vw" parallax={0.15} />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/45" />
+            <div className="zoom-copy container-page absolute inset-x-0 bottom-0 pb-14 md:pb-20">
+              {slide.eyebrow && <p className="text-[11px] tracking-[0.4em] uppercase opacity-80">{slide.eyebrow}</p>}
+              <h1 data-rise="load" className="mt-4 max-w-5xl font-serif text-[clamp(2.6rem,8vw,7.5rem)] leading-[0.92]"><Rise text={slide.heading} /></h1>
+              {slide.subheading && <p className="mt-5 max-w-lg text-sm leading-relaxed opacity-85">{slide.subheading}</p>}
+              <Ctas
+                slide={slide}
+                className="mt-8"
+                primary="inline-flex h-12 items-center rounded-btn bg-white px-7 text-[12px] tracking-[0.2em] text-black uppercase transition-colors hover:bg-white/85"
+                secondary="inline-flex h-12 items-center rounded-btn border border-white/70 px-7 text-[12px] tracking-[0.2em] text-white uppercase transition-colors hover:bg-white hover:text-black"
+              />
+            </div>
+            <span aria-hidden className="absolute right-6 bottom-8 hidden text-[10px] tracking-[0.4em] uppercase opacity-70 [writing-mode:vertical-rl] md:block">Scroll</span>
           </div>
-          <span aria-hidden className="absolute right-6 bottom-8 hidden text-[10px] tracking-[0.4em] uppercase opacity-70 [writing-mode:vertical-rl] md:block">Scroll</span>
         </section>
       );
 
@@ -225,26 +230,28 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [] }
         );
       }
       return (
-        <section data-hero="film" className="relative h-[100svh] min-h-[34rem] overflow-hidden bg-neutral-900 text-white">
-          <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="100vw" parallax={0.18} />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/50" />
-          <div className="absolute inset-0 grid place-items-center px-6 text-center">
-            <div>
-              {slide.eyebrow && <p className="animate-fade-in text-[11px] tracking-[0.35em] uppercase opacity-90">{slide.eyebrow}</p>}
-              <h1 className="mt-5 animate-fade-in font-serif text-[clamp(3rem,9vw,8.5rem)] leading-[0.95] [animation-delay:150ms]">{slide.heading}</h1>
-              {slide.subheading && <p className="mx-auto mt-6 max-w-md animate-fade-in text-sm leading-relaxed opacity-90 [animation-delay:300ms]">{slide.subheading}</p>}
-              <Ctas
-                slide={slide}
-                className="mt-9 animate-fade-in justify-center [animation-delay:450ms]"
-                primary="inline-flex h-12 items-center rounded-btn bg-white/90 px-7 text-[12px] tracking-[0.2em] text-black uppercase backdrop-blur transition-colors hover:bg-white"
-                secondary="inline-flex h-12 items-center rounded-btn border border-white/70 px-7 text-[12px] tracking-[0.2em] text-white uppercase transition-colors hover:bg-white hover:text-black"
-              />
+        <section data-hero="film" data-zoom className="relative h-[100svh] min-h-[34rem] overflow-hidden bg-neutral-900 text-white">
+          <div className="zoom-stage absolute inset-0">
+            <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="100vw" parallax={0.18} />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/50" />
+            <div className="zoom-copy absolute inset-0 grid place-items-center px-6 text-center">
+              <div>
+                {slide.eyebrow && <p className="animate-fade-in text-[11px] tracking-[0.35em] uppercase opacity-90">{slide.eyebrow}</p>}
+                <h1 data-rise="load" className="mt-5 animate-fade-in font-serif text-[clamp(3rem,9vw,8.5rem)] leading-[0.95] [animation-delay:150ms]"><Rise text={slide.heading} /></h1>
+                {slide.subheading && <p className="mx-auto mt-6 max-w-md animate-fade-in text-sm leading-relaxed opacity-90 [animation-delay:300ms]">{slide.subheading}</p>}
+                <Ctas
+                  slide={slide}
+                  className="mt-9 animate-fade-in justify-center [animation-delay:450ms]"
+                  primary="inline-flex h-12 items-center rounded-btn bg-white/90 px-7 text-[12px] tracking-[0.2em] text-black uppercase backdrop-blur transition-colors hover:bg-white"
+                  secondary="inline-flex h-12 items-center rounded-btn border border-white/70 px-7 text-[12px] tracking-[0.2em] text-white uppercase transition-colors hover:bg-white hover:text-black"
+                />
+              </div>
             </div>
+            <span aria-hidden className="absolute bottom-7 left-1/2 flex -translate-x-1/2 flex-col items-center gap-3 text-[10px] tracking-[0.4em] uppercase opacity-80">
+              Scroll
+              <span className="h-10 w-px bg-white/70" />
+            </span>
           </div>
-          <span aria-hidden className="absolute bottom-7 left-1/2 flex -translate-x-1/2 flex-col items-center gap-3 text-[10px] tracking-[0.4em] uppercase opacity-80">
-            Scroll
-            <span className="h-10 w-px bg-white/70" />
-          </span>
         </section>
       );
 
@@ -252,40 +259,42 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [] }
       const picture = image ?? extras.find((x): x is string => !!x) ?? null;
       const glow = "shadow-[0_0_36px_-6px_var(--color-brand)]";
       return (
-        <section data-hero="glow" className="relative overflow-hidden bg-ivory">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{ background: "radial-gradient(60% 50% at 50% 50%, color-mix(in oklab, var(--color-brand) 55%, transparent), transparent 72%)" }}
-          />
-          <p aria-hidden data-drift="0.25" className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center font-serif text-[clamp(4.5rem,19vw,17rem)] leading-none whitespace-nowrap text-ink/10">
-            {heading}
-          </p>
-          {/* The heading, the glowing picture and the buttons: stacked on phones, side by side on wide screens. */}
-          <div className="container-page relative grid min-h-[100svh] content-center items-center gap-8 pt-28 pb-14 text-center lg:grid-cols-[1fr_auto_1fr] lg:gap-12 lg:text-left">
-            <div>
-              <p className="inline-block rounded-btn border border-line px-3 py-1 text-[11px] tracking-[0.2em] uppercase">{slide?.eyebrow || "New drop"}</p>
-              <h1 className="mt-5 font-serif text-[clamp(2.4rem,5vw,5.5rem)] leading-[0.95]">{heading}</h1>
-            </div>
-            {picture ? (
-              <div className="relative mx-auto aspect-[3/4] w-[min(52vw,15rem)] animate-float overflow-hidden rounded-card shadow-[0_34px_120px_-24px_var(--color-brand)] lg:w-[min(26vw,22rem)]">
-                <CatalogImage src={picture} alt={slide?.image_alt || ""} fill priority sizes="(min-width: 1024px) 22rem, 52vw" className="object-cover" />
+        <section data-hero="glow" data-zoom className="relative overflow-hidden bg-ivory">
+          <div className="zoom-stage relative">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{ background: "radial-gradient(60% 50% at 50% 50%, color-mix(in oklab, var(--color-brand) 55%, transparent), transparent 72%)" }}
+            />
+            <p aria-hidden data-drift="0.25" className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center font-serif text-[clamp(4.5rem,19vw,17rem)] leading-none whitespace-nowrap text-ink/10">
+              {heading}
+            </p>
+            {/* The heading, the glowing picture and the buttons: stacked on phones, side by side on wide screens. */}
+            <div className="container-page relative grid min-h-[100svh] content-center items-center gap-8 pt-28 pb-14 text-center lg:grid-cols-[1fr_auto_1fr] lg:gap-12 lg:text-left">
+              <div className="zoom-copy">
+                <p className="inline-block rounded-btn border border-line px-3 py-1 text-[11px] tracking-[0.2em] uppercase">{slide?.eyebrow || "New drop"}</p>
+                <h1 data-rise="load" className="mt-5 font-serif text-[clamp(2.4rem,5vw,5.5rem)] leading-[0.95]"><Rise text={heading} /></h1>
               </div>
-            ) : (
-              <div aria-hidden className="mx-auto size-40 animate-float rounded-full bg-brand/40 blur-2xl lg:size-72" />
-            )}
-            <div className="lg:max-w-xs lg:justify-self-end">
-              {slide?.subheading && <p className="mx-auto max-w-md text-sm leading-relaxed text-taupe lg:mx-0">{slide.subheading}</p>}
-              {slide ? (
-                <Ctas
-                  slide={slide}
-                  className="mt-6 justify-center lg:justify-start"
-                  primary={buttonClass("primary", "lg", `font-bold ${glow}`)}
-                  secondary={buttonClass("secondary", "lg", "font-bold")}
-                />
+              {picture ? (
+                <div className="zoom-media relative mx-auto aspect-[3/4] w-[min(52vw,15rem)] animate-float overflow-hidden rounded-card shadow-[0_34px_120px_-24px_var(--color-brand)] lg:w-[min(26vw,22rem)]">
+                  <CatalogImage src={picture} alt={slide?.image_alt || ""} fill priority sizes="(min-width: 1024px) 22rem, 52vw" className="object-cover" />
+                </div>
               ) : (
-                <Link href="/shop?sort=newest" className={buttonClass("primary", "lg", `mt-6 font-bold ${glow}`)}>Shop new arrivals</Link>
+                <div aria-hidden className="mx-auto size-40 animate-float rounded-full bg-brand/40 blur-2xl lg:size-72" />
               )}
+              <div className="zoom-copy lg:max-w-xs lg:justify-self-end">
+                {slide?.subheading && <p className="mx-auto max-w-md text-sm leading-relaxed text-taupe lg:mx-0">{slide.subheading}</p>}
+                {slide ? (
+                  <Ctas
+                    slide={slide}
+                    className="mt-6 justify-center lg:justify-start"
+                    primary={buttonClass("primary", "lg", `font-bold ${glow}`)}
+                    secondary={buttonClass("secondary", "lg", "font-bold")}
+                  />
+                ) : (
+                  <Link href="/shop?sort=newest" className={buttonClass("primary", "lg", `mt-6 font-bold ${glow}`)}>Shop new arrivals</Link>
+                )}
+              </div>
             </div>
           </div>
         </section>

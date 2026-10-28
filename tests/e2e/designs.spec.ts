@@ -150,6 +150,66 @@ test("each design builds the store its own way, and every one stays accessible",
   await expect(tab.getByText("Preview of a look")).toHaveCount(0);
 });
 
+test("cinematic designs open with a curtain once a visit, zoom the banner, raise their headlines and mark the chapters", async ({ page, context, browser }) => {
+  await page.goto("/admin/settings?tab=appearance");
+  const tab = await preview(page, context, "Cinema");
+  const html = tab.locator("html");
+  // The curtain with the store's name lifts by itself, and doesn't come back on this visit.
+  await expect(html).toHaveClass(/intro-seen/);
+  await expect(html).not.toHaveClass(/intro-playing/);
+  await expect(tab.locator(".intro")).toBeHidden();
+  await tab.reload({ waitUntil: "domcontentloaded" });
+  await expect(html).not.toHaveClass(/intro-playing/);
+
+  // A new visit (a new tab) opens with it; a tap lifts it at once.
+  const fresh = await context.newPage();
+  await fresh.addInitScript(() => {
+    new MutationObserver(() => {
+      if (document.documentElement?.classList.contains("intro-playing")) (window as unknown as { intro: boolean }).intro = true;
+    }).observe(document, { subtree: true, attributes: true, attributeFilter: ["class"] });
+  });
+  await fresh.goto("/", { waitUntil: "domcontentloaded" });
+  expect(await fresh.evaluate(() => (window as unknown as { intro?: boolean }).intro)).toBe(true);
+  await expect(fresh.locator(".intro")).toContainText(/\S/);
+  await fresh.mouse.click(10, 300);
+  await expect(fresh.locator("html")).toHaveClass(/intro-seen/);
+  await expect(fresh.locator(".intro")).toBeHidden();
+  await fresh.close();
+
+  // The banner zooms in as the page scrolls over it.
+  const hero = tab.locator("[data-zoom]");
+  await tab.evaluate(() => window.scrollTo(0, window.innerHeight * 0.4));
+  await expect.poll(() => hero.evaluate((el) => Number(el.style.getPropertyValue("--zoom")))).toBeGreaterThan(0.3);
+  await expect(tab.locator('[data-zoom] h1[data-rise="load"]')).toHaveText(/\S/);
+
+  // Headlines rise as they come into view, line by line, keeping their words.
+  const title = tab.locator("main .sh-title[data-rise]").first();
+  const words = (await title.textContent())!;
+  await title.scrollIntoViewIfNeeded();
+  await expect(title).toHaveClass(/is-in/);
+  await expect(title).toHaveText(words);
+  await expect(title.locator(".rise-w").first()).toHaveCSS("--line", "0");
+
+  // The Spotlight's dots show the chapter on screen and go to any other.
+  const dots = tab.getByRole("navigation", { name: "Spotlight chapters" }).getByRole("button");
+  await tab.getByRole("region", { name: "Spotlight" }).scrollIntoViewIfNeeded();
+  await dots.nth(1).click();
+  await expect(dots.nth(1)).toHaveAttribute("aria-current", "step");
+  await expect(dots.nth(0)).not.toHaveAttribute("aria-current", "step");
+  await expectAccessible(tab, "Cinema: home after the curtain");
+  await tab.close();
+
+  // Shoppers who ask for less motion get the page straight away, still.
+  const still = await browser.newContext({ reducedMotion: "reduce", storageState: OWNER.state });
+  const quiet = await still.newPage();
+  await quiet.goto("/admin/settings?tab=appearance");
+  const calm = await preview(quiet, still, "Cinema");
+  await expect(calm.locator("html")).not.toHaveClass(/intro-playing/);
+  await expect(calm.locator(".intro")).toBeHidden();
+  await expect(calm.locator("html")).not.toHaveClass(/motion-ready/);
+  await still.close();
+});
+
 test("the home page follows the store's own order of sections", async ({ page }) => {
   const { data: before } = await db().from("store_settings").select("homepage").eq("id", 1).single();
   try {

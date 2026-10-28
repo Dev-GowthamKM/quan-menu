@@ -13,6 +13,7 @@ import DepartmentList from "./DepartmentList";
 import NewsletterForm from "./NewsletterForm";
 import ProductCard from "./ProductCard";
 import Rail from "./Rail";
+import Rise from "./Rise";
 import { SectionHeader } from "./SectionHeader";
 
 export { SectionHeader };
@@ -249,7 +250,7 @@ export function SeasonalFeature({ collection }: { collection?: Collection }) {
         <div className="container-page absolute inset-0 flex items-end pb-14 md:items-center md:pb-0">
           <div className="max-w-lg text-white" data-reveal>
             <p className="label-caps opacity-90">{collection.season || "The season"}</p>
-            <h2 className="mt-4 font-serif text-5xl leading-none md:text-7xl">{collection.title}</h2>
+            <h2 data-rise className="mt-4 font-serif text-5xl leading-none md:text-7xl"><Rise text={collection.title} /></h2>
             {collection.description && <p className="mt-5 leading-relaxed opacity-90">{collection.description}</p>}
             <span className="mt-8 inline-flex h-12 items-center gap-2 rounded-btn bg-white px-7 text-[12px] tracking-[0.16em] text-black uppercase">
               Explore the collection <ArrowRight size={14} />
@@ -309,7 +310,7 @@ export function CampaignBand({ slide }: { slide: HeroSlide }) {
         </div>
         <div className="px-6 pb-10 md:px-16 md:py-16">
           {slide.eyebrow && <p className="label-caps text-accent">{slide.eyebrow}</p>}
-          <h2 className="mt-4 font-serif text-4xl leading-tight md:text-6xl">{slide.heading}</h2>
+          <h2 data-rise className="mt-4 font-serif text-4xl leading-tight md:text-6xl"><Rise text={slide.heading} /></h2>
           {slide.subheading && <p className="mt-5 max-w-md leading-relaxed text-taupe">{slide.subheading}</p>}
           {safeHref(slide.cta_href) && <Link href={safeHref(slide.cta_href)!} className={buttonClass("secondary", "lg", "mt-8")}>{slide.cta_label || "Discover"}</Link>}
         </div>
@@ -405,7 +406,7 @@ export function StorySection({ settings, variant }: { settings: Settings; varian
       <div className="container-page py-16 text-center md:py-24" data-reveal>
         <p className="label-caps text-accent">Our story</p>
         {variant === "heritage" && <span aria-hidden className="ornament mt-4 text-accent" />}
-        <p className="mx-auto mt-6 max-w-3xl font-serif text-2xl leading-relaxed normal-case md:text-3xl">{opening}</p>
+        <p data-rise className="mx-auto mt-6 max-w-3xl font-serif text-2xl leading-relaxed normal-case md:text-3xl"><Rise text={opening} /></p>
         <Link href="/pages/about" className={buttonClass("secondary", "md", "mt-8")}>Read our story</Link>
       </div>
     </section>
@@ -467,7 +468,7 @@ export function NewsletterSection({ variant }: { variant: DesignKey }) {
       return (
         <section className="container-page mt-24 md:mt-36">
           <div className="mx-auto max-w-2xl text-center" data-reveal>
-            <h2 className="font-serif text-[clamp(2.25rem,5vw,4rem)] leading-[1.05]">{title}</h2>
+            <h2 data-rise className="font-serif text-[clamp(2.25rem,5vw,4rem)] leading-[1.05]"><Rise text={title} /></h2>
             <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-taupe">{text}</p>
             <div className="mx-auto max-w-md text-left"><NewsletterForm source="home" boxed /></div>
           </div>
@@ -478,7 +479,7 @@ export function NewsletterSection({ variant }: { variant: DesignKey }) {
         <section className="container-page mt-20 md:mt-28">
           <div className="relative overflow-hidden rounded-card border border-line bg-paper p-8 md:p-14" data-reveal>
             <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-brand/30 blur-3xl" />
-            <h2 className="relative font-serif text-4xl leading-none md:text-6xl">{title}</h2>
+            <h2 data-rise className="relative font-serif text-4xl leading-none md:text-6xl"><Rise text={title} /></h2>
             <p className="relative mt-4 max-w-md text-sm text-taupe">{text}</p>
             <div className="relative max-w-md"><NewsletterForm source="home" boxed /></div>
           </div>
@@ -488,7 +489,7 @@ export function NewsletterSection({ variant }: { variant: DesignKey }) {
       return (
         <section className="container-page mt-20 md:mt-28">
           <div className="grid gap-8 border-t border-line pt-14 md:grid-cols-[1.3fr_1fr] md:items-end">
-            <h2 className="font-serif text-[clamp(2.5rem,6vw,5rem)] leading-[0.95]">Stay close</h2>
+            <h2 data-rise className="font-serif text-[clamp(2.5rem,6vw,5rem)] leading-[0.95]"><Rise text="Stay close" /></h2>
             <div>
               <p className="text-sm text-taupe">{text}</p>
               <NewsletterForm source="home" />

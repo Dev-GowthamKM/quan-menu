@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import ChatButton from "@/components/store/ChatButton";
 import Footer from "@/components/store/Footer";
 import Header from "@/components/store/Header";
+import Intro from "@/components/store/Intro";
 import Motion from "@/components/store/Motion";
 import SetupNotice from "@/components/store/SetupNotice";
 import StoreProvider from "@/components/store/StoreProvider";
@@ -74,6 +75,8 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       data-scheme={light ? "light" : "dark"}
       className="flex min-h-dvh flex-col bg-ivory font-sans text-ink"
     >
+      {/* First, so it decides before the header is drawn whether this visit opens with the curtain. */}
+      {design.intro === "name" && design.motion !== "none" && <Intro name={settings.store_name} />}
       {/* The page behind the store (overscroll, the bottom of short pages) in the store's background. */}
       <style href="store-background" precedence="default">{`body{background:${look.colors.background}}`}</style>
       <a href="#main" className="sr-only z-50 bg-ink px-4 py-2 text-ivory focus:not-sr-only focus:fixed focus:top-2 focus:left-2">

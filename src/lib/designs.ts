@@ -25,12 +25,15 @@ export const CORNER_STYLES = ["sharp", "soft", "round"] as const;
 export const BUTTON_STYLES = ["square", "soft", "pill"] as const;
 /** How much the store moves: not at all, sections easing in as they scroll into view, or that plus parallax and scroll-driven scenes. */
 export const MOTION_STYLES = ["none", "subtle", "cinematic"] as const;
+/** How the home page opens, once a visit: straight away, or with the store's name rising on a curtain that lifts (only where the design moves). */
+export const INTRO_STYLES = ["none", "name"] as const;
 export type HeaderStyle = (typeof HEADER_STYLES)[number];
 export type HeroStyle = (typeof HERO_STYLES)[number];
 export type CardStyle = (typeof CARD_STYLES)[number];
 export type CornerStyle = (typeof CORNER_STYLES)[number];
 export type ButtonStyle = (typeof BUTTON_STYLES)[number];
 export type MotionStyle = (typeof MOTION_STYLES)[number];
+export type IntroStyle = (typeof INTRO_STYLES)[number];
 export type DepartmentStyle = "tiles" | "list" | "chips" | "circles" | "arches" | "mosaic" | "panels" | "lineup";
 export type TitleStyle = "editorial" | "minimal" | "bold" | "soft" | "ornament" | "giant" | "statement" | "glow";
 export type FooterStyle = "columns" | "minimal" | "bold" | "soft" | "heritage" | "wordmark" | "grand" | "neon";
@@ -84,6 +87,7 @@ export interface Design {
   /** Overrides the heading font's own weight, within what the font has. */
   headingWeight?: number;
   motion: MotionStyle;
+  intro: IntroStyle;
   sections: SectionKey[];
   /** Palettes (lib/theme.ts) and fonts that suit the design; the first of each is its default. */
   palettes: string[];
@@ -111,6 +115,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingCase: "none",
     headingTracking: "normal",
     motion: "none",
+    intro: "none",
     sections: ["hero", "departments", "new", "promos", "best", "seasonal", "collections", "brands", "campaign", "recommended", "newsletter"],
     palettes: ["wine", "indigo", "emerald", "rose", "ivory", "noir"],
     headings: ["cormorant", "playfair", "bodoni", "dm-serif", "fraunces"],
@@ -136,6 +141,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingTracking: "-0.01em",
     headingWeight: 500,
     motion: "subtle",
+    intro: "none",
     sections: ["hero", "new", "departments", "seasonal", "best", "collections", "campaign", "recommended", "newsletter"],
     palettes: ["snow", "oat", "fog", "sage", "clay"],
     headings: ["space-grotesk", "outfit", "tenor", "josefin", "italiana"],
@@ -161,6 +167,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingTracking: "-0.01em",
     headingWeight: 800,
     motion: "subtle",
+    intro: "none",
     sections: ["hero", "departments", "trust", "best", "promos", "new", "collections", "brands", "recommended", "newsletter"],
     palettes: ["tangerine", "bubblegum", "cobalt", "cherry", "acid"],
     headings: ["unbounded", "bricolage", "archivo", "syne"],
@@ -185,6 +192,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingCase: "none",
     headingTracking: "normal",
     motion: "subtle",
+    intro: "none",
     sections: ["hero", "departments", "new", "promos", "best", "collections", "campaign", "trust", "recommended", "newsletter"],
     palettes: ["blush", "lavender", "mint", "butter", "sky"],
     headings: ["fraunces", "dm-serif", "playfair", "josefin"],
@@ -209,6 +217,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingCase: "uppercase",
     headingTracking: "0.06em",
     motion: "subtle",
+    intro: "none",
     sections: ["hero", "trust", "departments", "best", "story", "collections", "promos", "brands", "seasonal", "newsletter"],
     palettes: ["maharani", "peacock", "marigold", "temple", "royal"],
     headings: ["cinzel", "marcellus", "cormorant", "playfair"],
@@ -234,6 +243,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingTracking: "0.05em",
     headingWeight: 400,
     motion: "cinematic",
+    intro: "name",
     sections: ["hero", "new", "departments", "seasonal", "campaign", "collections", "best", "recommended", "newsletter"],
     palettes: ["onyx", "midnight", "bordeaux", "graphite"],
     headings: ["italiana", "bodoni", "syne", "tenor", "cinzel"],
@@ -258,6 +268,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingCase: "none",
     headingTracking: "-0.01em",
     motion: "cinematic",
+    intro: "name",
     sections: ["hero", "statement", "spotlight", "new", "departments", "best", "story", "recommended"],
     palettes: ["linen", "stone", "sandstone", "mist"],
     headings: ["bodoni", "cormorant", "italiana", "fraunces"],
@@ -283,6 +294,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingTracking: "-0.01em",
     headingWeight: 800,
     motion: "cinematic",
+    intro: "name",
     sections: ["hero", "showcase", "departments", "spotlight", "statement", "new", "brands", "recommended"],
     palettes: ["ultraviolet", "cyber", "magma", "toxic"],
     headings: ["archivo", "unbounded", "syne", "bricolage"],
@@ -302,6 +314,7 @@ export interface DesignOptions {
   corners?: CornerStyle;
   buttons?: ButtonStyle;
   motion?: MotionStyle;
+  intro?: IntroStyle;
 }
 
 export const OPTION_CHOICES = {
@@ -311,6 +324,7 @@ export const OPTION_CHOICES = {
   corners: CORNER_STYLES,
   buttons: BUTTON_STYLES,
   motion: MOTION_STYLES,
+  intro: INTRO_STYLES,
 } as const;
 
 export const OPTION_LABELS: { [K in keyof DesignOptions]-?: { label: string; names: Record<NonNullable<DesignOptions[K]>, string> } } = {
@@ -334,7 +348,8 @@ export const OPTION_LABELS: { [K in keyof DesignOptions]-?: { label: string; nam
   },
   corners: { label: "Corners", names: { sharp: "Sharp", soft: "Softened", round: "Round" } },
   buttons: { label: "Buttons", names: { square: "Square", soft: "Softened", pill: "Pill" } },
-  motion: { label: "Motion", names: { none: "Still", subtle: "Sections ease in", cinematic: "Cinematic: ease in, parallax and scenes" } },
+  motion: { label: "Motion", names: { none: "Still", subtle: "Sections ease in", cinematic: "Cinematic: rising headlines, zooming banner, parallax, smooth scrolling" } },
+  intro: { label: "Opening", names: { none: "Straight to the page", name: "Your name on a curtain, once a visit" } },
 };
 
 /** Only the known options, with known values (the column is free-form JSON). */

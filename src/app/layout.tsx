@@ -21,7 +21,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={fontVariables}>
+    // The storefront marks <html> before it hydrates (the opening curtain, components/store/Intro.tsx).
+    <html lang="en-IN" className={fontVariables} suppressHydrationWarning>
       <body className="min-h-dvh">{children}</body>
     </html>
   );

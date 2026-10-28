@@ -234,7 +234,7 @@
 
 [data-title="bold"] .sh-eyebrow { font-weight: 700; }
 [data-title="bold"] .sh-title { font-size: clamp(2rem, 5.5vw, 4rem); line-height: 1; letter-spacing: -0.02em; }
-[data-title="bold"] .sh-title span { background: linear-gradient(transparent 62%, color-mix(in oklab, var(--color-accent) 32%, transparent) 62%); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+[data-title="bold"] .sh-title > span { background: linear-gradient(transparent 62%, color-mix(in oklab, var(--color-accent) 32%, transparent) 62%); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 [data-title="bold"] .sh-link { border: 2px solid var(--color-ink); border-radius: var(--radius-btn); padding: 0.5rem 1rem; font-weight: 600; text-decoration: none; }
 
 [data-title="soft"] .sh,
@@ -256,7 +256,8 @@
 
 [data-title="glow"] .sh-eyebrow { display: inline-block; padding: 0.25rem 0.75rem; border: 1px solid var(--color-line); border-radius: 999px; color: var(--color-ink); }
 [data-title="glow"] .sh-title { margin-top: 0.75rem; font-size: clamp(2.25rem, 6vw, 4.75rem); line-height: 0.95; }
-[data-title="glow"] .sh-title span { background: linear-gradient(100deg, var(--color-ink) 15%, var(--color-accent) 55%, var(--color-brand) 95%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+/* Each word carries the gradient (a word can rise on its own), with room for the letters' tails. */
+[data-title="glow"] .sh-title .rise-i { margin-block: -0.15em; padding: 0.15em 0.05em; background: linear-gradient(100deg, var(--color-ink) 15%, var(--color-accent) 55%, var(--color-brand) 95%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 [data-title="glow"] .sh-link { padding: 0.5rem 1rem; border: 1px solid var(--color-line); border-radius: var(--radius-btn); text-decoration: none; }
 
 /*
@@ -286,6 +287,112 @@
 }
 .motion-ready [data-motion="cinematic"] [data-drift] {
   transform: translate3d(var(--drift, 0px), 0, 0);
+}
+
+/*
+ * Rising headlines (cinematic designs; components/store/Rise.tsx): each word sits in a mask and
+ * rises from just below it, line by line as its heading scrolls into view (Motion.tsx marks the
+ * lines), or word by word at once for a heading on screen from the start (data-rise="load").
+ */
+.rise-w,
+.rise-i {
+  display: inline-block;
+  max-width: 100%;
+}
+@keyframes rise {
+  from {
+    translate: 0 calc(100% + 0.35em);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-motion="cinematic"] .rise-w {
+    /* Room around the word for accents, italics and tails; a rising word starts just below it. */
+    clip-path: inset(-0.35em -0.3em -0.3em -0.3em);
+  }
+  [data-motion="cinematic"] [data-rise="load"] .rise-i {
+    animation: rise 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+    animation-delay: calc(0.15s + var(--i, 0) * 0.07s);
+  }
+}
+.motion-ready [data-motion="cinematic"] [data-rise]:not([data-rise="load"]):not(.is-in):not(.is-shown) .rise-i {
+  translate: 0 calc(100% + 0.35em);
+}
+.motion-ready [data-motion="cinematic"] [data-rise].is-in .rise-i {
+  animation: rise 1s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  animation-delay: calc(var(--line, 0) * 0.12s);
+}
+
+/*
+ * The opening banner (data-zoom) as the page scrolls over it, in cinematic designs: its stage
+ * moves at half speed, its picture zooms in and its words float up and away. --zoom runs from 0
+ * to 1 as the shopper scrolls past it (Motion.tsx).
+ */
+.motion-ready [data-motion="cinematic"] [data-zoom] .zoom-stage {
+  translate: 0 calc(var(--zoom, 0) * 45%);
+}
+.motion-ready [data-motion="cinematic"] [data-zoom] [data-parallax],
+.motion-ready [data-motion="cinematic"] [data-zoom] .zoom-media {
+  scale: calc(1 + var(--zoom, 0) * 0.3);
+  transition-property: opacity, filter;
+}
+.motion-ready [data-motion="cinematic"] [data-zoom] .zoom-copy {
+  translate: 0 calc(var(--zoom, 0) * -24vh);
+  opacity: calc(1 - var(--zoom, 0) * 1.7);
+}
+
+/*
+ * The opening curtain (components/store/Intro.tsx): only while <html> carries "intro-playing".
+ * The store's name rises letter by letter, a line draws under it, then the curtain lifts; the
+ * page's own opening animations wait for it.
+ */
+.intro {
+  display: none;
+}
+.intro-playing .intro {
+  display: grid;
+  animation: intro-lift 0.8s cubic-bezier(0.76, 0, 0.24, 1) 1.15s forwards;
+}
+.intro-playing main * {
+  animation-play-state: paused !important;
+}
+.intro-piece {
+  display: inline-block;
+  animation: intro-piece 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  animation-delay: calc(0.1s + var(--i, 0) * 0.045s);
+}
+.intro-line {
+  position: absolute;
+  bottom: 30%;
+  left: 50%;
+  width: min(40vw, 14rem);
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+  translate: -50% 0;
+  transform-origin: left;
+  animation: intro-line 1.1s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+@keyframes intro-piece {
+  from {
+    translate: 0 0.9em;
+    opacity: 0;
+  }
+}
+@keyframes intro-line {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes intro-lift {
+  to {
+    translate: 0 -100%;
+    visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-playing .intro {
+    display: none;
+  }
 }
 
 /* Giant words filled with the brand's colours, glowing (Neon). */

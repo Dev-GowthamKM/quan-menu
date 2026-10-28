@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import CatalogImage from "../ui/CatalogImage";
 import { buttonClass, cx } from "../ui/controls";
+import Rise from "./Rise";
 
 export interface Chapter {
   title: string;
@@ -14,9 +15,9 @@ export interface Chapter {
 
 /**
  * The store's collections one at a time as the shopper scrolls: on wide screens the picture
- * stays pinned while each chapter's words pass by, and the background takes each chapter's
- * colour (colours from theme.ts chapterColors, so text stays readable); on phones, chapter
- * after chapter.
+ * stays pinned while each chapter's words pass by, dots at the side show where the shopper is
+ * (and take them to any chapter), and the background takes each chapter's colour (colours from
+ * theme.ts chapterColors, so text stays readable); on phones, chapter after chapter.
  */
 export default function Spotlight({ chapters, colors }: { chapters: Chapter[]; colors: string[] }) {
   const [active, setActive] = useState(0);
@@ -34,8 +35,21 @@ export default function Spotlight({ chapters, colors }: { chapters: Chapter[]; c
   }, [chapters.length]);
 
   const count = String(chapters.length).padStart(2, "0");
+  const goTo = (i: number) =>
+    refs.current[i]?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
   return (
     <section aria-label="Spotlight" className="relative mt-20 transition-colors duration-700 motion-reduce:transition-none md:mt-28" style={{ backgroundColor: colors[active] }}>
+      <nav aria-label="Spotlight chapters" className="pointer-events-none absolute inset-y-0 right-3 z-10 hidden lg:block xl:right-6">
+        <ol className="pointer-events-auto sticky top-[50svh] flex -translate-y-1/2 flex-col items-center gap-1">
+          {chapters.map((c, i) => (
+            <li key={c.href}>
+              <button type="button" onClick={() => goTo(i)} aria-label={`${c.title}, ${i + 1} of ${chapters.length}`} aria-current={i === active ? "step" : undefined} className="group grid min-h-6 w-6 place-items-center py-1">
+                <span className={cx("block w-1.5 rounded-full transition-all duration-500 motion-reduce:transition-none", i === active ? "h-7 bg-ink" : "h-1.5 bg-ink/35 group-hover:bg-ink/70")} />
+              </button>
+            </li>
+          ))}
+        </ol>
+      </nav>
       <div className="container-page grid lg:grid-cols-2 lg:gap-16">
         <div className="relative hidden lg:block">
           <div className="sticky top-0 flex h-[100svh] items-center justify-center pt-28 pb-12">
@@ -69,7 +83,7 @@ export default function Spotlight({ chapters, colors }: { chapters: Chapter[]; c
               <p className="label-caps text-accent">
                 {c.eyebrow} · {String(i + 1).padStart(2, "0")} / {count}
               </p>
-              <h2 className="mt-4 font-serif text-4xl leading-[1.02] md:text-6xl">{c.title}</h2>
+              <h2 data-rise className="mt-4 font-serif text-4xl leading-[1.02] md:text-6xl"><Rise text={c.title} /></h2>
               {c.text && <p className="mt-5 max-w-md leading-relaxed text-taupe">{c.text}</p>}
               <Link href={c.href} className={buttonClass("secondary", "md", "mt-8 self-start")}>
                 Explore {c.title}

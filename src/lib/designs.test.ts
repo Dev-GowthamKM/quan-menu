@@ -88,6 +88,13 @@ describe("designs", () => {
     expect(DESIGNS.neon.sections).toContain("showcase");
   });
 
+  it("open with the store's name only where they move, and only if the store wants it", () => {
+    for (const d of DESIGN_LIST) expect(d.intro === "name").toBe(d.motion === "cinematic");
+    expect(resolveDesign("neon", { intro: "none" }).intro).toBe("none");
+    expect(resolveDesign("atelier", { intro: "name" }).intro).toBe("name");
+    expect(parseOptions({ intro: "fireworks" })).toEqual({});
+  });
+
   it("turns corners and buttons into radius tokens", () => {
     expect(radiusTokens({ corners: "sharp", buttons: "square" })).toMatchObject({ "--radius-card": "0px", "--radius-btn": "0px" });
     expect(radiusTokens({ corners: "round", buttons: "pill" })).toMatchObject({ "--radius-card": "20px", "--radius-btn": "999px", "--radius-badge": "999px" });

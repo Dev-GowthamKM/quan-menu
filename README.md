@@ -69,12 +69,15 @@ payment account and web address, and the platform's administrators create them f
   section titles, buttons, product photos and footer (Atelier, Nordic, Bazaar, Boutique,
   Heritage, Noir, Cinema, Neon), in 38 palettes, light and dark, and 26 fonts. New stores start
   with a look no other store has (see [Appearance](#appearance)).
-- Movement, as the design chooses: sections that ease in as the shopper scrolls, pictures that
-  drift slower than the page, a Spotlight whose picture stays pinned while each collection's
-  words pass by and the background changes colour, and giant words sliding sideways. The
-  opening banner can play a short silent film, and a product can be shown as a 360° view the
-  shopper turns by dragging. Nothing moves for shoppers whose device asks for less motion, and
-  films give way to the photo on slow or data-saving connections.
+- Movement, as the design chooses: sections that ease in as the shopper scrolls, headlines that
+  rise into place line by line, an opening banner that zooms in as the page slides over it,
+  pictures that drift slower than the page, a Spotlight whose picture stays pinned while each
+  collection's words pass by and the background changes colour (with dots at the side to jump
+  between chapters), giant words sliding sideways, a mouse wheel that glides, and a curtain with
+  the store's name that opens the first visit. The opening banner can play a short silent film,
+  and a product can be shown as a 360° view the shopper turns by dragging. Nothing moves for
+  shoppers whose device asks for less motion, and films give way to the photo on slow or
+  data-saving connections.
 - An announcement bar whose messages take turns (or scroll past), an add-to-bag bar that stays in
   reach on phones, free-delivery progress in the bag, an optional WhatsApp "Chat with us" button,
   and each store's own icon in browser tabs.
@@ -652,13 +655,22 @@ can be read at `http://localhost:4014/__test/messages`.
   would be hard to read.
 - **Typography:** 16 heading fonts (serif and sans serif) and 10 for body text, and italic
   headings where the font has a true italic.
-- **Mix and match:** take the header, main banner, product cards, corners, buttons or motion
-  from another design.
+- **Mix and match:** take the header, main banner, product cards, corners, buttons, motion or
+  opening from another design.
 - **Motion:** still; sections easing in as the shopper scrolls; or cinematic, which adds
-  pictures drifting slower than the page and giant words sliding sideways
-  (`src/components/store/Motion.tsx`). Atelier is still; Noir, Cinema and Neon are cinematic;
-  the others ease in. Nothing moves for shoppers whose device asks for less motion, and the page
-  is complete without it.
+  headlines rising line by line from behind a mask (`src/components/store/Rise.tsx`), the
+  full-screen opening banner moving at half speed under the page while its picture zooms in and
+  its words float away, pictures drifting slower than the page, giant words sliding sideways and
+  a mouse wheel that glides to a stop instead of jumping (keys, the scroll bar, touch and
+  anything that scrolls by itself work as always) (`src/components/store/Motion.tsx`). Atelier
+  is still; Noir, Cinema and Neon are cinematic; the others ease in. Nothing moves for shoppers
+  whose device asks for less motion, and the page is complete without it.
+- **Opening:** Noir, Cinema and Neon open a shopper's first visit to the home page with a
+  curtain in the store's colour, its name rising letter by letter (word by word in scripts whose
+  letters join), lifting after two seconds or at the first tap or key, with the banner's own
+  entrance waiting for it (`src/components/store/Intro.tsx`). Once a visit, only where the
+  design moves, and never for shoppers who ask for less motion; any design can turn it on or
+  off.
 - **Surprise me** picks a design, palette and fonts no other store on the platform has.
 - **Preview on the store** opens the store in the unsaved look, in a new tab, for two hours. The
   link is signed by the server and works only for that store; customers keep seeing the saved
@@ -666,7 +678,8 @@ can be read at `http://localhost:4014/__test/messages`.
 
 **Settings › Homepage › Sections** reorders or hides the home page's sections (the design's
 order until you change it), including the **Spotlight** (featured collections, or else
-departments, one at a time with a pinned picture), the **Statement** (the second banner's
+departments, one at a time with a pinned picture and dots at the side that show the chapter on
+screen and go to any other), the **Statement** (the second banner's
 heading in giant letters behind its picture) and the **Showcase** (the store's featured pieces,
 then best sellers and new arrivals, those with a photo, lined up on a stage: the piece in front glows in its own colour, taken from its first
 swatch, with its name huge behind it, and the arrows, its dot, a swipe or a click on a neighbour
@@ -780,17 +793,20 @@ checklist and the dashboard's pointer to it, a shopper's order showing only in t
 admin, a payment going to the store's own Razorpay account with its own webhook secret, and
 suspending and reopening the store.
 
-**Theme and design tests (64 unit, 4 database, 6 Playwright)** cover the colour arithmetic; that
+**Theme and design tests (65 unit, 4 database, 7 Playwright)** cover the colour arithmetic; that
 every one of the 38 palettes keeps text, labels, secondary text, sale and error colours, fields
 and the words on buttons readable on every surface, and on the Spotlight's and the Showcase's
 changing backgrounds too, whatever colour a product is; fonts' weights; that the eight designs differ in every part and suggest real palettes,
-fonts and sections; mixed-in parts, motion and defaults; that new stores get different looks
+fonts and sections; mixed-in parts, motion, openings and defaults; that new stores get different looks
 until the designs and palettes run out, and Shuffle always shows something new; the home page's
 own section order; store icons' initials; the database saving a new store's design and
 rejecting malformed names, taking banner films only from staff and nothing but pictures and
 videos, and the 360° switch (staff only) reaching the product page; and, in the browser, every
 design built its own way and accessible on its home, product and shop pages through **Preview on
 the store** (Neon's Showcase turned with its arrows and dots), a forged preview link doing nothing and customers seeing the saved look meanwhile,
+a cinematic store's opening curtain (once a visit, lifted by a tap, never for shoppers who ask
+for less motion), its banner zooming as the page scrolls, headlines rising line by line and the
+Spotlight's dots,
 an owner changing palette, fonts and design (and back), reordering the home page, the chat
 button and icon, a banner film uploaded, playing and pausing (and the photo instead for shoppers
 who ask for less motion), and a 360° view switched on in the editor and turned with the keys and

@@ -17,7 +17,9 @@ test.describe("storefront", () => {
       await audit(page, path);
     }
     await page.goto(`/products/${data!.slug}`);
-    await page.getByRole("button", { name: /^Size / }).first().click();
+    // Whichever product comes first: a size to choose only if it comes in sizes.
+    const size = page.getByRole("button", { name: /^Size (?!guide)/ }).first();
+    if (await size.count()) await size.click();
     await page.getByRole("button", { name: "Add to bag" }).click();
     await audit(page, "/checkout");
   });
