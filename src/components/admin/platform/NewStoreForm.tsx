@@ -154,12 +154,19 @@ export default function NewStoreForm({ vercel, taken, initial }: { vercel: boole
             />
           </div>
         )}
-        <Toggle
-          label="Start with the sample catalog"
-          hint={`45 example clothing products from six made-up labels, with photos, sizes, collections, discount codes and homepage banners, so the store looks complete straight away${v.store_type === "fashion" ? "" : " (they suit a clothing store best, or trying the store out)"}. They're marked as samples: remove them all in one click from the store's Settings › Maintenance and data.`}
-          checked={v.samples}
-          onChange={(x) => setV({ ...v, samples: x })}
-        />
+        {v.store_type === "fashion" ? (
+          <Toggle
+            label="Start with the sample catalog"
+            hint="45 example clothing products from six made-up labels, with photos, sizes, collections, discount codes and homepage banners, so the store looks complete straight away. They're marked as samples: remove them all in one click from the store's Settings › Maintenance and data."
+            checked={v.samples}
+            onChange={(x) => setV({ ...v, samples: x })}
+          />
+        ) : (
+          <p className="text-sm text-taupe">
+            The sample catalog is clothing, so it&apos;s offered to clothing stores only. Add this store&apos;s first products in its admin once it&apos;s created;
+            until then its home page says it&apos;s opening soon.
+          </p>
+        )}
       </Card>
 
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}

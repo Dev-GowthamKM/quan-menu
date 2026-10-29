@@ -5,7 +5,7 @@ import StoreDetail from "@/components/admin/platform/StoreDetail";
 import { Card, PageHeader, Stat } from "@/components/admin/ui";
 import { Badge, buttonClass, Notice } from "@/components/ui/controls";
 import { requirePlatformPage } from "@/lib/auth";
-import { storeOrigin } from "@/lib/store";
+import { storeViewUrl } from "@/lib/store";
 import { sessionClient } from "@/lib/supabase/session";
 import { vercelDomainsReady } from "@/lib/vercel";
 
@@ -21,6 +21,9 @@ export default async function StorePage({ params, searchParams }: { params: Prom
   const owners = (s.owners ?? []) as unknown as string[];
   const host = domains[0]?.hostname ?? null;
   const vercel = vercelDomainsReady();
+  const view = storeViewUrl({ id: s.id, host, isHome: s.is_home });
+  // The sample catalog is clothing: it's offered to clothing stores (lib/store-types.ts).
+  const { data: settings } = await (await sessionClient(s.id)).from("store_settings").select("store_type").maybeSingle();
   return (
     <>
       <PageHeader
@@ -29,7 +32,7 @@ export default async function StorePage({ params, searchParams }: { params: Prom
         back={{ href: "/admin/stores", label: "All stores" }}
         actions={
           <>
-            {(host || s.is_home) && <a href={`${storeOrigin({ host })}/`} target="_blank" rel="noreferrer" className={buttonClass("ghost", "sm", "border-black/15! bg-white")}>Visit store</a>}
+            <a href={view.url} target="_blank" rel="noreferrer" className={buttonClass("ghost", "sm", "border-black/15! bg-white")}>{view.preview ? "Preview store" : "Visit store"}</a>
             <OpenStoreButton storeId={s.id} label="Open its admin" className={buttonClass("primary", "sm")} />
           </>
         }
@@ -39,6 +42,7 @@ export default async function StorePage({ params, searchParams }: { params: Prom
           <p className="font-medium">{s.name} is ready. Next:</p>
           <ol className="mt-2 list-decimal space-y-1 pl-5">
             <li>Open its admin to add products, or ask its owner to.</li>
+            {!host && <li>It has no web address yet, so customers can&apos;t visit it: add one under Web addresses. Until then, Preview store shows it to you.</li>}
             {host && !vercel && <li>Add <span className="font-mono">{host}</span> in Vercel › your project › Settings › Domains.</li>}
             {host && <li>Add <span className="font-mono">https://{host}/**</span> in Supabase › Authentication › URL Configuration › Redirect URLs, so sign-in emails come back to this store.</li>}
             <li>The owner saves the store&apos;s Razorpay keys in Settings › Payment accounts to take online payments (cash on delivery works straight away).</li>
@@ -53,7 +57,7 @@ export default async function StorePage({ params, searchParams }: { params: Prom
       </div>
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <StoreDetail
-          store={{ id: s.id, name: s.name, status: s.status === "suspended" ? "suspended" : "active", isHome: s.is_home, products: Number(s.products) }}
+          store={{ id: s.id, name: s.name, status: s.status === "suspended" ? "suspended" : "active", isHome: s.is_home, products: Number(s.products), clothing: (settings?.store_type ?? "fashion") === "fashion" }}
           domains={domains}
           vercel={vercel}
         />

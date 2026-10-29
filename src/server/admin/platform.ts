@@ -114,7 +114,8 @@ export async function createStore(input: CreateStoreInput): Promise<ActionResult
   if (error) return fail(friendlyError(error, "The store couldn't be created."));
   const id = data as string;
   // The store exists from here on: a problem with the extras is reported, not a failure.
-  const samples = p.samples ? (await copySamples(sb, id)).message : null;
+  // The sample catalog is clothing: it goes to clothing stores only.
+  const samples = p.samples && kind.key === "fashion" ? (await copySamples(sb, id)).message : null;
   let domain: string | null = null;
   if (p.hostname && vercelDomainsReady()) domain = (await addVercelDomain(p.hostname)).message;
   changed(id);
@@ -126,6 +127,8 @@ export async function addSampleCatalog(storeId: string): Promise<ActionResult<nu
   const sb = await platform();
   if (!sb) return fail("Only the platform's administrators can do this.");
   if (!uuid.safeParse(storeId).success) return fail("Unknown store.");
+  const { data: settings } = await (await sessionClient(storeId)).from("store_settings").select("store_type").maybeSingle();
+  if (settings && settings.store_type !== "fashion") return fail("The sample catalog is clothing, so it's offered to clothing stores only. Add this store's own products in its Catalog › Products.");
   const res = await copySamples(sb, storeId);
   if (!res.ok) return fail(res.message);
   changed(storeId);

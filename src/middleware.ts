@@ -10,6 +10,8 @@ const SCOPE_HEADER = "x-store-scope";
 const STORE_HEADER = "x-store-id";
 // Must match LOOK_COOKIE in lib/look.ts: an admin's unsaved look, shown on this storefront only.
 const LOOK_COOKIE = "taana_look";
+// Must match STORE_PREVIEW_COOKIE in lib/store-preview.ts: a store without an address yet, shown here.
+const STORE_PREVIEW_COOKIE = "taana_store";
 
 interface HostStore {
   id: string | null;
@@ -68,15 +70,23 @@ export async function middleware(request: NextRequest) {
     confirm.pathname = "/auth/confirm";
     return NextResponse.redirect(confirm);
   }
-  // "Preview on the store" opens /?look=<signed look>: keep it in a cookie on this address and
-  // drop it from the URL (the store's layout checks the signature). ?look=exit ends it.
-  const look = request.nextUrl.searchParams.get("look");
-  if (look !== null && isStorefront(path)) {
+  // "Preview on the store" opens /?look=<signed look>, and "Preview store" /?store=<signed store>:
+  // keep them in cookies on this address and drop them from the URL (the app checks the
+  // signatures). ?look=exit and ?store=exit end them.
+  const previews = [
+    [LOOK_COOKIE, request.nextUrl.searchParams.get("look"), 2 * 60 * 60],
+    [STORE_PREVIEW_COOKIE, request.nextUrl.searchParams.get("store"), 24 * 60 * 60],
+  ] as const;
+  if (previews.some(([, value]) => value !== null) && isStorefront(path)) {
     const clean = request.nextUrl.clone();
     clean.searchParams.delete("look");
+    clean.searchParams.delete("store");
     const redirect = NextResponse.redirect(clean);
-    if (look === "exit" || look.length > 2000) redirect.cookies.delete(LOOK_COOKIE);
-    else redirect.cookies.set(LOOK_COOKIE, look, { httpOnly: true, sameSite: "lax", secure: request.nextUrl.protocol === "https:", path: "/", maxAge: 2 * 60 * 60 });
+    for (const [name, value, maxAge] of previews) {
+      if (value === null) continue;
+      if (value === "exit" || value.length > 2000) redirect.cookies.delete(name);
+      else redirect.cookies.set(name, value, { httpOnly: true, sameSite: "lax", secure: request.nextUrl.protocol === "https:", path: "/", maxAge });
+    }
     return redirect;
   }
   const isAdmin = path === "/admin" || (path.startsWith("/admin/") && !path.startsWith("/admin/login"));

@@ -8,7 +8,7 @@ import { authProviderStatus, msg91Configured } from "@/lib/login-codes";
 import { SMS_HOOK_SECRET } from "@/lib/server-env";
 import { SECTION_KEYS } from "@/lib/designs";
 import { lookColumns, lookSchema, signLookPreview } from "@/lib/look";
-import { storeOrigin } from "@/lib/store";
+import { storeViewUrl } from "@/lib/store";
 import { STORE_TYPES } from "@/lib/store-types";
 import type { AppRole } from "@/lib/types";
 import { whatsappConnected } from "@/lib/whatsapp";
@@ -284,8 +284,9 @@ export async function previewLook(input: unknown): Promise<ActionResult<{ url: s
   if (!ctx) return fail("Only admins can preview looks.");
   const parsed = lookSchema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Check the colours and fonts.");
-  if (!ctx.store.isHome && !ctx.store.host) return fail("Give the store a web address first (All stores › the store › Web addresses).");
-  return ok({ url: `${storeOrigin(ctx.store)}/?look=${signLookPreview(ctx.store.id, parsed.data)}` });
+  // A store without its own address yet is previewed at the site's main address (lib/store-preview.ts).
+  const view = storeViewUrl(ctx.store);
+  return ok({ url: `${view.url}${view.preview ? "&" : "?"}look=${signLookPreview(ctx.store.id, parsed.data)}` });
 }
 
 /** What still stops customers from signing in with a mobile number, if anything. */

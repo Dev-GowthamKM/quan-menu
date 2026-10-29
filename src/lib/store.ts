@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { SITE_URL, SUPABASE_CONFIGURED } from "./env";
 import { getUser } from "./session";
+import { readStorePreview, signStorePreview, STORE_PREVIEW_COOKIE } from "./store-preview";
 import { supabaseService } from "./supabase/admin";
 import { supabasePublic } from "./supabase/public";
 import { sessionClient } from "./supabase/session";
@@ -28,6 +29,8 @@ export interface StoreRef {
   /** The store's main web address (a host name, with a port only locally), if it has one. */
   host: string | null;
   maintenance: boolean;
+  /** Shown at the site's main address before it has its own ("Preview store", lib/store-preview.ts). */
+  preview?: boolean;
 }
 
 export interface MyStore extends Omit<StoreRef, "maintenance" | "id"> {
@@ -72,8 +75,22 @@ export async function requestHost() {
   return (h.get("x-forwarded-host") ?? h.get("host") ?? "").split(",")[0].trim().toLowerCase();
 }
 
-/** The store whose web address this request came in on. */
-export const requestStore = cache(async (): Promise<StoreRef> => storeForHost(await requestHost()));
+/**
+ * The store whose web address this request came in on; at the main address, a store without an
+ * address of its own when the visitor opened its preview link.
+ */
+export const requestStore = cache(async (): Promise<StoreRef> => {
+  const here = await storeForHost(await requestHost());
+  if (!here.isHome) return here;
+  const previewed = readStorePreview((await cookies()).get(STORE_PREVIEW_COOKIE)?.value);
+  if (!previewed || previewed === here.id) return here;
+  const store = await storeById(previewed).catch(() => null);
+  if (!store || store.host || store.status !== "active") return here;
+  // Closed to customers: only its staff see it, as at its own address.
+  const { data } = await supabaseService(previewed).from("store_settings").select("maintenance_mode").eq("store_id", previewed).maybeSingle();
+  if (data?.maintenance_mode && !(await myStores()).some((s) => s.id === previewed)) return here;
+  return { ...store, maintenance: !!data?.maintenance_mode, preview: true };
+});
 
 /** The stores the signed-in person works at (every store, for the platform's admins). */
 export const myStores = cache(async (): Promise<MyStore[]> => {
@@ -130,6 +147,15 @@ export const isPlatformAdmin = cache(async (): Promise<boolean> => {
 export function storeOrigin(store: Pick<StoreRef, "host">): string {
   if (!store.host) return SITE_URL;
   return `${new URL(SITE_URL).protocol}//${store.host}`;
+}
+
+/**
+ * Where the store's staff look at its storefront: its own address, or, for a store without one
+ * yet, its preview at the site's main address (lib/store-preview.ts).
+ */
+export function storeViewUrl(store: Pick<StoreRef, "id" | "host" | "isHome">): { url: string; preview: boolean } {
+  if (store.host || store.isHome || !store.id) return { url: `${storeOrigin(store)}/`, preview: false };
+  return { url: `${SITE_URL}/?store=${signStorePreview(store.id)}`, preview: true };
 }
 
 const STORE_COLUMNS = "id, slug, name, status, is_home, store_domains (hostname, is_primary, created_at)";

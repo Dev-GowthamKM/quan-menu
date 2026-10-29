@@ -2,7 +2,7 @@ import { AdminStoreProvider } from "@/components/admin/AdminStore";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import { Toaster } from "@/components/admin/Toaster";
 import { requireStaffPage } from "@/lib/auth";
-import { adminStore, isPlatformAdmin, myStores, storeOrigin } from "@/lib/store";
+import { adminStore, isPlatformAdmin, myStores, storeOrigin, storeViewUrl } from "@/lib/store";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     isPlatformAdmin(),
   ]);
   const origin = store.host || store.isHome ? storeOrigin(store) : null;
+  const view = storeViewUrl(store);
   return (
     <AdminStoreProvider value={{ id: store.id, name: store.name, isHome: store.isHome, origin }}>
       <Toaster>
@@ -29,7 +30,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             email={user.email ?? ""}
             role={role}
             counts={{ orders: toFulfil.count ?? 0, returns: openReturns.count ?? 0, messages: newMessages.count ?? 0, reviews: pendingReviews.count ?? 0 }}
-            store={{ id: store.id, name: store.name, origin, suspended: store.status === "suspended" }}
+            store={{ id: store.id, name: store.name, view: view.url, preview: view.preview, suspended: store.status === "suspended" }}
             stores={stores.map((s) => ({ id: s.id, name: s.name }))}
             platform={platform}
           />

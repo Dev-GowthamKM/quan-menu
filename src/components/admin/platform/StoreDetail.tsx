@@ -18,7 +18,7 @@ export default function StoreDetail({
   domains,
   vercel,
 }: {
-  store: { id: string; name: string; status: "active" | "suspended"; isHome: boolean; products: number };
+  store: { id: string; name: string; status: "active" | "suspended"; isHome: boolean; products: number; clothing: boolean };
   domains: Domain[];
   vercel: boolean;
 }) {
@@ -77,13 +77,20 @@ export default function StoreDetail({
 
       {!store.isHome && store.products === 0 && (
         <Card title="Products">
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="flex-1 text-sm text-taupe">
-              This store has no products yet, so its home page says it&apos;s opening soon. To see it working straight away, add the sample catalog:
-              45 example products with photos, collections, discount codes and homepage banners, all removable in one click later.
+          {store.clothing ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="flex-1 text-sm text-taupe">
+                This store has no products yet, so its home page says it&apos;s opening soon. To see it working straight away, add the sample catalog:
+                45 example products with photos, collections, discount codes and homepage banners, all removable in one click later.
+              </p>
+              <Button type="button" size="sm" disabled={pending} onClick={() => run(() => addSampleCatalog(store.id))}>Add the sample catalog</Button>
+            </div>
+          ) : (
+            <p className="text-sm text-taupe">
+              This store has no products yet, so its home page says it&apos;s opening soon. Add its first products in its admin (Open its admin, then Catalog › Products).
+              The sample catalog is clothing, so it&apos;s offered to clothing stores only.
             </p>
-            <Button type="button" size="sm" disabled={pending} onClick={() => run(() => addSampleCatalog(store.id))}>Add the sample catalog</Button>
-          </div>
+          )}
         </Card>
       )}
 

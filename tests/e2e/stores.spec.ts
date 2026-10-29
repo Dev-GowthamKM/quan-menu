@@ -190,6 +190,43 @@ test("a store can start with the sample catalog, ready to shop", async ({ browse
   await guest.close();
 });
 
+test("a shop without a web address yet can be previewed at the main address; a shoe shop isn't given clothing samples", async ({ browser }) => {
+  const name = `Step Lightly ${run}`;
+  const admin = await owner(browser);
+  const page = await admin.newPage();
+  await page.goto("/admin/stores/new");
+  await page.getByLabel("Store name").fill(name);
+  await page.getByLabel("What it sells").selectOption("footwear");
+  await expect(page.getByLabel("Start with the sample catalog")).toHaveCount(0);
+  await expect(page.getByText("The sample catalog is clothing, so it's offered to clothing stores only.")).toBeVisible();
+  await page.getByLabel("Order numbers start with").fill(`F${PREFIX.slice(1)}`);
+  await page.getByRole("button", { name: "Create store" }).click();
+  await expect(page.getByText(`${name} is ready. Next:`)).toBeVisible();
+  await expect(page.getByText("It has no web address yet, so customers can't visit it")).toBeVisible();
+
+  // Preview store opens it at the site's main address, with a bar saying customers can't see it yet.
+  const [shop] = await Promise.all([page.waitForEvent("popup"), page.getByRole("link", { name: "Preview store" }).first().click()]);
+  await expect(shop.getByText(`Preview of ${name}: customers can't visit it until it has its own web address.`)).toBeVisible();
+  await expect(shop.getByRole("link", { name: `${name} home` })).toBeVisible();
+  await shop.getByRole("link", { name: "End preview" }).click();
+  await expect(shop.getByText(/^Preview of /)).toHaveCount(0);
+  await expect(shop.getByRole("link", { name: `${name} home` })).toHaveCount(0);
+
+  // Closed to customers for maintenance: the same link shows it to the store's staff only.
+  const link = (await page.getByRole("link", { name: "Preview store" }).first().getAttribute("href"))!;
+  const storeId = page.url().match(/stores\/([0-9a-f-]{36})/)![1];
+  await db().from("store_settings").update({ maintenance_mode: true }).eq("store_id", storeId);
+  const guest = await browser.newContext();
+  const visitor = await guest.newPage();
+  await visitor.goto(link);
+  await expect(visitor.getByRole("link", { name: /home$/ }).first()).toBeVisible();
+  await expect(visitor.getByRole("link", { name: `${name} home` })).toHaveCount(0);
+  await guest.close();
+  await shop.goto(link);
+  await expect(shop.getByRole("link", { name: `${name} home` })).toBeVisible();
+  await admin.close();
+});
+
 test("the setup page lists what's left, and the dashboard points to it", async ({ browser }) => {
   const admin = await owner(browser);
   const page = await admin.newPage();

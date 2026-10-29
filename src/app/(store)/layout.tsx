@@ -12,6 +12,7 @@ import { headingWeight, homeSections, radiusTokens } from "@/lib/designs";
 import { storefrontLook } from "@/lib/look";
 import { fontFile } from "@/lib/font-files";
 import { contactOf, getSettings, homepageOf } from "@/lib/settings";
+import { requestStore } from "@/lib/store";
 import { BODY_FONTS, fontStack, HEADING_FONTS, isLight, themeTokens } from "@/lib/theme";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -40,7 +41,7 @@ export async function generateViewport(): Promise<Viewport> {
 }
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
-  const [settings, departments] = await Promise.all([getSettings(), getDepartments()]);
+  const [settings, departments, store] = await Promise.all([getSettings(), getDepartments(), requestStore()]);
   const home = homepageOf(settings);
   const contact = contactOf(settings);
   const { look, design, preview } = await storefrontLook(settings);
@@ -96,6 +97,13 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       </a>
       <StoreProvider currency={settings.currency} storeType={settings.store_type}>
         {settings.unavailable && <div data-above-header><SetupNotice /></div>}
+        {store.preview && (
+          <div data-above-header className="relative z-50 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-amber-100 px-4 py-2 text-center text-xs text-amber-950">
+            <span>Preview of {settings.store_name}: customers can&apos;t visit it until it has its own web address.</span>
+            {/* A full page load, so the cookie is cleared before the page is drawn again. */}
+            <a href="/?store=exit" className="font-semibold underline underline-offset-2">End preview</a>
+          </div>
+        )}
         {preview && (
           <div data-above-header className="relative z-50 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-amber-100 px-4 py-2 text-center text-xs text-amber-950">
             <span>Preview of a look that isn&apos;t saved yet. Customers still see the store as it was.</span>

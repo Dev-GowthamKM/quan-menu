@@ -104,7 +104,7 @@ export default function AdminSidebar({
   email: string;
   role: AppRole;
   counts: Counts;
-  store: { id: string | null; name: string; origin: string | null; suspended: boolean };
+  store: { id: string | null; name: string; view: string; preview: boolean; suspended: boolean };
   stores: StoreChoice[];
   /** The person runs the platform: show the Stores section. */
   platform: boolean;
@@ -150,11 +150,10 @@ export default function AdminSidebar({
         </div>
       ))}
       <div className="mt-auto grid gap-2 border-t border-black/10 px-3 pt-4 text-xs">
-        {store.origin ? (
-          <a href={`${store.origin}/`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-ink/80 hover:text-ink">View store <ExternalIcon size={12} /></a>
-        ) : (
-          <p className="text-stone">No web address yet</p>
-        )}
+        <a href={store.view} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-ink/80 hover:text-ink">
+          {store.preview ? "Preview store" : "View store"} <ExternalIcon size={12} />
+        </a>
+        {store.preview && <p className="text-stone">No web address yet: customers can&apos;t visit it.</p>}
         <p className="truncate text-stone" title={email}>{email}</p>
         <p className="text-stone capitalize">Role: {role}</p>
         <form action={signOut}><button className="text-ink/80 underline hover:text-ink">Sign out</button></form>
