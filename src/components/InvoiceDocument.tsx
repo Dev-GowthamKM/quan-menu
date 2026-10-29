@@ -34,7 +34,7 @@ export default function InvoiceDocument({ order, items, settings }: { order: Inv
   const inclusive = order.tax_mode === "inclusive";
 
   return (
-    <article className="mx-auto max-w-3xl bg-white p-8 text-ink print:p-0">
+    <article className="mx-auto max-w-3xl bg-white p-5 text-ink sm:p-8 print:p-0">
       <header className="flex items-start justify-between gap-6 border-b border-black/15 pb-6">
         <div>
           <p className="text-xl font-semibold">{settings.store_name}</p>
@@ -55,7 +55,9 @@ export default function InvoiceDocument({ order, items, settings }: { order: Inv
         <div><h2 className="mb-1 text-xs font-semibold tracking-wider text-taupe uppercase">Ship to</h2><Addr a={ship} /><p className="mt-1 text-xs text-taupe">Place of supply: {ship?.state}</p></div>
       </section>
 
-      <table className="mt-5 w-full text-sm">
+      {/* On a phone the table scrolls sideways rather than squeezing its figures together. */}
+      <div className="mt-5 overflow-x-auto">
+      <table className="w-full min-w-[34rem] text-sm [&_td+td]:pl-3 [&_th+th]:pl-3">
         <thead>
           <tr className="border-b border-black/15 text-left text-xs text-taupe">
             <th className="py-2 font-medium">Item</th>
@@ -87,6 +89,7 @@ export default function InvoiceDocument({ order, items, settings }: { order: Inv
           })}
         </tbody>
       </table>
+      </div>
 
       <dl className="ml-auto mt-4 grid max-w-xs gap-1 text-sm">
         <div className="flex justify-between"><dt>Items</dt><dd className="tabular-nums">{formatMoney(order.subtotal - order.discount_total, c)}</dd></div>

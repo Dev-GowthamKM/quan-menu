@@ -60,7 +60,7 @@ export default function QuickAdd({ slug, title, className }: { slug: string; tit
       await addItem(selected.id, 1);
     };
     return (
-      <div className="grid gap-5">
+      <div className="grid gap-5 p-5">
         <div className="flex gap-4">
           <div className="relative aspect-[4/5] w-20 shrink-0 overflow-hidden rounded-img bg-bone">
             <CatalogImage src={product.image} alt="" fill sizes="80px" className="object-cover" />
