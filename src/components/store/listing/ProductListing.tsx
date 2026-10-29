@@ -158,9 +158,10 @@ export default async function ProductListing({
           )}
           <div className="min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-              <p className="text-sm text-taupe" aria-live="polite">
+              {/* The heading over the grid, so the product names under it (h3) follow on from the page's title. */}
+              <h2 className="text-sm text-taupe" aria-live="polite">
                 {results.total} {results.total === 1 ? "product" : "products"}
-              </p>
+              </h2>
               <div className="flex items-center gap-3">
                 <MobileFilters facets={facets} hide={hide} categories={categories} total={results.total} always={drawer} />
                 <SortSelect className="hidden lg:flex" />
