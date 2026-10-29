@@ -54,6 +54,27 @@ function SpinBadge({ text, className }: { text: string; className?: string }) {
   );
 }
 
+/** A mandala of petals and rings, in the current text colour (Heritage's arched banner). */
+function Mandala({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 200 200" aria-hidden fill="none" stroke="currentColor" strokeWidth="0.45" className={className}>
+      <circle cx="100" cy="100" r="98" />
+      <circle cx="100" cy="100" r="92" strokeDasharray="0.6 2.4" />
+      <circle cx="100" cy="100" r="64" />
+      <circle cx="100" cy="100" r="40" strokeDasharray="1 2" />
+      {Array.from({ length: 24 }, (_, i) => (
+        <path key={`p${i}`} d="M100 12C107 26 107 40 100 54C93 40 93 26 100 12Z" transform={`rotate(${i * 15} 100 100)`} />
+      ))}
+      {Array.from({ length: 12 }, (_, i) => (
+        <path key={`l${i}`} d="M100 58C104 66 104 74 100 80C96 74 96 66 100 58Z" transform={`rotate(${i * 30 + 15} 100 100)`} />
+      ))}
+      {Array.from({ length: 48 }, (_, i) => (
+        <circle key={`d${i}`} cx="100" cy="5" r="0.9" transform={`rotate(${i * 7.5} 100 100)`} />
+      ))}
+    </svg>
+  );
+}
+
 export default function Hero({ variant, slide, storeName, tagline, extras = [], text = "New pieces every season, made to be worn for many more." }: HeroProps) {
   const image = slide?.image_url || null;
   const video = slide?.video_url || null;
@@ -75,7 +96,7 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [], 
       return (
         <section className="relative">
           <div className="relative h-[72svh] min-h-[26rem] overflow-hidden bg-bone md:h-[86svh]">
-            <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="100vw" parallax={0.12} />
+            <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="100vw" parallax={0.12} className="hero-settle object-cover" />
           </div>
           <div className="container-page relative -mt-24 md:absolute md:inset-x-0 md:bottom-10 md:mt-0">
             <div className="max-w-md bg-ivory p-6 md:p-9">
@@ -132,12 +153,15 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [], 
 
     case "framed":
       return (
-        <section className="container-page pt-4 md:pt-6">
-          <div className="relative overflow-hidden rounded-[calc(var(--radius-card)*1.5)] bg-bone">
+        <section className="relative overflow-x-clip">
+          <div aria-hidden className="pointer-events-none absolute -top-16 left-[8%] size-72 animate-float rounded-full bg-brand/20 blur-3xl md:size-96" />
+          <div aria-hidden className="pointer-events-none absolute right-[6%] -bottom-10 size-72 animate-float rounded-full bg-accent/20 blur-3xl [animation-delay:-3.5s] md:size-96" />
+          <div className="container-page relative pt-4 md:pt-6">
+          <div className="relative overflow-hidden rounded-[calc(var(--radius-card)*1.5)] bg-bone shadow-[0_30px_80px_-40px_color-mix(in_oklab,var(--color-brand)_45%,transparent)]">
             {image && slide ? (
               <>
                 <div className="relative aspect-[4/5] overflow-hidden sm:aspect-[16/10] md:aspect-auto md:h-[min(78svh,44rem)]">
-                  <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="(min-width: 1408px) 84rem, 100vw" parallax={0.08} />
+                  <HeroMedia image={image} video={video} alt={slide.image_alt || ""} priority sizes="(min-width: 1408px) 84rem, 100vw" parallax={0.08} className="hero-settle object-cover" />
                 </div>
                 <div className="absolute inset-x-3 bottom-3 md:inset-x-auto md:bottom-10 md:left-10 md:max-w-md">
                   <div className="rounded-card bg-paper/90 p-6 shadow-lg backdrop-blur md:p-8">
@@ -156,13 +180,15 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [], 
               </div>
             )}
           </div>
+          </div>
         </section>
       );
 
     case "arch":
       return (
         <section className="relative overflow-hidden bg-bone">
-          <div className={cx("container-page grid items-center gap-10 py-14 md:py-20", image && "md:grid-cols-2")}>
+          <div aria-hidden className="jaali pointer-events-none absolute inset-0 text-accent opacity-[0.06]" />
+          <div className={cx("container-page relative grid items-center gap-10 py-14 md:py-20", image && "md:grid-cols-2")}>
             <div className="order-2 text-center md:order-1">
               <p className="label-caps text-accent">{slide?.eyebrow || storeName}</p>
               <span aria-hidden className="ornament mt-4 text-accent" />
@@ -177,9 +203,11 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [], 
             {image && (
               <div className="order-1 md:order-2">
                 <div className="relative mx-auto aspect-[3/4] w-full max-w-sm">
+                  <Mandala className="animate-spin-slower absolute top-[40%] left-1/2 w-[165%] max-w-[44rem] -translate-x-1/2 -translate-y-1/2 text-accent opacity-35" />
                   <div aria-hidden className="absolute -inset-3 rounded-t-full border border-accent" />
-                  <div className="relative size-full overflow-hidden rounded-t-full bg-sand">
-                    <HeroMedia image={image} video={video} alt={slide?.image_alt || ""} priority sizes="(min-width: 768px) 24rem, 90vw" />
+                  <div aria-hidden className="absolute -inset-6 rounded-t-full border border-accent/40" />
+                  <div className="relative size-full overflow-hidden rounded-t-full bg-sand shadow-[0_30px_60px_-30px_rgb(0_0_0/0.45)]">
+                    <HeroMedia image={image} video={video} alt={slide?.image_alt || ""} priority sizes="(min-width: 768px) 24rem, 90vw" className="hero-settle object-cover" />
                   </div>
                 </div>
               </div>
@@ -321,13 +349,21 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [], 
         <section className="relative">
           <div className="grid md:grid-cols-2">
             <div className="relative order-1 aspect-[4/5] overflow-hidden bg-bone md:order-2 md:aspect-auto md:min-h-[min(88vh,56rem)]">
-              <HeroMedia image={slide.image_url} video={video} alt={slide.image_alt || ""} priority sizes="(min-width: 768px) 50vw, 100vw" />
+              <HeroMedia image={slide.image_url} video={video} alt={slide.image_alt || ""} priority sizes="(min-width: 768px) 50vw, 100vw" className="hero-settle object-cover" />
+              <span aria-hidden className="absolute top-8 left-6 hidden text-[10px] tracking-[0.42em] text-white/90 uppercase [writing-mode:vertical-rl] md:block">
+                {storeName}{slide.eyebrow ? ` — ${slide.eyebrow}` : ""}
+              </span>
             </div>
             <div className="order-2 flex items-center bg-bone md:order-1">
               <div className="w-full px-6 py-14 md:px-12 lg:px-20 xl:px-28">
-                {slide.eyebrow && <p className="label-caps animate-fade-in text-accent">{slide.eyebrow}</p>}
-                <h1 className="mt-5 animate-fade-in font-serif text-5xl leading-[1.02] [animation-delay:80ms] md:text-6xl xl:text-[5.5rem]">{slide.heading}</h1>
-                {slide.subheading && <p className="mt-6 max-w-md animate-fade-in leading-relaxed text-taupe [animation-delay:160ms]">{slide.subheading}</p>}
+                {slide.eyebrow && (
+                  <p className="label-caps flex animate-fade-in items-center gap-4 text-accent">
+                    <span aria-hidden className="h-px w-10 bg-current" />
+                    {slide.eyebrow}
+                  </p>
+                )}
+                <h1 className="mt-6 animate-fade-in font-serif text-5xl leading-[0.98] [animation-delay:80ms] md:text-6xl xl:text-[6rem]">{slide.heading}</h1>
+                {slide.subheading && <p className="mt-7 max-w-md animate-fade-in leading-relaxed text-taupe [animation-delay:160ms]">{slide.subheading}</p>}
                 <Ctas slide={slide} className="mt-10 animate-fade-in [animation-delay:240ms]" primary={buttonClass("primary", "lg")} secondary={buttonClass("secondary", "lg")} />
               </div>
             </div>

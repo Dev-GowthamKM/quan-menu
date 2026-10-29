@@ -13,6 +13,7 @@ import {
   radiusTokens,
   resolveDesign,
   SECTION_KEYS,
+  SECTION_LABELS,
   type TakenLook,
 } from "./designs";
 import { BODY_FONTS, HEADING_FONTS, paletteByKey, PALETTES } from "./theme";
@@ -77,12 +78,13 @@ describe("designs", () => {
   });
 
   it("move as the design says, unless the store picks otherwise", () => {
-    expect(DESIGNS.atelier.motion).toBe("none");
-    expect(DESIGNS.nordic.motion).toBe("subtle");
+    // Every design moves at least a little; a store can still keep its pages still.
+    for (const d of DESIGN_LIST) expect(d.motion).not.toBe("none");
+    expect(DESIGNS.atelier.motion).toBe("subtle");
     expect(DESIGNS.cinema.motion).toBe("cinematic");
     expect(resolveDesign("cinema", { motion: "none" }).motion).toBe("none");
-    expect(resolveDesign("atelier", { motion: "subtle" }).motion).toBe("subtle");
-    expect(resolveDesign("atelier", { motion: "warp" }).motion).toBe("none");
+    expect(resolveDesign("atelier", { motion: "none" }).motion).toBe("none");
+    expect(resolveDesign("atelier", { motion: "warp" }).motion).toBe("subtle");
     // The scrolling sections belong to the cinematic designs, and Neon shows its pieces one at a time.
     for (const k of ["cinema", "neon"] as const) expect(DESIGNS[k].sections).toEqual(expect.arrayContaining(["spotlight", "statement"]));
     expect(DESIGNS.neon.sections).toContain("showcase");
@@ -90,6 +92,17 @@ describe("designs", () => {
     expect(DESIGNS.neon.sections).toEqual(expect.arrayContaining(["rack", "marquee", "numbers"]));
     expect(DESIGNS.cinema.sections).toEqual(expect.arrayContaining(["aisle", "numbers"]));
     expect(DESIGNS.atelier.sections).not.toContain("aisle");
+  });
+
+  it("each have a home page section of their own, and one sign-up (the footer's)", () => {
+    const own = { atelier: "lookbook", nordic: "index", bazaar: "bento", boutique: "moodboard", heritage: "doors", noir: "reel", cinema: "aisle", neon: "showcase" } as const;
+    for (const d of DESIGN_LIST) {
+      expect(d.sections, d.key).toContain(own[d.key]);
+      for (const other of DESIGN_LIST) if (other.key !== d.key) expect(other.sections, `${other.key} has ${d.key}'s ${own[d.key]}`).not.toContain(own[d.key]);
+      expect(d.sections, d.key).not.toContain("newsletter");
+    }
+    // Every section has a name in Settings › Homepage.
+    for (const k of SECTION_KEYS) expect(SECTION_LABELS[k], k).toBeTruthy();
   });
 
   it("open with the store's name only where they move, and only if the store wants it", () => {

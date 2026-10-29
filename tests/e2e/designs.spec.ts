@@ -18,6 +18,8 @@ const DESIGNS: { name: string; key: string; home: (p: Page) => Promise<void>; sh
     home: async (p) => {
       await expect(p.getByRole("link", { name: "Track order" })).toBeVisible();
       await expect(p.locator("h1").first()).toHaveCSS("text-transform", "none");
+      // The lookbook: numbered looks laid out like a magazine spread.
+      await expect(p.getByRole("region", { name: "The lookbook" }).getByRole("link", { name: /^Look 01/ })).toHaveAttribute("href", /^\/products\//);
     },
     shop: async (p) => await expect(p.getByRole("complementary", { name: "Filters" })).toBeVisible(),
   },
@@ -27,6 +29,8 @@ const DESIGNS: { name: string; key: string; home: (p: Page) => Promise<void>; sh
     home: async (p) => {
       await expect(p.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "New In" })).toBeVisible();
       await expect(p.getByRole("link", { name: "Track order" })).toHaveCount(0);
+      // The index: what's new, one piece to a line.
+      await expect(p.getByRole("region", { name: "The index" }).getByRole("listitem").first().getByRole("link")).toHaveAttribute("href", /^\/products\//);
     },
     // Filters behind a button on every screen, for a wider grid.
     shop: async (p) => {
@@ -41,6 +45,8 @@ const DESIGNS: { name: string; key: string; home: (p: Page) => Promise<void>; sh
       await expect(p.getByRole("searchbox", { name: "Search products" })).toBeVisible();
       await expect(p.getByRole("button", { name: "Pause announcements" })).toBeVisible();
       await expect(p.locator("h1").first()).toHaveCSS("text-transform", "uppercase");
+      // The bento: a big piece with its price on a sticker, among a figure, a department and a promise.
+      await expect(p.getByRole("region", { name: "Hot right now" }).getByRole("link", { name: /₹/ }).first()).toHaveAttribute("href", /^\/products\//);
     },
   },
   {
@@ -49,6 +55,8 @@ const DESIGNS: { name: string; key: string; home: (p: Page) => Promise<void>; sh
     home: async (p) => {
       await expect(p.getByRole("heading", { name: "Find your fit" })).toBeVisible();
       await expect(p.getByRole("button", { name: "Subscribe" }).last()).toHaveCSS("border-top-left-radius", "999px");
+      // The moodboard: collections and pieces pinned to a board.
+      await expect(p.getByRole("region", { name: "Our moodboard" }).getByRole("link", { name: /Autumn/ }).first()).toHaveAttribute("href", /^\/collections\//);
     },
   },
   {
@@ -58,6 +66,8 @@ const DESIGNS: { name: string; key: string; home: (p: Page) => Promise<void>; sh
       await expect(p.locator("header .ornament").first()).toBeVisible();
       // Heritage's home page tells the store's story (Settings › Policies › About).
       await expect(p.getByRole("link", { name: "Read our story" })).toBeVisible();
+      // Its collections behind arched doors.
+      await expect(p.getByRole("region", { name: "Step inside" }).getByRole("link").first()).toHaveAttribute("href", /^\/collections\//);
     },
   },
   {
@@ -68,6 +78,8 @@ const DESIGNS: { name: string; key: string; home: (p: Page) => Promise<void>; sh
       // The header sits see-through over the opening photograph, with a menu button on every screen.
       await expect(p.locator("header").first()).toHaveClass(/overlay-clear/);
       await expect(p.getByRole("button", { name: "Open menu" })).toBeVisible();
+      // The reel: what's new in big numbered frames.
+      await expect(p.getByRole("region", { name: "Now showing" }).getByRole("link", { name: "Shop all" })).toHaveAttribute("href", "/shop");
     },
   },
   {
@@ -269,6 +281,62 @@ test("a rail brings a piece forward, an aisle walks past the products, and movin
   await still.close();
 });
 
+test("the still designs move too: looks are uncovered, the index shows the piece pointed at, doors open and the reel slides", async ({ page, context, browser }) => {
+  test.setTimeout(180_000);
+  await page.goto("/admin/settings?tab=appearance");
+
+  // Atelier: each look's photograph is uncovered as it comes into view.
+  const atelier = await preview(page, context, "Atelier");
+  const look = atelier.getByRole("region", { name: "The lookbook" }).locator('[data-reveal="wipe"]').first();
+  await look.scrollIntoViewIfNeeded();
+  await expect(look).toHaveClass(/is-in|is-shown/);
+  await expect.poll(() => look.locator(":scope > *").evaluate((el) => getComputedStyle(el).clipPath)).toBe("none");
+  await atelier.close();
+
+  // Nordic: pointing at a line of the index shows that piece beside the list.
+  const nordic = await preview(page, context, "Nordic");
+  const index = nordic.getByRole("region", { name: "The index" });
+  const second = index.getByRole("listitem").nth(1);
+  const title = (await second.locator(".font-serif").first().textContent())!;
+  await second.hover();
+  await expect(index.locator("[data-preview]")).toContainText(title);
+  await expectAccessible(nordic, "Nordic: the index");
+  await nordic.close();
+
+  // Heritage: the doors swing open when the doorways come into view.
+  const heritage = await preview(page, context, "Heritage");
+  const doorway = heritage.getByRole("region", { name: "Step inside" }).getByRole("listitem").first();
+  await doorway.scrollIntoViewIfNeeded();
+  await expect(doorway).toHaveClass(/is-in|is-shown/);
+  await expect.poll(() => doorway.locator(".door-left").evaluate((el) => getComputedStyle(el).transform)).not.toBe("none");
+  await heritage.close();
+
+  // Noir: the reel holds still while the page scrolls, and its frames slide past; a frame reached
+  // with the keyboard is scrolled into view.
+  const noir = await preview(page, context, "Noir");
+  const reel = noir.getByRole("region", { name: "Now showing" });
+  await expect(reel).toHaveAttribute("data-pinned", "");
+  const strip = reel.locator(".reel-strip");
+  await reel.evaluate((el: HTMLElement) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY + (el.offsetHeight - window.innerHeight) * 0.6));
+  await expect.poll(() => strip.evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41)).toBeLessThan(-100);
+  const last = reel.getByRole("link", { name: "Shop all" });
+  await last.focus();
+  await expect(last).toBeInViewport();
+  await expectAccessible(noir, "Noir: the reel");
+  await noir.close();
+
+  // Shoppers who ask for less motion: doors stand open (none drawn) and the reel is swiped instead.
+  const still = await browser.newContext({ reducedMotion: "reduce", storageState: OWNER.state });
+  const quiet = await still.newPage();
+  await quiet.goto("/admin/settings?tab=appearance");
+  const calmNoir = await preview(quiet, still, "Noir");
+  await expect(calmNoir.getByRole("region", { name: "Now showing" })).not.toHaveAttribute("data-pinned", "");
+  await calmNoir.close();
+  const calmHeritage = await preview(quiet, still, "Heritage");
+  await expect(calmHeritage.getByRole("region", { name: "Step inside" }).locator(".door").first()).toBeHidden();
+  await still.close();
+});
+
 test("the store's own numbers, set in Settings › Homepage", async ({ page }) => {
   const { data: before } = await db().from("store_settings").select("homepage").eq("id", 1).single();
   try {
@@ -295,8 +363,9 @@ test("the home page follows the store's own order of sections", async ({ page })
     await page.goto("/admin/settings?tab=homepage");
     await page.getByLabel("Show Featured brands").uncheck();
     // Best sellers first, above the main banner.
-    for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "Move Best sellers (or your featured edit) up" }).click();
-    await expect(page.getByRole("button", { name: "Move Best sellers (or your featured edit) up" })).toBeDisabled();
+    const up = page.getByRole("button", { name: "Move Best sellers (or your featured edit) up" });
+    for (let i = 0; i < 12 && (await up.isEnabled()); i++) await up.click();
+    await expect(up).toBeDisabled();
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Settings saved.").first()).toBeVisible();
 

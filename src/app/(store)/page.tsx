@@ -1,9 +1,15 @@
 import { Fragment, type ReactNode } from "react";
 import Aisle from "@/components/store/Aisle";
+import Bento from "@/components/store/Bento";
+import Doors, { type Doorway } from "@/components/store/Doors";
+import IndexList from "@/components/store/IndexList";
+import Lookbook from "@/components/store/Lookbook";
+import Moodboard from "@/components/store/Moodboard";
 import NewsletterForm from "@/components/store/NewsletterForm";
 import Numbers, { type Figure } from "@/components/store/Numbers";
 import Rack from "@/components/store/Rack";
 import RecentlyViewed from "@/components/store/RecentlyViewed";
+import Reel from "@/components/store/Reel";
 import Showcase from "@/components/store/Showcase";
 import Hero from "@/components/store/heroes";
 import Spotlight, { type Chapter } from "@/components/store/Spotlight";
@@ -99,6 +105,15 @@ export default async function Home() {
   const showcase = pictured(data.featured, data.bestSellers, data.newArrivals).slice(0, 8);
   const rack = pictured(data.newArrivals, data.featured).slice(0, 10);
   const aisle = pictured(data.bestSellers, data.newArrivals, data.featured).slice(0, 12);
+  // The still designs' own sections: the lookbook and the bento lead with the store's chosen
+  // pieces, the index and the reel with what's new.
+  const chosen = pictured(data.featured, data.bestSellers, data.newArrivals);
+  const newest = pictured(data.newArrivals, data.featured, data.bestSellers);
+  const season = data.seasonal[0]?.season || data.trending.find((c) => c.season)?.season || "This season";
+  const collectionDoors = data.trending.some((c) => c.image_url || c.banner_url);
+  const doorways: Doorway[] = collectionDoors
+    ? data.trending.map((c) => ({ href: `/collections/${c.slug}`, title: c.title, image: c.image_url || c.banner_url, note: c.season || "Collection" }))
+    : data.departments.map((d) => ({ href: `/category/${d.slug}`, title: d.name, image: d.image_url, note: "Department" }));
   // Numbers: the store's own, or what its catalog and promises say.
   const figures: Figure[] = home.stats?.length
     ? home.stats
@@ -176,6 +191,22 @@ export default async function Home() {
         glow={design.title === "glow"}
       />
     ),
+    lookbook: () => <Lookbook products={chosen} eyebrow={season} many={kind.many} />,
+    index: () => <IndexList products={newest.slice(0, 8)} eyebrow="Just landed" />,
+    bento: () => (
+      <Bento
+        products={chosen}
+        departments={data.departments}
+        collections={data.trending}
+        figures={figures}
+        promises={trustPoints(settings).map((p) => p.title)}
+        currency={settings.currency}
+        title="Hot right now"
+      />
+    ),
+    moodboard: () => <Moodboard collections={data.trending} products={newest} title="Our moodboard" />,
+    doors: () => <Doors doorways={doorways} eyebrow={collectionDoors ? "Our collections" : "Departments"} title="Step inside" />,
+    reel: () => <Reel products={newest.slice(0, 8)} eyebrow="Just landed" title="Now showing" />,
     story: () => <StorySection settings={settings} variant={design.key} />,
     recommended: () => <RecentlyViewed title="Recommended for you" mode="recommend" />,
     newsletter: () => <NewsletterSection variant={design.key} title={kind.words.newsletter} text={kind.words.newsletterText} />,

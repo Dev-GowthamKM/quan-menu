@@ -41,7 +41,10 @@ export type AnnouncementStyle = "band" | "slim" | "marquee";
 export type GalleryStyle = "thumbs" | "stack" | "grid";
 
 /** Homepage sections, in the order a design shows them unless the store reorders them. */
-export const SECTION_KEYS = ["hero", "trust", "departments", "new", "promos", "best", "seasonal", "collections", "brands", "campaign", "spotlight", "statement", "showcase", "rack", "aisle", "marquee", "numbers", "story", "recommended", "newsletter"] as const;
+export const SECTION_KEYS = [
+  "hero", "trust", "departments", "new", "promos", "best", "seasonal", "collections", "brands", "campaign", "spotlight", "statement", "showcase", "rack", "aisle",
+  "marquee", "numbers", "lookbook", "index", "bento", "moodboard", "doors", "reel", "story", "recommended", "newsletter",
+] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 export const SECTION_LABELS: Record<SectionKey, string> = {
@@ -62,6 +65,12 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
   aisle: "The aisle: walk past your products as you scroll, as down a shop's aisle",
   marquee: "Moving band: your promises in big type, crossing the page",
   numbers: "Numbers: your store in figures, counting up (your own below, or the store's)",
+  lookbook: "Lookbook: five of your pieces laid out like a magazine spread, numbered looks",
+  index: "Index: your newest pieces as a numbered list in big type, a picture beside the one pointed at",
+  bento: "Bento: a bold grid of a big piece with a price sticker, a figure, a department, a collection and a promise",
+  moodboard: "Moodboard: your collections and pieces as photographs pinned to a board",
+  doors: "Doorways: your collections behind arched, carved doors that open as shoppers reach them",
+  reel: "Reel: your newest pieces in big numbered frames that slide sideways as shoppers scroll",
   story: "Your story (from Policies › About)",
   recommended: "Recommended for each shopper",
   newsletter: "Newsletter sign-up",
@@ -104,7 +113,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
   atelier: {
     key: "atelier",
     name: "Atelier",
-    summary: "Editorial and calm: a centred name, a large menu with pictures, big photographs and serif headlines.",
+    summary: "Editorial and calm: a centred name, a large menu with pictures, a lookbook laid out like a magazine spread and serif headlines.",
     header: "classic",
     hero: "split",
     card: "classic",
@@ -118,9 +127,9 @@ export const DESIGNS: Record<DesignKey, Design> = {
     filters: "sidebar",
     headingCase: "none",
     headingTracking: "normal",
-    motion: "none",
+    motion: "subtle",
     intro: "none",
-    sections: ["hero", "departments", "new", "promos", "best", "seasonal", "collections", "brands", "campaign", "recommended", "newsletter"],
+    sections: ["hero", "departments", "new", "lookbook", "promos", "best", "seasonal", "collections", "brands", "campaign", "recommended"],
     palettes: ["wine", "indigo", "emerald", "rose", "ivory", "noir"],
     headings: ["cormorant", "playfair", "bodoni", "dm-serif", "fraunces"],
     bodies: ["jost", "manrope", "inter", "dm-sans"],
@@ -129,7 +138,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
   nordic: {
     key: "nordic",
     name: "Nordic",
-    summary: "Minimal and airy: a slim header that tucks away as you scroll, full-width photographs, small type and lots of white space.",
+    summary: "Minimal and airy: a slim header that tucks away as you scroll, full-width photographs, an index of pieces in big type and lots of white space.",
     header: "inline",
     hero: "full",
     card: "minimal",
@@ -146,7 +155,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingWeight: 500,
     motion: "subtle",
     intro: "none",
-    sections: ["hero", "new", "departments", "seasonal", "best", "collections", "campaign", "recommended", "newsletter"],
+    sections: ["hero", "index", "seasonal", "departments", "best", "numbers", "collections", "campaign", "recommended"],
     palettes: ["snow", "oat", "fog", "sage", "clay"],
     headings: ["space-grotesk", "outfit", "tenor", "josefin", "italiana"],
     bodies: ["inter", "manrope", "work-sans", "karla", "figtree"],
@@ -155,7 +164,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
   bazaar: {
     key: "bazaar",
     name: "Bazaar",
-    summary: "Bold and playful: a scrolling announcement, category chips under the header, chunky capitals and rounded, outlined cards.",
+    summary: "Bold and playful: a scrolling announcement, category chips, a bento grid with price stickers, chunky capitals and outlined cards.",
     header: "bold",
     hero: "type",
     card: "sticker",
@@ -172,7 +181,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingWeight: 800,
     motion: "subtle",
     intro: "none",
-    sections: ["hero", "departments", "trust", "best", "promos", "new", "collections", "brands", "recommended", "newsletter"],
+    sections: ["hero", "departments", "trust", "bento", "best", "marquee", "promos", "new", "collections", "brands", "recommended"],
     palettes: ["tangerine", "bubblegum", "cobalt", "cherry", "acid"],
     headings: ["unbounded", "bricolage", "archivo", "syne"],
     bodies: ["dm-sans", "figtree", "work-sans", "karla", "outfit"],
@@ -181,7 +190,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
   boutique: {
     key: "boutique",
     name: "Boutique",
-    summary: "Soft and friendly: rounded shapes, round category bubbles like stories, pastel colours and gentle italics.",
+    summary: "Soft and friendly: rounded shapes, round category bubbles like stories, a moodboard of pinned photographs, pastel colours and gentle italics.",
     header: "centered",
     hero: "framed",
     card: "soft",
@@ -197,7 +206,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingTracking: "normal",
     motion: "subtle",
     intro: "none",
-    sections: ["hero", "departments", "new", "promos", "best", "collections", "campaign", "trust", "recommended", "newsletter"],
+    sections: ["hero", "departments", "new", "moodboard", "promos", "best", "campaign", "trust", "recommended"],
     palettes: ["blush", "lavender", "mint", "butter", "sky"],
     headings: ["fraunces", "dm-serif", "playfair", "josefin"],
     bodies: ["nunito", "dm-sans", "figtree", "karla"],
@@ -206,7 +215,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
   heritage: {
     key: "heritage",
     name: "Heritage",
-    summary: "Rich and traditional: arched frames, ornaments, jewel tones and classical capitals, made for festive and handloom wear.",
+    summary: "Rich and traditional: arched frames, carved doors that open onto your collections, ornaments, jewel tones and classical capitals, made for festive and handloom wear.",
     header: "heritage",
     hero: "arch",
     card: "framed",
@@ -222,7 +231,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingTracking: "0.06em",
     motion: "subtle",
     intro: "none",
-    sections: ["hero", "trust", "departments", "best", "story", "collections", "promos", "brands", "seasonal", "newsletter"],
+    sections: ["hero", "trust", "departments", "best", "doors", "story", "promos", "brands", "seasonal"],
     palettes: ["maharani", "peacock", "marigold", "temple", "royal"],
     headings: ["cinzel", "marcellus", "cormorant", "playfair"],
     bodies: ["lora", "jost", "manrope", "karla"],
@@ -231,7 +240,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
   noir: {
     key: "noir",
     name: "Noir",
-    summary: "Dark and dramatic: a see-through header over full-screen photographs, light words on black and wide capitals.",
+    summary: "Dark and dramatic: a see-through header over full-screen photographs, a reel of pieces sliding past as you scroll, light words on black and wide capitals.",
     header: "overlay",
     hero: "cinema",
     card: "overlay",
@@ -248,7 +257,7 @@ export const DESIGNS: Record<DesignKey, Design> = {
     headingWeight: 400,
     motion: "cinematic",
     intro: "name",
-    sections: ["hero", "new", "departments", "seasonal", "campaign", "collections", "best", "recommended", "newsletter"],
+    sections: ["hero", "reel", "departments", "seasonal", "campaign", "collections", "best", "recommended"],
     palettes: ["onyx", "midnight", "bordeaux", "graphite"],
     headings: ["italiana", "bodoni", "syne", "tenor", "cinzel"],
     bodies: ["inter", "manrope", "work-sans", "figtree"],

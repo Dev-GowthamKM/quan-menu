@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Department } from "@/lib/catalog";
 import type { FooterStyle } from "@/lib/designs";
 import { contactOf, socialOf, type Settings } from "@/lib/settings";
+import { storeKind } from "@/lib/store-types";
 import { cx } from "../ui/controls";
 import InstallApp from "./InstallApp";
 import NewsletterForm from "./NewsletterForm";
@@ -72,8 +73,10 @@ export default function Footer({ settings, departments, variant = "columns" }: {
     </div>
   );
 
-  const join = `Join the ${settings.store_name} list`;
-  const pitch = "New collections, early access to the sale and stories from the makers. No more than twice a month.";
+  // The store's sign-up, in the words of what it sells (the home page has no other).
+  const words = storeKind(settings.store_type).words;
+  const join = words.newsletter;
+  const pitch = `${words.newsletterText} No more than twice a month.`;
 
   switch (variant) {
     case "minimal":
@@ -81,7 +84,7 @@ export default function Footer({ settings, departments, variant = "columns" }: {
         <footer className="mt-24 border-t border-line">
           <div className="container-page grid gap-10 py-12 md:grid-cols-[1fr_1fr] md:items-end">
             <div>
-              <p className="text-[13px] font-medium tracking-[0.14em] uppercase">Newsletter</p>
+              <h2 className="text-[13px] font-medium tracking-[0.14em] uppercase">{join}</h2>
               <p className="mt-2 max-w-sm text-sm text-taupe">{pitch}</p>
             </div>
             <NewsletterForm />
@@ -96,7 +99,7 @@ export default function Footer({ settings, departments, variant = "columns" }: {
         <footer className="on-brand mt-24 overflow-hidden bg-brand text-on-brand">
           <div className="container-page grid gap-12 py-16 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
             <div className="max-w-md">
-              <p className="font-serif text-4xl leading-none">{join}</p>
+              <h2 className="font-serif text-4xl leading-none">{join}</h2>
               <p className="mt-4 text-sm leading-relaxed text-on-brand-soft">{pitch}</p>
               <NewsletterForm dark boxed />
             </div>
@@ -111,7 +114,7 @@ export default function Footer({ settings, departments, variant = "columns" }: {
       return (
         <footer className="mt-24 rounded-t-[2.5rem] bg-sand">
           <div className="container-page py-16 text-center">
-            <p className="font-serif text-4xl">{join}</p>
+            <h2 className="font-serif text-4xl">{join}</h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-taupe">{pitch}</p>
             <div className="mx-auto max-w-md text-left">
               <NewsletterForm boxed />
@@ -133,7 +136,7 @@ export default function Footer({ settings, departments, variant = "columns" }: {
           </div>
           <div className="container-page grid gap-12 pb-14 lg:grid-cols-[1.3fr_repeat(3,1fr)]">
             <div className="max-w-sm">
-              <p className="font-serif text-2xl">{join}</p>
+              <h2 className="font-serif text-2xl">{join}</h2>
               <p className="mt-3 text-sm leading-relaxed text-on-brand-soft">{pitch}</p>
               <NewsletterForm dark />
             </div>
@@ -147,8 +150,9 @@ export default function Footer({ settings, departments, variant = "columns" }: {
       return (
         <footer className="mt-24 border-t border-line">
           <div className="container-page py-20 text-center md:py-28" data-reveal>
-            <p className="mx-auto max-w-4xl font-serif text-[clamp(2.5rem,6.5vw,5.5rem)] leading-[1.02]">{settings.tagline || join}</p>
-            <p className="mx-auto mt-6 max-w-md text-sm leading-relaxed text-taupe">{pitch}</p>
+            {settings.tagline && <p className="mx-auto max-w-4xl font-serif text-[clamp(2.5rem,6.5vw,5.5rem)] leading-[1.02]">{settings.tagline}</p>}
+            <h2 className={cx("mx-auto font-serif leading-[1.05]", settings.tagline ? "mt-8 text-2xl" : "max-w-4xl text-[clamp(2.5rem,6.5vw,5.5rem)]")}>{join}</h2>
+            <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-taupe">{pitch}</p>
             <div className="mx-auto max-w-md text-left">
               <NewsletterForm boxed />
             </div>
@@ -163,7 +167,7 @@ export default function Footer({ settings, departments, variant = "columns" }: {
         <footer className="mt-24 overflow-hidden border-t border-line">
           <div className="container-page grid gap-12 py-16 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
             <div className="max-w-md">
-              <p className="font-serif text-4xl leading-none">{join}</p>
+              <h2 className="font-serif text-4xl leading-none">{join}</h2>
               <p className="mt-4 text-sm leading-relaxed text-taupe">{pitch}</p>
               <NewsletterForm boxed />
             </div>
@@ -179,7 +183,7 @@ export default function Footer({ settings, departments, variant = "columns" }: {
         <footer className="mt-24 overflow-hidden border-t border-line">
           <div className="container-page grid gap-12 py-16 lg:grid-cols-[1.3fr_repeat(3,1fr)]">
             <div className="max-w-sm">
-              <p className="font-serif text-3xl">{join}</p>
+              <h2 className="font-serif text-3xl">{join}</h2>
               <p className="mt-3 text-sm leading-relaxed text-taupe">{pitch}</p>
               <NewsletterForm />
             </div>
@@ -200,7 +204,7 @@ export default function Footer({ settings, departments, variant = "columns" }: {
         <footer className="on-brand mt-24 bg-brand text-on-brand">
           <div className="container-page grid gap-12 py-16 lg:grid-cols-[1.3fr_repeat(3,1fr)]">
             <div className="max-w-sm">
-              <p className="font-serif text-3xl">{join}</p>
+              <h2 className="font-serif text-3xl">{join}</h2>
               <p className="mt-3 text-sm leading-relaxed text-on-brand-soft">{pitch}</p>
               <NewsletterForm dark />
             </div>

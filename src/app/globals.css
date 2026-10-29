@@ -51,6 +51,7 @@
     to { transform: translateX(-50%); }
   }
   --animate-spin-slow: spin 18s linear infinite;
+  --animate-spin-slower: spin 140s linear infinite;
   --animate-float: float 7s ease-in-out infinite;
   @keyframes float {
     0%, 100% { translate: 0 0; }
@@ -87,6 +88,7 @@
   @media (prefers-reduced-motion: reduce) {
     .animate-marquee,
     .animate-spin-slow,
+    .animate-spin-slower,
     .animate-float,
     .animate-fade-in {
       animation: none;
@@ -483,6 +485,189 @@
   .aisle-walk {
     display: none;
   }
+}
+
+/* An opening photograph settling into place as the page opens, in designs that move. */
+@keyframes hero-settle {
+  from {
+    scale: 1.09;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .store-root:not([data-motion="none"]) .hero-settle {
+    animation: hero-settle 2.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+}
+
+/*
+ * The lookbook (components/store/Lookbook.tsx): in moving designs each photograph is uncovered
+ * from below as it reaches the screen, settling from a slight enlargement. The frame is what's
+ * watched for (a fully clipped element never counts as on screen); the picture inside is clipped.
+ */
+@keyframes wipe {
+  from {
+    clip-path: inset(100% 0 0 0);
+  }
+}
+@keyframes wipe-settle {
+  from {
+    scale: 1.16;
+  }
+}
+.motion-ready [data-reveal="wipe"]:not(.is-in):not(.is-shown) {
+  opacity: 1;
+}
+.motion-ready [data-reveal="wipe"]:not(.is-in):not(.is-shown) > * {
+  clip-path: inset(100% 0 0 0);
+}
+.motion-ready [data-reveal="wipe"].is-in {
+  animation: none;
+}
+.motion-ready [data-reveal="wipe"].is-in > * {
+  animation: wipe 1.3s cubic-bezier(0.7, 0, 0.2, 1) backwards;
+}
+.motion-ready [data-reveal="wipe"].is-in img {
+  animation: wipe-settle 1.9s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+/* The moodboard (components/store/Moodboard.tsx): pinned photographs, each tilted, swaying gently. */
+.mood-pin {
+  rotate: var(--tilt, 0deg);
+}
+.mood-pin:hover,
+.mood-pin:focus-visible {
+  rotate: 0deg;
+}
+.mood-tape {
+  rotate: -4deg;
+  backdrop-filter: blur(1px);
+}
+@keyframes mood-sway {
+  50% {
+    translate: 0 -9px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .store-root:not([data-motion="none"]) .mood-pin {
+    animation: mood-sway var(--sway, 7s) ease-in-out infinite;
+  }
+  .mood-pin:hover,
+  .mood-pin:focus-visible {
+    animation-play-state: paused;
+  }
+}
+
+/*
+ * Doorways (components/store/Doors.tsx): carved doors in the brand's colour, each half with a
+ * raised arched panel and a brass knob, that swing open when the doorway reaches the screen.
+ * They stand open unless the page moves and the doorway hasn't been reached yet.
+ */
+.door {
+  position: absolute;
+  inset-block: 0;
+  width: 50%;
+  background:
+    linear-gradient(90deg, rgb(0 0 0 / 0.22), transparent 28%, rgb(255 255 255 / 0.07) 72%, rgb(0 0 0 / 0.16)),
+    var(--color-brand);
+  transition: transform 1.7s cubic-bezier(0.7, 0, 0.2, 1) 0.35s;
+  backface-visibility: hidden;
+}
+.door::before {
+  content: "";
+  position: absolute;
+  inset: 16% 16% 9%;
+  border: 1px solid color-mix(in oklab, var(--color-accent) 75%, transparent);
+  border-radius: 999px 999px 3px 3px;
+  box-shadow:
+    inset 0 0 0 4px color-mix(in oklab, var(--color-brand) 78%, #000),
+    inset 0 0 0 5px color-mix(in oklab, var(--color-accent) 45%, transparent);
+}
+.door::after {
+  content: "";
+  position: absolute;
+  top: 56%;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 35%, color-mix(in oklab, var(--color-accent) 40%, #fff), var(--color-accent));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+}
+.door-left {
+  left: 0;
+  transform-origin: left center;
+  transform: rotateY(-102deg);
+  box-shadow: inset -1px 0 0 rgb(0 0 0 / 0.4);
+}
+.door-left::after {
+  right: 9%;
+}
+.door-right {
+  right: 0;
+  transform-origin: right center;
+  transform: rotateY(102deg);
+  box-shadow: inset 1px 0 0 rgb(255 255 255 / 0.12);
+}
+.door-right::after {
+  left: 9%;
+}
+.doorway:nth-child(2) .door { transition-delay: 0.5s; }
+.doorway:nth-child(3) .door { transition-delay: 0.65s; }
+.doorway:nth-child(4) .door { transition-delay: 0.8s; }
+.motion-ready .doorway:not(.is-in):not(.is-shown) .door {
+  transform: none;
+}
+.doorway-view {
+  transition: scale 1.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.motion-ready .doorway:not(.is-in):not(.is-shown) .doorway-view {
+  scale: 1.12;
+}
+.doorway a:hover .doorway-view,
+.doorway a:focus-visible .doorway-view {
+  scale: 1.06;
+}
+@media (prefers-reduced-motion: reduce) {
+  .door {
+    display: none;
+  }
+}
+/* A carved lattice (jaali) of interlocking circles, in the current text colour. */
+.jaali {
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40' fill='none' stroke='black' stroke-width='1'%3E%3Ccircle cx='20' cy='20' r='14'/%3E%3Ccircle cx='0' cy='0' r='14'/%3E%3Ccircle cx='40' cy='0' r='14'/%3E%3Ccircle cx='0' cy='40' r='14'/%3E%3Ccircle cx='40' cy='40' r='14'/%3E%3C/svg%3E") 0 0 / 40px 40px repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40' fill='none' stroke='black' stroke-width='1'%3E%3Ccircle cx='20' cy='20' r='14'/%3E%3Ccircle cx='0' cy='0' r='14'/%3E%3Ccircle cx='40' cy='0' r='14'/%3E%3Ccircle cx='0' cy='40' r='14'/%3E%3Ccircle cx='40' cy='40' r='14'/%3E%3C/svg%3E") 0 0 / 40px 40px repeat;
+}
+
+/*
+ * The reel (components/store/Reel.tsx): on wide screens with motion, the stage holds still while
+ * the page scrolls and the row, as wide as its frames, slides sideways inside it; otherwise the
+ * row scrolls sideways by itself.
+ */
+.reel-progress {
+  display: none;
+}
+.reel[data-pinned] .reel-stage {
+  position: sticky;
+  top: 0;
+  display: flex;
+  height: 100svh;
+  flex-direction: column;
+  justify-content: center;
+  /* Clipped, not a scroll box: moving focus along the row must not scroll it sideways. */
+  overflow: hidden;
+  overflow: clip;
+  /* Room for the store's header, which stays at the top while the reel holds still. */
+  padding-top: 7rem;
+}
+.reel[data-pinned] .reel-strip {
+  width: max-content;
+  overflow: visible;
+  scroll-snap-type: none;
+  will-change: transform;
+}
+.reel[data-pinned] .reel-progress {
+  display: block;
+  margin-top: 1.25rem;
 }
 
 /* Giant words filled with the brand's colours, glowing (Neon). */
