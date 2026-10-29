@@ -935,8 +935,8 @@ and the design tests on the home, product and shop pages of all eight designs, a
 a film and a product page with a 360° view. Automated checks
 don't replace testing with a keyboard and a screen reader.
 
-Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 98/98,
-integration 99/99, Playwright 38/38 against the production build (`next build`), and the home,
+Latest local run, on a database rebuilt from the migrations: typecheck clean, unit 106/106,
+integration 99/99, Playwright 41/41 against the production build (`next build`), and the home,
 shop, product, bag, sign-in and collections pages of all eight designs checked at 360, 390, 768,
 1024 and 1280 px wide without horizontal scrolling.
 

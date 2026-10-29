@@ -98,7 +98,7 @@ export default function QuickAdd({ slug, title, className }: { slug: string; tit
                     swatched
                       ? cx("size-9 rounded-full ring-offset-2 ring-offset-ivory", color === c.name ? "ring-2 ring-ink" : "ring-1 ring-black/15 hover:ring-ink/50")
                       : cx("h-10 rounded-btn border px-3.5 text-sm", color === c.name ? "border-brand bg-brand text-on-brand" : "border-line bg-paper hover:border-ink"),
-                    c.available <= 0 && !swatched && "text-stone/70 line-through",
+                    c.available <= 0 && !swatched && "text-stone line-through",
                   )}
                 >
                   {swatched ? c.available <= 0 && <span className="absolute inset-0 m-auto h-px w-10 -rotate-45 bg-ink/70" aria-hidden /> : c.name}

@@ -195,7 +195,7 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
                     className={cx(
                       "h-11 rounded-btn border px-4 text-sm transition",
                       color === c.name ? "border-brand bg-brand text-on-brand" : "border-line bg-paper hover:border-ink",
-                      c.available <= 0 && "text-stone/70 line-through",
+                      c.available <= 0 && "text-stone line-through",
                     )}
                   >
                     {c.name}

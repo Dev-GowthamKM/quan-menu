@@ -237,7 +237,7 @@ export default function CheckoutForm({ initialQuote, user, addresses, config }: 
       <div>
         <ol className="flex flex-wrap gap-x-5 gap-y-2 text-[11px] tracking-[0.14em] uppercase" aria-label="Checkout steps">
           {STEPS.map((s, i) => (
-            <li key={s} className={cx("flex items-center gap-2", i === step ? "text-ink" : i < step ? "text-taupe" : "text-stone/60")} aria-current={i === step ? "step" : undefined}>
+            <li key={s} className={cx("flex items-center gap-2", i === step ? "text-ink" : i < step ? "text-taupe" : "text-stone")} aria-current={i === step ? "step" : undefined}>
               <span className={cx("grid size-5 place-items-center rounded-full text-[10px]", i < step ? "bg-brand text-on-brand" : i === step ? "border border-ink" : "border border-line")}>
                 {i < step ? <CheckIcon size={11} /> : i + 1}
               </span>
@@ -418,7 +418,7 @@ function Section({ index, step, title, summary, onEdit, children }: { index: num
   return (
     <section id={`step-${index}`} className="scroll-mt-32 border-b border-line py-7" aria-labelledby={`step-${index}-title`}>
       <div className="flex items-baseline justify-between gap-4">
-        <h2 id={`step-${index}-title`} className={cx("font-serif text-2xl", !open && !done && "text-stone/70")}>
+        <h2 id={`step-${index}-title`} className={cx("font-serif text-2xl", !open && !done && "text-stone")}>
           {index + 1}. {title}
         </h2>
         {done && (
