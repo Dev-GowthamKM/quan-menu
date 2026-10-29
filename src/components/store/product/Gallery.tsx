@@ -8,6 +8,11 @@ import { Dialog } from "../../ui/Dialog";
 import { ChevronLeft, ChevronRight, ZoomIcon } from "../../ui/icons";
 import SpinViewer, { SPIN_MIN } from "./SpinViewer";
 
+// The phone strip and the desktop view each draw the first picture, one of them hidden at a time:
+// where a view is hidden it asks for a picture 1vw wide (next/image then offers its smallest
+// widths too), so only the one on screen is downloaded in full.
+const DESKTOP_SIZES = "(min-width: 1280px) 46vw, (min-width: 1024px) 55vw, 1vw";
+
 /**
  * Product images: on desktop, thumbnails beside a hover-zoom main image, or (as the design
  * chooses) every image stacked or in a grid beside the details; a swipeable strip on phones;
@@ -90,7 +95,7 @@ export default function Gallery({
         >
           {ordered.map((img, i) => (
             <button key={img.id} type="button" onClick={() => { setActive(i); setViewer(true); }} className="relative aspect-[4/5] w-full shrink-0 snap-center overflow-hidden bg-bone" aria-label={`Open image ${i + 1} of ${ordered.length}`}>
-              <CatalogImage src={img.url} alt={img.alt || title} fill sizes="100vw" priority={i === 0} className="object-cover" />
+              <CatalogImage src={img.url} alt={img.alt || title} fill sizes="(min-width: 1024px) 1vw, 100vw" priority={i === 0} fetchPriority={i === 0 ? "high" : undefined} className="object-cover" />
             </button>
           ))}
         </div>
@@ -114,7 +119,7 @@ export default function Gallery({
                 className="relative block aspect-[4/5] w-full cursor-zoom-in overflow-hidden rounded-img bg-bone"
                 aria-label={`Open image ${i + 1} of ${ordered.length} full screen`}
               >
-                <CatalogImage src={img.url} alt={img.alt || title} fill priority={i === 0} sizes={layout === "grid" && i > 0 ? "(min-width: 1280px) 23vw, 28vw" : "(min-width: 1280px) 46vw, 55vw"} className="object-cover transition duration-700 hover:scale-[1.02]" />
+                <CatalogImage src={img.url} alt={img.alt || title} fill priority={i === 0} fetchPriority={i === 0 ? "high" : undefined} sizes={layout === "grid" && i > 0 ? "(min-width: 1280px) 23vw, (min-width: 1024px) 28vw, 1vw" : DESKTOP_SIZES} className="object-cover transition duration-700 hover:scale-[1.02]" />
               </button>
             </li>
           ))}
@@ -155,7 +160,8 @@ export default function Gallery({
               alt={current.alt || title}
               fill
               priority
-              sizes="(min-width: 1280px) 46vw, 55vw"
+              fetchPriority="high"
+              sizes={DESKTOP_SIZES}
               className="object-cover transition-transform duration-200 ease-out"
               style={zoom ? { transform: "scale(2)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}
             />

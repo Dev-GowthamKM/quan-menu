@@ -111,7 +111,7 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [], 
             <div className="relative mx-auto aspect-square w-full max-w-md">
               {pictures[0] ? (
                 <div className="absolute inset-[4%_16%_12%_6%] -rotate-3 overflow-hidden rounded-card border-2 border-ink bg-bone shadow-[8px_8px_0_var(--color-ink)]">
-                  <CatalogImage src={pictures[0]} alt={slide?.image_alt || ""} fill priority sizes="(min-width: 768px) 30vw, 70vw" className="object-cover" />
+                  <CatalogImage src={pictures[0]} alt={slide?.image_alt || ""} fill priority fetchPriority="high" sizes="(min-width: 768px) 30vw, 70vw" className="object-cover" />
                 </div>
               ) : (
                 <div aria-hidden className="absolute inset-[8%] grid place-items-center rounded-full border-2 border-ink bg-brand font-serif text-[clamp(2rem,6vw,4rem)] text-on-brand">
@@ -279,7 +279,7 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [], 
               </div>
               {picture ? (
                 <div className="zoom-media relative mx-auto aspect-[3/4] w-[min(52vw,15rem)] animate-float overflow-hidden rounded-card shadow-[0_34px_120px_-24px_var(--color-brand)] lg:w-[min(26vw,22rem)]">
-                  <CatalogImage src={picture} alt={slide?.image_alt || ""} fill priority sizes="(min-width: 1024px) 22rem, 52vw" className="object-cover" />
+                  <CatalogImage src={picture} alt={slide?.image_alt || ""} fill priority fetchPriority="high" sizes="(min-width: 1024px) 22rem, 52vw" className="object-cover" />
                 </div>
               ) : (
                 <div aria-hidden className="mx-auto size-40 animate-float rounded-full bg-brand/40 blur-2xl lg:size-72" />

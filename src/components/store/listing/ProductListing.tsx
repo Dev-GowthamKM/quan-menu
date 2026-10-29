@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Suspense, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { getDepartments, getFacets, PAGE_SIZE, searchProducts, type SearchParams } from "@/lib/catalog";
 import { listingQuery, type ListingParams, type RawParams } from "@/lib/listing";
 import { storefrontLook } from "@/lib/look";
@@ -129,7 +129,7 @@ export default async function ProductListing({
     <div>
       {banner ? (
         <section className="relative h-[42vh] min-h-72 overflow-hidden bg-bone md:h-[52vh]">
-          <CatalogImage src={banner} alt="" fill priority sizes="100vw" className="object-cover" />
+          <CatalogImage src={banner} alt="" fill priority fetchPriority="high" sizes="100vw" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent" />
           <div className="container-page absolute inset-x-0 bottom-0 pb-10 text-white">
             {eyebrow && <p className="label-caps opacity-90">{eyebrow}</p>}
@@ -153,9 +153,7 @@ export default async function ProductListing({
         <div className={cx("mt-8 grid gap-10", !drawer && "lg:grid-cols-[15rem_1fr] xl:grid-cols-[16rem_1fr]")}>
           {!drawer && (
             <aside aria-label="Filters" className="hidden lg:block">
-              <Suspense>
-                <FilterPanel facets={facets} hide={hide} categories={categories} />
-              </Suspense>
+              <FilterPanel facets={facets} hide={hide} categories={categories} />
             </aside>
           )}
           <div className="min-w-0">
@@ -164,16 +162,12 @@ export default async function ProductListing({
                 {results.total} {results.total === 1 ? "product" : "products"}
               </p>
               <div className="flex items-center gap-3">
-                <Suspense>
-                  <MobileFilters facets={facets} hide={hide} categories={categories} total={results.total} always={drawer} />
-                  <SortSelect className="hidden lg:flex" />
-                </Suspense>
+                <MobileFilters facets={facets} hide={hide} categories={categories} total={results.total} always={drawer} />
+                <SortSelect className="hidden lg:flex" />
               </div>
             </div>
             <div className="mt-4">
-              <Suspense>
-                <ActiveFilters facets={facets} />
-              </Suspense>
+              <ActiveFilters facets={facets} />
             </div>
             <div className="mt-6">
               {results.items.length > 0 ? (

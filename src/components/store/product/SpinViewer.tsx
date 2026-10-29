@@ -85,6 +85,7 @@ export default function SpinViewer({ frames, title }: { frames: PageImage[]; tit
           alt=""
           fill
           priority={i === 0}
+          fetchPriority={i === 0 ? "high" : undefined}
           draggable={false}
           sizes="(min-width: 1024px) 50vw, 100vw"
           className={cx("pointer-events-none object-cover", i === frame ? "opacity-100" : "opacity-0")}

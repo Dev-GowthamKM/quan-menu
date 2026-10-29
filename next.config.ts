@@ -10,8 +10,12 @@ const supabase = (() => {
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  // Admin › Setup reads the migrations to offer the database update a deployment needs.
-  outputFileTracingIncludes: { "/admin/**": ["./supabase/migrations/*.sql"] },
+  outputFileTracingIncludes: {
+    // Admin › Setup reads the migrations to offer the database update a deployment needs.
+    "/admin/**": ["./supabase/migrations/*.sql"],
+    // Store pages find their fonts' files in the built stylesheet, to preload them (lib/font-files.ts).
+    "/**": ["./.next/static/css/*.css"],
+  },
   experimental: {
     // CSV imports are sent in batches; this leaves room for a large batch.
     serverActions: { bodySizeLimit: "4mb" },

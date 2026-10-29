@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { fontFamilies } from "@/app/fonts";
 import ChatButton from "@/components/store/ChatButton";
 import Footer from "@/components/store/Footer";
 import Header from "@/components/store/Header";
@@ -9,6 +10,7 @@ import StoreProvider from "@/components/store/StoreProvider";
 import { getDepartments, searchProducts } from "@/lib/catalog";
 import { headingWeight, homeSections, radiusTokens } from "@/lib/designs";
 import { storefrontLook } from "@/lib/look";
+import { fontFile } from "@/lib/font-files";
 import { contactOf, getSettings, homepageOf } from "@/lib/settings";
 import { BODY_FONTS, fontStack, HEADING_FONTS, isLight, themeTokens } from "@/lib/theme";
 
@@ -39,6 +41,10 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   const { look, design, preview } = await storefrontLook(settings);
   const heading = HEADING_FONTS[look.heading_font];
   const body = BODY_FONTS[look.body_font];
+  const headingItalic = look.heading_italic && heading.italic;
+  const weight = headingWeight(design, look.heading_font);
+  // The store's own two fonts arrive with the page (lib/font-files.ts).
+  const fontFiles = [fontFile(fontFamilies[look.heading_font], weight, headingItalic), fontFile(fontFamilies[look.body_font], 400)].filter((f) => f !== null);
   const light = isLight(look.colors);
   // Custom properties resolve where they are declared, so every colour and the font stacks
   // themselves are declared here (setting only --font-heading would not reach .font-serif).
@@ -49,8 +55,8 @@ export default async function StoreLayout({ children }: { children: React.ReactN
     "--font-body": body.css,
     "--font-serif": fontStack(heading),
     "--font-sans": fontStack(body),
-    "--heading-style": look.heading_italic && heading.italic ? "italic" : "normal",
-    "--heading-weight": String(headingWeight(design, look.heading_font)),
+    "--heading-style": headingItalic ? "italic" : "normal",
+    "--heading-weight": String(weight),
     "--heading-case": design.headingCase,
     "--heading-tracking": design.headingTracking,
     colorScheme: light ? "light" : "dark",
@@ -77,6 +83,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
     >
       {/* First, so it decides before the header is drawn whether this visit opens with the curtain. */}
       {design.intro === "name" && design.motion !== "none" && <Intro name={settings.store_name} />}
+      {[...new Set(fontFiles)].map((href) => <link key={href} rel="preload" href={href} as="font" type="font/woff2" crossOrigin="anonymous" />)}
       {/* The page behind the store (overscroll, the bottom of short pages) in the store's background. */}
       <style href="store-background" precedence="default">{`body{background:${look.colors.background}}`}</style>
       <a href="#main" className="sr-only z-50 bg-ink px-4 py-2 text-ivory focus:not-sr-only focus:fixed focus:top-2 focus:left-2">

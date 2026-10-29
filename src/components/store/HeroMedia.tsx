@@ -57,7 +57,7 @@ export default function HeroMedia({
   return (
     <>
       {image ? (
-        <CatalogImage src={image} alt={alt} fill priority={priority} sizes={sizes} className={className} data-parallax={parallax} />
+        <CatalogImage src={image} alt={alt} fill priority={priority} fetchPriority={priority ? "high" : undefined} sizes={sizes} className={className} data-parallax={parallax} />
       ) : (
         <span aria-hidden className="absolute inset-0 bg-bone" />
       )}

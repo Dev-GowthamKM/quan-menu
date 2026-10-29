@@ -111,6 +111,7 @@ export default async function Home() {
 
   // Every section the home page can show; the design (or the store's own arrangement in
   // Settings › Homepage) decides which appear, and in what order.
+  const order = homeSections(design, home.sections);
   const sections: Record<SectionKey, () => ReactNode> = {
     hero: () => (
       <Hero
@@ -123,7 +124,7 @@ export default async function Home() {
       />
     ),
     trust: () => <TrustStrip settings={settings} variant={design.key} />,
-    departments: () => <Departments departments={data.departments} variant={design.departments} browse={kind.words.browse} />,
+    departments: () => <Departments departments={data.departments} variant={design.departments} browse={kind.words.browse} early={order.indexOf("departments") === 1} />,
     new: () =>
       design.key === "nordic" ? (
         <section className="container-page mt-20 md:mt-28">
@@ -183,7 +184,7 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structured) }} />
-      {homeSections(design, home.sections).map((key) => (
+      {order.map((key) => (
         <Fragment key={key}>{sections[key]()}</Fragment>
       ))}
     </>

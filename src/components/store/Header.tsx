@@ -84,7 +84,7 @@ function MegaPanel({ d }: { d: Department }) {
         </div>
         {d.image_url && (
           <Link href={`/category/${d.slug}`} className="group/tile relative block aspect-[4/5] overflow-hidden rounded-img bg-bone">
-            <CatalogImage src={d.image_url} alt={d.name} fill sizes="18rem" className="object-cover transition duration-700 group-hover/tile:scale-105" />
+            <CatalogImage src={d.image_url} alt="" fill sizes="18rem" className="object-cover transition duration-700 group-hover/tile:scale-105" />
             <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent p-4 font-serif text-2xl text-white">{d.name}</span>
           </Link>
         )}

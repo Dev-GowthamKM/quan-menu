@@ -77,6 +77,15 @@ describe("anonymous visitors", () => {
     const { error } = await anon().storage.from("catalog").upload(`hack-${Date.now()}.png`, new Blob(["x"], { type: "image/png" }));
     expect(error).not.toBeNull();
   });
+
+  it("cannot call trigger functions, which only the database runs", async () => {
+    const callable = await sql<{ fn: string }>(
+      `select p.oid::regprocedure::text as fn from pg_proc p
+       where p.pronamespace = 'public'::regnamespace and p.prorettype = 'trigger'::regtype
+         and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))`,
+    );
+    expect(callable.map((r) => r.fn)).toEqual([]);
+  });
 });
 
 describe("customers", () => {

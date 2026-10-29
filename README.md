@@ -166,6 +166,12 @@ payment account and web address, and the platform's administrators create them f
 - **Rendering.** Catalog pages are rendered on the server and cached (tags `catalog`,
   `settings`, `reviews`), then refreshed the moment an admin saves. Account, cart, checkout and
   admin pages are dynamic.
+- **Loading speed.** A page's visible parts arrive in the first response, so nothing appears
+  later and pushes the page down. The opening picture is requested first
+  (`fetchPriority="high"`). The product page draws its first photo twice, once for phones and once
+  for wide screens, and the hidden copy asks for the smallest picture so it costs almost nothing.
+  The store's own heading and body fonts are preloaded: `src/lib/font-files.ts` finds their
+  files in the built stylesheet, and none of the other fonts a store could choose is downloaded.
 - **Business logic lives in Postgres functions** so it is atomic and can't be bypassed:
   `quote_cart` (prices, coupons, shipping, GST), `place_order` (idempotent, reserves stock),
   `confirm_order_payment` (idempotent; handles duplicate, late and mismatched payments),
@@ -226,7 +232,8 @@ payment account and web address, and the platform's administrators create them f
   shared across instances); storage policies that let only staff upload or delete; a CSP that
   forbids framing, HSTS and other security headers; `noindex` and `no-store` on the admin;
   CSV exports guarded against formula injection; links typed into settings limited to site paths
-  and http(s) addresses (checked when saved and again when shown); exports and imports written to the audit log;
+  and http(s) addresses (checked when saved and again when shown); trigger functions not callable
+  through the API (only the database runs them); exports and imports written to the audit log;
   audit triggers on products, variants, prices, orders, payments, refunds, coupons, settings,
   shipping and roles.
 
@@ -254,6 +261,7 @@ All schema changes are SQL migrations in `supabase/migrations/` (run in order):
 | `20261026000100_designs` | Each store's design and the parts it mixes in from others; font names checked by format, so adding a font needs no migration |
 | `20261027000100_motion` | Banner films: the catalog bucket also takes MP4 and WebM, up to 50 MB; `products.spin` for the 360° view, returned with the product page |
 | `20261028000100_store_types` | `store_settings.store_type` (what the store sells) and `products.option_names` (a product's own names for its options, staff only, returned with the product page); new stores start with departments and starter text for what they sell; the sample catalog files into departments a store already has |
+| `20261029000100_database_advice` | Supabase's advisor findings: trigger functions are no longer callable through the API, and payment and courier events, refunds, inventory movements, back-in-stock requests, reviews, COD blocks and wishlist items are indexed by the order, shipment, payment, return, product or variant they belong to |
 
 Every migration from `20261025000100` on ends by replacing `app_schema_version()` with its own
 version, so **Admin › Setup** can tell which updates a database is missing (older databases are

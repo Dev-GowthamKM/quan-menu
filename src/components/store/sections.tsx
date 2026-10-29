@@ -18,11 +18,15 @@ import { SectionHeader } from "./SectionHeader";
 
 export { SectionHeader };
 
-/** Departments, in the design's department style; browse is their title where it has one ("Find your fit", "Shop by pet"). */
-export function Departments({ departments, variant, browse = "Find your fit" }: { departments: Department[]; variant: DepartmentStyle; browse?: string }) {
+/**
+ * Departments, in the design's department style; browse is their title where it has one ("Find
+ * your fit", "Shop by pet"). Their pictures load first only when they come straight under the
+ * banner (early), and say nothing to screen readers: each link already says the department.
+ */
+export function Departments({ departments, variant, browse = "Find your fit", early = false }: { departments: Department[]; variant: DepartmentStyle; browse?: string; early?: boolean }) {
   if (!departments.length) return null;
   const image = (d: Department, sizes: string, className = "", priority = false) => (
-    <CatalogImage src={d.image_url} alt={d.name} fill sizes={sizes} priority={priority} className={cx("object-cover transition duration-700 ease-out", className)} />
+    <CatalogImage src={d.image_url} alt="" fill sizes={sizes} priority={early && priority} className={cx("object-cover transition duration-700 ease-out", className)} />
   );
 
   switch (variant) {
@@ -107,7 +111,7 @@ export function Departments({ departments, variant, browse = "Find your fit" }: 
             {departments.slice(0, 4).map((d, i) => (
               <li key={d.id} data-reveal>
                 <Link href={`/category/${d.slug}`} className="group relative block h-[56svh] min-h-80 overflow-hidden bg-bone md:h-[72svh]">
-                  <CatalogImage src={d.image_url} alt={d.name} fill sizes="100vw" priority={i === 0} className="object-cover transition duration-[1.6s] ease-out group-hover:scale-[1.04]" data-parallax="0.1" />
+                  <CatalogImage src={d.image_url} alt="" fill sizes="100vw" priority={early && i === 0} className="object-cover transition duration-[1.6s] ease-out group-hover:scale-[1.04]" data-parallax="0.1" />
                   <span className="absolute inset-0 bg-black/25 transition-colors duration-700 group-hover:bg-black/35" />
                   <span className="absolute inset-0 grid place-items-center px-6 text-center text-white">
                     <span>
