@@ -2,14 +2,16 @@
 // demos. Every row it creates is flagged is_sample, and Admin > Settings > Sample data
 // removes them all in one click.
 //
-//   node scripts/generate-seed.mjs
+//   node scripts/generate-seed.mjs                 writes supabase/seed.sql
+//   node scripts/generate-seed.mjs --pack <store>  prints SQL adding the newer products to a store
 //
 // Brands, products and copy are fictional. Photos are from Unsplash (free to use under
 // the Unsplash License, https://unsplash.com/license) and are loaded from their CDN.
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const img = (id, ar = "4:5") => `https://images.unsplash.com/photo-${id}?ar=${ar}&fit=crop&w=1200&q=80&auto=format`;
+// crop "faces" keeps people's faces in frame when a tall photo is cut to a wide banner.
+const img = (id, ar = "4:5", crop = "") => `https://images.unsplash.com/photo-${id}?ar=${ar}&fit=crop${crop ? `&crop=${crop}` : ""}&w=1200&q=80&auto=format`;
 const wide = (id) => img(id, "16:9");
 const tall = (id) => img(id, "3:4");
 
@@ -390,7 +392,261 @@ const products = [
     fit: "200 x 70 cm with tasselled ends.",
     care: "Hand wash cold separately.",
     d: "Light handwoven cotton stoles with tasselled ends, dyed in small batches." },
+
+  // ---- Added October 2026: more clothing, on models or as clean product shots. Stores set up
+  // before these were added get them with `--pack` (see the end of this file).
+  // Women
+  { t: "Belted Linen Shirt Dress", b: "atelier-mira", c: "women-dresses", p: 3990, sizes: WX, featured: true,
+    colors: [["Terracotta", "#C8573F", ["1789110853872-f416085557fa", "1789110853833-bc1a883da2d6"]]],
+    tags: ["linen", "summer"], fabric: "Linen and cotton blend, garment washed.",
+    fit: "Relaxed shirt-dress cut to the knee, with a removable tie belt. True to size.",
+    care: "Machine wash cold. Iron while damp.",
+    d: "A short-sleeved shirt dress in washed linen, with a camp collar, patch pockets and a tie belt that pulls it in at the waist." },
+  { t: "Sage Cotton Sundress", b: "atelier-mira", c: "women-dresses", p: 2790, sizes: W,
+    colors: [["Sage", "#A9BFAE", ["1789110519607-6176d668fb72"]]],
+    tags: ["summer"], fabric: "100% cotton gauze.",
+    fit: "Fine adjustable straps and a gathered waist. Falls to mid-calf.",
+    care: "Machine wash cold on a gentle cycle. Line dry.",
+    d: "A light cotton midi with thin straps and a softly gathered waist. The coolest dress you will own on a hot afternoon." },
+  { t: "Rope-Belt Linen Dress", b: "kaari-studio", c: "women-dresses", p: 3290, sizes: WX,
+    colors: [["Ivory", "#F3EEE2", ["1789110520302-3df8ce0410f0"]]],
+    tags: ["linen", "summer", "handcrafted"], fabric: "Handwoven linen with a braided jute belt.",
+    fit: "Boxy, with dropped cap sleeves. Above the knee.",
+    care: "Hand wash cold. Dry in shade.",
+    d: "Handwoven linen cut into an easy boxy shape with cap sleeves and a deep hem, finished with a braided jute rope belt." },
+  { t: "Linen Shift Dress", b: "atelier-mira", c: "women-dresses", p: 3490, sizes: WX,
+    colors: [["Oat", "#D8CBB3", ["1747396206869-75ea57b325ce"]]],
+    tags: ["linen", "workwear"], fabric: "100% linen.",
+    fit: "Straight and sleeveless, skimming the body. Knee length.",
+    care: "Machine wash cold. Linen softens with every wash.",
+    d: "A clean-lined sleeveless shift in oat linen, with a round neck and side pockets. Polished enough for the office, easy enough for the weekend." },
+  { t: "Button-Front Puff-Sleeve Dress", b: "atelier-mira", c: "women-dresses", p: 3790, cmp: 4790, sizes: W,
+    colors: [["Sky Blue", "#8DB4CF", ["1763604996066-73160867c1fc", "1763604996042-d5ac7b72ead4"]]],
+    tags: ["summer"], fabric: "Cotton chambray.",
+    fit: "Fitted bodice, off-shoulder puff sleeves and a ruffled hem. Mini length.",
+    care: "Machine wash cold. Warm iron.",
+    d: "A sky blue mini with a buttoned front, puffed off-shoulder sleeves and a ruffled hem that swings when you walk." },
+  { t: "Wildflower Tiered Midi Dress", b: "atelier-mira", c: "women-dresses", p: 4490, sizes: W,
+    colors: [["Wildflower", "#E9C6C0", ["1762154057377-cc9d3dd6900c"]]],
+    tags: ["summer", "print"], fabric: "Printed cotton voile, lined.",
+    fit: "Strappy fitted bodice and a full tiered skirt.",
+    care: "Machine wash cold on a gentle cycle.",
+    d: "A tiered midi printed with a meadow of wildflowers, with a fitted strappy bodice and a skirt full enough to twirl in." },
+  { t: "Tiered Cotton Maxi Dress", b: "atelier-mira", c: "women-dresses", p: 5490, sizes: W, featured: true,
+    colors: [["White", "#F7F5F0", ["1613966570650-add3cf83aa83"]]],
+    tags: ["resort", "summer"], fabric: "Crinkled cotton.",
+    fit: "Halter neck, open back and a floor-length tiered skirt.",
+    care: "Hand wash cold. No need to iron the crinkle.",
+    d: "A white maxi in crinkled cotton with a halter neck, an open back and three tiers that billow in the breeze. Made for holidays." },
+  { t: "Red Floral Sundress", b: "field-and-fold", c: "women-dresses", p: 2490, sizes: WX,
+    colors: [["Red Floral", "#C9302C", ["1542295669297-4d352b042bca"]]],
+    tags: ["summer", "print"], fabric: "Viscose crepe.",
+    fit: "V-neck with wide straps. Above the knee, relaxed through the body.",
+    care: "Machine wash cold. Cool iron.",
+    d: "A cheerful red sundress scattered with small white flowers, with a V-neck and wide straps. Throw it on and go." },
+  { t: "One-Shoulder Puff-Sleeve Dress", b: "atelier-mira", c: "women-dresses", p: 3990, sizes: W,
+    colors: [["Powder Blue", "#A9C8E8", ["1700064990923-b1af57cf58db"]]],
+    tags: ["occasion", "summer"], fabric: "Satin-back crepe.",
+    fit: "One puffed sleeve, a draped bodice and a flared skirt above the knee.",
+    care: "Hand wash cold or dry clean.",
+    d: "A powder blue party dress with a single puffed sleeve and a softly draped bodice. Sandals by day, heels in the evening." },
+  { t: "Bridal Zardozi Lehenga", b: "kaari-studio", c: "women-ethnic", p: 38900, sizes: ["S", "M", "L", "XL"], featured: true,
+    colors: [["Rani Pink", "#C2185B", ["1746372283841-dbb3838f9935"]]],
+    tags: ["festive", "occasion", "handcrafted"], fabric: "Raw silk lehenga, velvet blouse and net dupatta, hand-embroidered with zardozi and sequins.",
+    fit: "Lehenga with a drawstring waist and cancan lining; the blouse is semi-stitched, to be fitted to you.",
+    care: "Dry clean only. Store folded in muslin.",
+    d: "A bridal lehenga in rani pink and emerald, worked by hand in zardozi, sequins and gota, with a fitted blouse and a heavy bordered dupatta." },
+  { t: "Marigold Embroidered Lehenga", b: "kaari-studio", c: "women-ethnic", p: 24900, sizes: ["S", "M", "L", "XL"],
+    colors: [["Marigold", "#E09A2D", ["1767955694884-d4bf352c23c2"]]],
+    tags: ["festive", "occasion", "handcrafted"], fabric: "Silk blend with thread and mirror embroidery; velvet-bordered dupatta.",
+    fit: "Flared lehenga with a drawstring waist; semi-stitched blouse.",
+    care: "Dry clean only.",
+    d: "A marigold lehenga covered in thread and mirror work, with a maroon velvet dupatta. For sangeets, haldis and every celebration in between." },
+  { t: "Crimson Flared Anarkali", b: "kaari-studio", c: "women-ethnic", p: 8990, sizes: WX,
+    colors: [["Crimson", "#9E1B32", ["1668371679302-a8ec781e876e"]]],
+    tags: ["festive", "occasion"], fabric: "Georgette with a gota-embroidered yoke.",
+    fit: "Fitted to the waist, then flaring to the floor. With churidar and dupatta.",
+    care: "Dry clean only.",
+    d: "A floor-length anarkali in deep crimson georgette, with an embroidered yoke and a skirt that flares into a full circle." },
+  { t: "Ivory Sequin Saree", b: "kaari-studio", c: "women-ethnic", p: 12900, sizes: ONE,
+    colors: [["Ivory", "#F1E9D8", ["1729146768775-3662af38016e"]]],
+    tags: ["festive", "occasion"], fabric: "Organza with hand-sewn sequins; embroidered blouse piece.",
+    fit: "5.5 m saree with a 0.8 m embroidered blouse piece.",
+    care: "Dry clean only.",
+    d: "An ivory organza saree shimmering with hand-sewn sequins, with a matching embroidered blouse piece. Quietly dazzling at evening functions." },
+  { t: "Mustard Lehenga Set", b: "kaari-studio", c: "women-ethnic", p: 9490, sizes: ["S", "M", "L", "XL"],
+    colors: [["Mustard", "#E1A72B", ["1574847872646-abff244bbd87"]]],
+    tags: ["festive"], fabric: "Fluid crepe skirt, embroidered cotton blouse and blush net dupatta.",
+    fit: "Full-length skirt with an elasticated waist; cropped blouse.",
+    care: "Dry clean recommended.",
+    d: "A light lehenga set: a fluid mustard skirt, a crisp white embroidered crop blouse and a blush net dupatta. Easy to dance in." },
+  { t: "Ivory Embroidered Anarkali Suit", b: "kaari-studio", c: "women-ethnic", p: 7990, sizes: WX,
+    colors: [["Ivory", "#F3EEE6", ["1602210901882-071c6b9e239d", "1601571103926-ed7860bb5e2c"]]],
+    tags: ["festive", "handcrafted"], fabric: "Cotton silk with hand embroidery; organza dupatta with a contrast border.",
+    fit: "Ankle-length anarkali with straight pants and dupatta.",
+    care: "Dry clean only.",
+    d: "An ivory anarkali suit embroidered by hand, with an organza dupatta edged in red and gold. Elegant at day weddings and pujas." },
+  { t: "Glen Check Double-Breasted Blazer", b: "atelier-mira", c: "women-outerwear", p: 6990, sizes: W,
+    colors: [["Grey Check", "#9A9A9A", ["1608234808654-2a8875faa7fd"]]],
+    tags: ["workwear", "aw26"], fabric: "Wool-blend Prince of Wales check, fully lined.",
+    fit: "Relaxed double-breasted cut with soft shoulder pads. Hits at the hip.",
+    care: "Dry clean only.",
+    d: "A double-breasted blazer in grey glen check, cut a little oversized to wear over a shirt, a knit or a slip dress." },
+  { t: "Pinstripe Tailored Blazer", b: "atelier-mira", c: "women-outerwear", p: 6490, sizes: W,
+    colors: [["Black Pinstripe", "#1B1B1F", ["1604914509335-9001944f23d5"]]],
+    tags: ["workwear", "aw26"], fabric: "Stretch wool-blend suiting with a chalk pinstripe.",
+    fit: "Single-breasted and nipped at the waist.",
+    care: "Dry clean only.",
+    d: "A sharp single-button blazer in black chalk-stripe suiting, nipped at the waist for a long, lean line." },
+  { t: "Scarlet Tailored Blazer", b: "atelier-mira", c: "women-outerwear", p: 5990, sizes: W,
+    colors: [["Scarlet", "#C8102E", ["1521510895919-46920266ddb3"]]],
+    tags: ["workwear"], fabric: "Crepe suiting, half lined.",
+    fit: "Relaxed single-breasted cut, made to be worn open.",
+    care: "Dry clean only.",
+    d: "A scarlet blazer that does the work of a whole outfit. Over black for the office, over a tee and jeans at the weekend." },
+  { t: "Forest Cable-Knit Jumper", b: "northloom", c: "women-knitwear", p: 4990, sizes: W,
+    colors: [["Forest", "#2F5D50", ["1580331451062-99ff652288d7"]]],
+    tags: ["knitwear", "aw26"], fabric: "Merino and cotton blend.",
+    fit: "Oversized and long, with dropped shoulders.",
+    care: "Hand wash cold. Dry flat.",
+    d: "A long cable-knit jumper in deep forest green, generous enough to pull over shirts and wear with leggings." },
+  { t: "Cream Fisherman Cardigan", b: "northloom", c: "women-knitwear", p: 5290, sizes: W,
+    colors: [["Cream", "#EFE7DA", ["1629580626780-7fe7fb0523e9"]]],
+    tags: ["knitwear", "aw26"], fabric: "Chunky wool blend.",
+    fit: "Relaxed, with dropped shoulders and a deep V.",
+    care: "Hand wash cold with wool wash. Dry flat.",
+    d: "A chunky fisherman-rib cardigan in undyed cream, with dropped shoulders and big, slouchy sleeves." },
+  { t: "Open-Knit Cotton Sweater", b: "northloom", c: "women-knitwear", p: 3990, sizes: W,
+    colors: [["Chalk", "#EDEAE3", ["1587999882859-34b3f313df77"]]],
+    tags: ["knitwear", "summer"], fabric: "100% cotton in an open stitch.",
+    fit: "Relaxed, with a slouchy funnel neck.",
+    care: "Hand wash cold. Dry flat.",
+    d: "An airy open-stitch sweater in chalk-white cotton, light enough for cool evenings by the sea." },
+  { t: "High-Rise Wide-Leg Jeans", b: "field-and-fold", c: "women-trousers", guide: "trousers", p: 3290, sizes: ["26", "28", "30", "32", "34"],
+    colors: [["Light Wash", "#9DB6CC", ["1598554747436-c9293d6a588f"]]],
+    tags: ["denim"], fabric: "100% cotton rigid denim.",
+    fit: "High rise, with a full-length wide leg.",
+    care: "Machine wash cold, inside out.",
+    d: "Wide-leg jeans in a light vintage wash, cut high on the waist and long in the leg. Best with a tucked-in tee." },
+  // Men
+  { t: "Wide-Stripe Cotton Shirt", b: "sable-row", c: "men-shirts", p: 2990, sizes: M,
+    colors: [["Rust Stripe", "#A86452", ["1791631064425-0e7e04aa9a95", "1791631064348-0337580f80d1"]]],
+    tags: ["summer"], fabric: "Cotton and linen blend.",
+    fit: "Regular fit with a chest pocket.",
+    care: "Machine wash cold. Warm iron.",
+    d: "A relaxed shirt in a bold rust and cream stripe, in a cotton-linen blend that only gets softer. Wear it buttoned, or open over a tee." },
+  { t: "Band-Collar Linen Shirt", b: "sable-row", c: "men-shirts", p: 2790, sizes: M,
+    colors: [["Ecru", "#E8E1D3", ["1627686011747-74adda3d2343"]]],
+    tags: ["linen", "summer"], fabric: "100% European linen.",
+    fit: "Regular fit with a band collar.",
+    care: "Machine wash cold. Iron while damp.",
+    d: "A linen shirt in ecru with a neat band collar. Works with chinos, denim or a dhoti alike." },
+  { t: "Indigo Linen Shirt", b: "sable-row", c: "men-shirts", p: 2890, sizes: M,
+    colors: [["Indigo", "#2E4A72", ["1740711152088-88a009e877bb"]]],
+    tags: ["linen"], fabric: "Garment-dyed linen.",
+    fit: "Relaxed fit with a soft collar. Made to be worn with the sleeves rolled.",
+    care: "Machine wash cold. The colour softens with washing.",
+    d: "A garment-dyed linen shirt in deep indigo that fades beautifully with every wash." },
+  { t: "Linen Popover Shirt", b: "field-and-fold", c: "men-shirts", p: 2490, sizes: M,
+    colors: [["White", "#F5F2EA", ["1713881587420-113c1c43e28a"]]],
+    tags: ["linen", "summer"], fabric: "Washed linen.",
+    fit: "Relaxed and short-sleeved, with a three-button placket.",
+    care: "Machine wash cold.",
+    d: "A short-sleeved linen popover with a grandad collar and a three-button placket. Summer in a shirt." },
+  { t: "Short-Sleeve Chambray Shirt", b: "field-and-fold", c: "men-shirts", p: 2390, sizes: M,
+    colors: [["Chambray", "#9FB0C2", ["1713881842156-3d9ef36418cc"]]],
+    tags: ["linen", "summer"], fabric: "Linen and cotton chambray.",
+    fit: "Regular fit with a band collar.",
+    care: "Machine wash cold.",
+    d: "A soft chambray shirt with short sleeves and a band collar, in a breezy linen-cotton weave." },
+  { t: "Heavyweight Crew-Neck Tee", b: "field-and-fold", c: "men-tshirts", p: 1490, sizes: M,
+    colors: [["White", "#FAFAFA", ["1592994238317-fcf75c5466fd", "1778671394516-8270eac13c42"]]],
+    tags: ["essentials"], fabric: "240 gsm combed cotton.",
+    fit: "Regular fit, with a firm ribbed neck that holds its shape.",
+    care: "Machine wash cold. Tumble dry low.",
+    d: "The white tee, made heavier: 240 gsm combed cotton with a firm rib collar, so it stays crisp wash after wash." },
+  { t: "Tipped Knit Polo", b: "sable-row", c: "men-tshirts", p: 2190, sizes: M,
+    colors: [["Black", "#151515", ["1744551358258-5a5b9b268eca"]]],
+    tags: ["workwear"], fabric: "Cotton piqué with tipped collar and cuffs.",
+    fit: "Slim fit.",
+    care: "Machine wash cold.",
+    d: "A black piqué polo with fine contrast tipping at the collar and cuffs. Smart enough for dinner, easy enough for every day." },
+  { t: "Royal Blue Kurta Pyjama Set", b: "kaari-studio", c: "men-ethnic", p: 4490, sizes: M, featured: true,
+    colors: [["Royal Blue", "#1F4E9A", ["1770359993283-a2c2f386584e"]]],
+    tags: ["festive"], fabric: "Cotton silk.",
+    fit: "Straight kurta to the knee with a mandarin collar; drawstring pyjama.",
+    care: "Dry clean recommended.",
+    d: "A royal blue kurta pyjama set in cotton silk with a mandarin collar and a quiet sheen. Festive without trying too hard." },
+  { t: "Mint Chikankari Kurta", b: "kaari-studio", c: "men-ethnic", p: 3990, sizes: M,
+    colors: [["Mint", "#BFE0C8", ["1727835523545-70ee992b5763"]]],
+    tags: ["handcrafted", "festive"], fabric: "Cotton with hand chikankari embroidery from Lucknow.",
+    fit: "Regular fit, below the knee.",
+    care: "Hand wash cold, inside out.",
+    d: "Mint cotton covered in fine chikankari, embroidered by hand in Lucknow. Cool, light and right for summer celebrations." },
+  { t: "Rose Thread-Work Kurta", b: "kaari-studio", c: "men-ethnic", p: 3790, sizes: M,
+    colors: [["Rose", "#E9A3B4", ["1727835523550-18478cacefa2"]]],
+    tags: ["handcrafted", "festive"], fabric: "Cotton silk with tonal thread work.",
+    fit: "Regular fit, knee length.",
+    care: "Dry clean recommended.",
+    d: "A rose pink kurta with tonal thread work at the placket and yoke. For haldis, mehendis and summer weddings." },
+  { t: "White Pathani Kurta Set", b: "kaari-studio", c: "men-ethnic", p: 4990, sizes: M,
+    colors: [["White", "#FBFBF8", ["1734418038940-2e5ee6a1b478", "1734418038517-ffc3a6a6751f"]]],
+    tags: ["festive"], fabric: "Cotton blend with a soft sheen.",
+    fit: "Relaxed Pathani kurta with a shirt collar, and a matching salwar.",
+    care: "Machine wash cold on a gentle cycle.",
+    d: "A crisp white Pathani set: a long collared kurta with a matching salwar. Clean, classic and cool in the heat." },
+  { t: "Butter Yellow Cotton Kurta", b: "kaari-studio", c: "men-ethnic", p: 2490, sizes: M,
+    colors: [["Butter", "#EFE0A3", ["1701365676249-9d7ab5022dec"]]],
+    tags: ["festive", "summer"], fabric: "Soft cotton.",
+    fit: "Regular fit to mid-thigh, with a mandarin collar.",
+    care: "Machine wash cold.",
+    d: "A soft butter-yellow kurta with a mandarin collar and a concealed placket. Wear it with denim or white pyjamas." },
+  { t: "Navy Slim-Fit Suit", b: "sable-row", c: "men-outerwear", guide: "blazer", p: 18900, sizes: ["38", "40", "42", "44"], featured: true,
+    colors: [["Navy", "#1F2D52", ["1617137984095-74e4e5e3613f"]]],
+    tags: ["occasion", "workwear"], fabric: "Wool blend, half canvassed.",
+    fit: "Slim two-piece: a single-breasted jacket and flat-front trousers.",
+    care: "Dry clean only.",
+    d: "A two-piece suit in deep navy with a notch lapel and slim flat-front trousers. The suit for interviews, weddings and everything in between." },
+  { t: "Black Two-Piece Suit", b: "sable-row", c: "men-outerwear", guide: "blazer", p: 17900, sizes: ["38", "40", "42", "44"],
+    colors: [["Black", "#141414", ["1618886614638-80e3c103d31a"]]],
+    tags: ["occasion"], fabric: "Stretch wool blend.",
+    fit: "Slim fit with tapered trousers.",
+    care: "Dry clean only.",
+    d: "An all-black suit with a slim jacket and tapered trousers. With a black shirt for evenings, or a white one for formal days." },
+  { t: "Pinstripe Double-Breasted Blazer", b: "sable-row", c: "men-outerwear", guide: "blazer", p: 11900, sizes: ["38", "40", "42", "44"],
+    colors: [["Dove Grey", "#BDBFC2", ["1480429370139-e0132c086e2a"]]],
+    tags: ["occasion", "aw26"], fabric: "Wool and linen blend with a fine pinstripe.",
+    fit: "Double-breasted, with peak lapels and a structured shoulder.",
+    care: "Dry clean only.",
+    d: "A dove grey double-breasted blazer with a fine pinstripe and peak lapels. Add a pocket square and you're done." },
+  { t: "Charcoal Brushed Blazer", b: "sable-row", c: "men-outerwear", guide: "blazer", p: 9900, sizes: ["38", "40", "42", "44"],
+    colors: [["Charcoal", "#4F555B", ["1622497170185-5d668f816a56"]]],
+    tags: ["workwear", "aw26"], fabric: "Brushed wool blend.",
+    fit: "Tailored fit with natural shoulders.",
+    care: "Dry clean only.",
+    d: "A charcoal blazer in a soft brushed wool blend, cut close with natural shoulders. As good with denim as with trousers." },
+  { t: "Tapered Stretch Jeans", b: "field-and-fold", c: "men-trousers", p: 3490, sizes: ["28", "30", "32", "34", "36"],
+    colors: [["Dark Rinse", "#2E3F5C", ["1714143164072-7646ef5cb24d"]], ["Mid Wash", "#4A6A96", ["1714143136372-ddaf8b606da7"]]],
+    tags: ["denim"], fabric: "12 oz stretch denim.",
+    fit: "Mid rise, slim through the thigh and tapered to the ankle.",
+    care: "Wash rarely, cold and inside out.",
+    d: "Jeans in comfortable stretch denim, slim through the thigh and tapered to the ankle. Turn up the hem for a neat finish." },
+  // Unisex
+  { t: "Oversized Fleece Hoodie", b: "field-and-fold", c: "unisex-essentials", p: 2990, sizes: WX,
+    colors: [["Cloud Grey", "#E4E4E2", ["1688111421205-a0a85415b224"]]],
+    tags: ["essentials", "aw26"], fabric: "380 gsm brushed-back cotton fleece.",
+    fit: "Oversized with dropped shoulders. Size down for a regular fit.",
+    care: "Machine wash cold. Tumble dry low.",
+    d: "A heavyweight oversized hoodie in brushed cotton fleece, with a double-layer hood and a kangaroo pocket." },
+  { t: "Garment-Dyed Hoodie", b: "field-and-fold", c: "unisex-essentials", p: 2790, sizes: WX,
+    colors: [["Mocha", "#7C6A5E", ["1611817757591-c3f345024273"]]],
+    tags: ["essentials", "aw26"], fabric: "Organic cotton fleece, garment dyed.",
+    fit: "Regular fit with a drawstring hood.",
+    care: "Machine wash cold. The colour softens with every wash.",
+    d: "A garment-dyed hoodie in warm mocha brown that softens and fades a little more with every wash." },
 ];
+/** The first of the products added after the sample catalog first shipped (see `--pack`). */
+const FIRST_ADDED = "Belted Linen Shirt Dress";
 
 const collections = [
   { slug: "autumn-winter-26", title: "Autumn / Winter '26", kind: "automated", seasonal: true, season: "Autumn/Winter 2026", featured: true, sort: 1,
@@ -417,6 +673,10 @@ const collections = [
     rules: { match: "all", conditions: [{ field: "tag", op: "equals", value: "workwear" }] },
     banner: wide("1613915617430-8ab0fd7c6baf"), image: tall("1613915617430-8ab0fd7c6baf"),
     description: "Crisp shirting, fluid blouses and tailoring for the working week." },
+  { slug: "festive-edit", title: "The Festive Edit", kind: "automated", seasonal: true, season: "Festive 2026", featured: true, sort: 7,
+    rules: { match: "all", conditions: [{ field: "tag", op: "equals", value: "festive" }] },
+    banner: img("1746372283841-dbb3838f9935", "16:9", "faces"), image: tall("1767955694884-d4bf352c23c2"),
+    description: "Lehengas, anarkalis, sarees and kurtas for weddings, Diwali and every celebration in between." },
 ];
 
 const colorCode = (name) => name.replace(/[^A-Za-z ]/g, "").split(" ").map((w) => w.slice(0, 3)).join("").toUpperCase().slice(0, 6);
@@ -553,6 +813,77 @@ update public.store_settings set
   og_image_url = ${q(img("1779406165962-7df12de281b1", "1.91:1"))}
 where id = 1;
 `);
+
+// --pack <store id>: instead of the seed, prints the SQL that adds the products from
+// FIRST_ADDED onwards to one store (a store whose sample catalog was copied before they were
+// added, or any clothing store), as the newest arrivals and flagged as samples. It adds the size
+// guides, brands and categories they need where the store has none by that name, and skips
+// products the store already has. Paste it into Supabase › SQL Editor.
+const packAt = process.argv.indexOf("--pack");
+if (packAt > -1) {
+  const store = process.argv[packAt + 1] ?? "";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(store)) {
+    console.error("--pack takes a store id, like 6bf8ac76-bb65-4994-b630-e9eda2c7a357");
+    process.exit(1);
+  }
+  const from = products.findIndex((p) => p.t === FIRST_ADDED);
+  const added = products.slice(from);
+  const inStore = (table, column, value) => `(select id from public.${table} where store_id = s and ${column} = ${q(value)})`;
+  const absent = (table, column, value) => `not exists (select 1 from public.${table} where store_id = s and ${column} = ${q(value)})`;
+  const needed = new Set(added.map((p) => p.c));
+  for (const slug of [...needed]) {
+    const parent = categories.find((c) => c.slug === slug)?.parent;
+    if (parent) needed.add(parent);
+  }
+  const cats = categories.filter((c) => needed.has(c.slug)).sort((a, b) => Number(!!a.parent) - Number(!!b.parent));
+  const guides = new Set([...cats.map((c) => c.guide), ...added.map((p) => p.guide)].filter(Boolean));
+  const sql = [
+    `-- Adds ${added.length} sample products ("${FIRST_ADDED}" onwards) to store ${store}.`,
+    "-- Generated by scripts/generate-seed.mjs --pack. Run once in Supabase › SQL Editor.",
+    "do $pack$",
+    "declare",
+    `  s uuid := ${q(store)};`,
+    "begin",
+    "  if not exists (select 1 from public.stores where id = s) then raise exception 'No store %', s; end if;",
+    "  perform set_config('app.cross_store', 'on', true);",
+  ];
+  for (const g of sizeGuides.filter((x) => guides.has(x.key))) {
+    sql.push(`  insert into public.size_guides (store_id, name, unit, columns, rows, how_to_measure, is_sample) select s, ${q(g.name)}, ${q(g.unit)}, ${arr(g.columns)}, ${json(g.rows)}, ${q(g.how)}, true where ${absent("size_guides", "name", g.name)};`);
+  }
+  const guideIn = (key) => inStore("size_guides", "name", sizeGuides.find((g) => g.key === key).name);
+  for (const b of brands.filter((x) => added.some((p) => p.b === x.slug))) {
+    sql.push(`  insert into public.brands (store_id, name, slug, description, banner_url, is_featured, sort_order, is_sample) select s, ${q(b.name)}, ${q(b.slug)}, ${q(b.description)}, ${q(b.banner)}, ${b.featured}, ${brands.indexOf(b) + 1}, true where ${absent("brands", "slug", b.slug)};`);
+  }
+  for (const c of cats) {
+    sql.push(`  insert into public.categories (store_id, parent_id, name, slug, description, image_url, banner_url, size_guide_id, sort_order, is_sample) select s, ${
+      c.parent ? inStore("categories", "slug", c.parent) : "null"
+    }, ${q(c.name)}, ${q(c.slug)}, ${q(c.description || "")}, ${q(c.image || null)}, ${q(c.banner || null)}, ${c.guide ? guideIn(c.guide) : "null"}, ${c.sort}, true where ${absent("categories", "slug", c.slug)};`);
+  }
+  added.forEach((p, k) => {
+    const i = from + k;
+    const brand = brands.find((b) => b.slug === p.b);
+    const slug = slugify(p.t);
+    const product = `(select id from public.products where store_id = s and slug = ${q(slug)})`;
+    sql.push(`  insert into public.products (store_id, title, slug, brand_id, category_id, size_guide_id, description, fabric, fit, care, tags, status, published_at, is_featured, price, compare_at_price, is_returnable, is_sample) select s, ${q(p.t)}, ${q(slug)}, ${inStore("brands", "slug", p.b)}, ${inStore("categories", "slug", p.c)}, ${p.guide ? guideIn(p.guide) : "null"}, ${q(p.d)}, ${q(p.fabric)}, ${q(p.fit)}, ${q(p.care)}, ${arr(p.tags)}, 'active', now() - interval '${k * 5} hours', ${!!p.featured}, ${p.p * 100}, ${p.cmp ? p.cmp * 100 : "null"}, ${p.returnable !== false}, true where ${absent("products", "slug", slug)};`);
+    const ids = [...new Set(p.colors.flatMap(([, , list]) => list))];
+    ids.forEach((id, pos) => {
+      const owners = p.colors.filter(([, , list]) => list.includes(id)).map(([name]) => name);
+      const color = owners.length === 1 ? owners[0] : null;
+      const alt = color && p.colors.length > 1 ? `${p.t} in ${color.toLowerCase()}` : p.t;
+      sql.push(`  insert into public.product_images (store_id, product_id, url, alt, color, position) select s, ${product}, ${q(img(id))}, ${q(alt)}, ${q(color)}, ${pos} where not exists (select 1 from public.product_images where product_id = ${product} and url = ${q(img(id))});`);
+    });
+    let vpos = 0;
+    for (const [color, hex] of p.colors) {
+      for (const size of p.sizes) {
+        const sku = [brand.code, String(i + 1).padStart(3, "0"), colorCode(color), size].filter(Boolean).join("-");
+        sql.push(`  insert into public.product_variants (store_id, product_id, sku, size, color, color_hex, stock_quantity, position) select s, ${product}, ${q(sku)}, ${q(size)}, ${q(color)}, ${q(hex)}, ${stockFor(sku)}, ${vpos++} where ${absent("product_variants", "sku", sku)};`);
+      }
+    }
+  });
+  sql.push("end $pack$;");
+  process.stdout.write(sql.join("\n") + "\n");
+  process.exit(0);
+}
 
 const target = fileURLToPath(new URL("../supabase/seed.sql", import.meta.url));
 writeFileSync(target, out.join("\n") + "\n");
