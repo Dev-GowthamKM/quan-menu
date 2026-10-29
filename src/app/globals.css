@@ -653,6 +653,8 @@
   height: 100svh;
   flex-direction: column;
   justify-content: center;
+  /* Centred, but never pushed up under the header when the screen is short. */
+  justify-content: safe center;
   /* Clipped, not a scroll box: moving focus along the row must not scroll it sideways. */
   overflow: hidden;
   overflow: clip;
