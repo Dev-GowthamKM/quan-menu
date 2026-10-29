@@ -25,7 +25,12 @@ export async function generateMetadata(): Promise<Metadata> {
     description: s.seo_description || s.tagline,
     openGraph: { siteName: s.store_name, type: "website", images: s.og_image_url ? [s.og_image_url] : undefined },
     twitter: { card: "summary_large_image" },
-    icons: { icon: [{ url: `/store-icon.svg?v=${(hash >>> 0).toString(36)}`, type: "image/svg+xml" }] },
+    icons: {
+      icon: [{ url: `/store-icon.svg?v=${(hash >>> 0).toString(36)}`, type: "image/svg+xml" }],
+      // iPhones' home screens (Android and desktops take the icons in app/manifest.ts).
+      apple: [{ url: `/app-icon/apple?v=${(hash >>> 0).toString(36)}`, sizes: "180x180", type: "image/png" }],
+    },
+    appleWebApp: { capable: true, title: s.store_name, statusBarStyle: "default" },
   };
 }
 
@@ -79,7 +84,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       data-card={design.card}
       data-title={design.title}
       data-scheme={light ? "light" : "dark"}
-      className="flex min-h-dvh flex-col bg-ivory font-sans text-ink"
+      className="store-root flex min-h-dvh flex-col bg-ivory font-sans text-ink"
     >
       {/* First, so it decides before the header is drawn whether this visit opens with the curtain. */}
       {design.intro === "name" && design.motion !== "none" && <Intro name={settings.store_name} />}

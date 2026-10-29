@@ -1,19 +1,48 @@
 "use server";
 import { unstable_cache } from "next/cache";
-import { getRelatedProducts, productCardsByIds, searchProducts } from "@/lib/catalog";
+import { getProductPage, getRelatedProducts, productCardsByIds, searchProducts } from "@/lib/catalog";
 import { deliveryWindow, formatDay } from "@/lib/format";
 import { rateLimit } from "@/lib/rate-limit";
 import { getSettings } from "@/lib/settings";
 import { serviceability, shiprocketConfigured } from "@/lib/shipping/shiprocket";
 import { contextStore } from "@/lib/store";
 import { supabasePublic } from "@/lib/supabase/public";
-import type { PostcodeCheck, ProductCard } from "@/lib/types";
+import type { PageVariant, PostcodeCheck, ProductCard, ProductPage } from "@/lib/types";
 
 const clean = (ids: unknown) =>
   (Array.isArray(ids) ? ids : []).filter((id): id is string => typeof id === "string" && /^[0-9a-f-]{36}$/i.test(id)).slice(0, 24);
 
 export async function getProductCards(ids: string[]): Promise<ProductCard[]> {
   return productCardsByIds(clean(ids));
+}
+
+/** What Quick add needs to put a product in the bag from a list: its options, prices and stock. */
+export interface QuickProduct {
+  slug: string;
+  title: string;
+  image: string | null;
+  min_price: number;
+  max_price: number;
+  min_price_compare_at: number | null;
+  option_names: ProductPage["option_names"];
+  variants: PageVariant[];
+}
+
+/** A product on sale in this store, for Quick add (null if there's no such product on sale). */
+export async function quickProduct(slug: string): Promise<QuickProduct | null> {
+  if (typeof slug !== "string" || !/^[a-z0-9-]{1,120}$/.test(slug)) return null;
+  const p = await getProductPage(slug);
+  if (!p) return null;
+  return {
+    slug: p.slug,
+    title: p.title,
+    image: p.images[0]?.url ?? null,
+    min_price: p.min_price,
+    max_price: p.max_price,
+    min_price_compare_at: p.min_price_compare_at,
+    option_names: p.option_names,
+    variants: p.variants,
+  };
 }
 
 /** "Recommended for you": products related to what this visitor looked at recently. */

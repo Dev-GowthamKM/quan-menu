@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import PrintButton from "@/components/admin/PrintButton";
+import PrintButton from "@/components/ui/PrintButton";
 import { ORDER_COLUMNS } from "@/lib/admin-orders";
 import { requireRole, requireStaffPage } from "@/lib/auth";
 import { formatDate } from "@/lib/format";

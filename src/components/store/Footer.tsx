@@ -3,6 +3,7 @@ import type { Department } from "@/lib/catalog";
 import type { FooterStyle } from "@/lib/designs";
 import { contactOf, socialOf, type Settings } from "@/lib/settings";
 import { cx } from "../ui/controls";
+import InstallApp from "./InstallApp";
 import NewsletterForm from "./NewsletterForm";
 
 const SOCIAL_LABELS: Record<string, string> = {
@@ -58,6 +59,7 @@ export default function Footer({ settings, departments, variant = "columns" }: {
         {settings.gstin ? ` GSTIN ${settings.gstin}.` : ""}
       </p>
       <p>Secure payments: UPI · Cards · Net banking · Wallets{settings.cod_enabled ? " · Cash on delivery" : ""}</p>
+      <InstallApp storeName={settings.store_name} className={onBrand ? "hover:text-on-brand" : "hover:text-ink"} />
       {social.length > 0 && (
         <ul className="flex gap-4">
           {social.map(([key, url]) => (

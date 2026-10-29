@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { CloseIcon } from "./icons";
 import { cx } from "./controls";
 
@@ -27,6 +27,8 @@ export function Dialog({
   className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // The dialog is named by its title, whatever the title holds (words, or words and a count).
+  const titleId = useId();
 
   useEffect(() => {
     const d = ref.current;
@@ -63,11 +65,11 @@ export function Dialog({
         placement,
         className,
       )}
-      aria-label={typeof title === "string" ? title : undefined}
+      aria-labelledby={title ? titleId : undefined}
     >
       {(title || side !== "center") && (
         <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
-          <div className="font-serif text-xl">{title}</div>
+          <div id={titleId} className="font-serif text-xl">{title}</div>
           <button type="button" onClick={onClose} className="-mr-2 p-2 text-ink/70 hover:text-ink" aria-label="Close">
             <CloseIcon />
           </button>

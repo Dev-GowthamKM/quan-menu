@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { invoiceAvailable } from "@/lib/invoice";
 import { formatMoney } from "@/lib/money";
 import type { CourierScan, OrderDetail } from "@/lib/types";
 import { FULFILLMENT_STATUS, ORDER_STATUS, PAYMENT_STATUS } from "@/lib/types-ui";
 import CatalogImage from "../../ui/CatalogImage";
 import CodConfirm from "./CodConfirm";
 import { Badge, cx } from "../../ui/controls";
-import { CheckIcon, ExternalIcon } from "../../ui/icons";
+import { CheckIcon, ExternalIcon, PrintIcon } from "../../ui/icons";
 import OrderActions from "./OrderActions";
 import PaymentWatcher from "./PaymentWatcher";
 import WhatsAppToggle from "./WhatsAppToggle";
@@ -198,6 +199,14 @@ export default function OrderView({ detail, accessKey, justPlaced, stripeSession
             {o.amount_refunded > 0 && <div className="flex justify-between text-violet-800"><dt>Refunded</dt><dd className="tabular-nums">−{formatMoney(o.amount_refunded, c)}</dd></div>}
           </dl>
           {o.tax_mode === "inclusive" && o.tax_total > 0 && <p className="-mt-3 text-right text-xs text-stone">Includes {formatMoney(o.tax_total, c)} {o.tax_label}</p>}
+          {invoiceAvailable(o) && (
+            <Link
+              href={`/orders/${o.order_number}/invoice${accessKey ? `?key=${encodeURIComponent(accessKey)}` : ""}`}
+              className="inline-flex items-center gap-2 underline underline-offset-4"
+            >
+              <PrintIcon size={15} /> Invoice: view, print or save as PDF
+            </Link>
+          )}
           <p className="text-xs text-stone">
             Need help with this order? <Link href={`/contact`} className="underline">Contact us</Link> and mention {o.order_number}.
           </p>

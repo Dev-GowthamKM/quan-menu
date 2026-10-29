@@ -58,6 +58,9 @@ payment account and web address, and the platform's administrators create them f
   courier's own estimate when Shiprocket is connected), "notify me" for sold-out sizes, details,
   fabric and care, shipping and returns, reviews (verified purchase badges), related products,
   structured data.
+- Quick add on every product card: choose a size or colour (or the store's own options) in a small
+  sheet and put the product in the bag without leaving the list; a product with only one way to
+  buy it goes straight in.
 - Bag with server-side pricing, discount codes, free-delivery progress. Guest bags are merged into
   the account on sign-in.
 - Checkout: contact → address (Indian states, PIN validation) → delivery options → payment
@@ -68,7 +71,15 @@ payment account and web address, and the platform's administrators create them f
   through MSG91, or WhatsApp), sign in, password reset, optional Google, profile,
   address book, order history and tracking (courier status, expected date and scan history),
   wishlist (with optional price-drop emails), cancellation and return requests. Guests
-  get a private link to their order, and can look it up by number and email.
+  get a private link to their order, and can look it up by number and email. Once an order is
+  confirmed or paid, its invoice (a GST tax invoice when the store has a GSTIN) opens from the
+  order page to print or save as a PDF, without the store's header and footer.
+- Each store installs as its own app (Add to Home Screen on Android, iPhone and desktop): its name,
+  colours and icon (its initials in its heading font, made per store at `/app-icon/…`), with
+  shortcuts to the shop, the bag and orders (`app/manifest.ts`). The footer offers "Get the app"
+  where the browser can install it, and explains Add to Home Screen on iPhones. When the
+  shopper is offline, the app shows the store's own offline page instead of the browser's error.
+  It comes from a small service worker (`public/sw.js`), which caches nothing else.
 - Policy pages, FAQ, contact form, maintenance page, sitemap and robots.
 - Until a store has something on sale, its homepage says it is opening soon and takes email
   sign-ups for launch day.

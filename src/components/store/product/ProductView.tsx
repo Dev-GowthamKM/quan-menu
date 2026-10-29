@@ -6,7 +6,8 @@ import { checkDelivery, type DeliveryCheck } from "@/server/catalog";
 import { discountPercent, formatMoney } from "@/lib/money";
 import type { GalleryStyle } from "@/lib/designs";
 import { optionNames } from "@/lib/store-types";
-import type { PageVariant, ProductPage, SizeGuide } from "@/lib/types";
+import type { ProductPage, SizeGuide } from "@/lib/types";
+import { colorsOf, firstColor, sizesOf, variantFor as findVariant } from "@/lib/variants";
 import { Button, cx } from "../../ui/controls";
 import { Dialog } from "../../ui/Dialog";
 import { CheckIcon, MapPinIcon, MinusIcon, PlusIcon, ReturnIcon, RulerIcon, ShareIcon, StarIcon, TruckIcon } from "../../ui/icons";
@@ -18,12 +19,6 @@ import Gallery from "./Gallery";
 
 const LOW_STOCK = 3;
 
-function sizeOrder(variants: PageVariant[]) {
-  const seen: string[] = [];
-  for (const v of variants) if (v.size && !seen.includes(v.size)) seen.push(v.size);
-  return seen;
-}
-
 export default function ProductView({ product, currency, preview, stockAlerts, gallery = "thumbs" }: { product: ProductPage; currency: string; preview?: boolean; stockAlerts?: boolean; gallery?: GalleryStyle }) {
   const router = useRouter();
   const search = useSearchParams();
@@ -32,24 +27,15 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
   const names = optionNames(kind, product.option_names);
   const sizeWord = names.size.toLowerCase();
 
-  const colors = useMemo(() => {
-    const list: { name: string; hex: string | null; available: number }[] = [];
-    for (const v of product.variants) {
-      if (!v.color) continue;
-      const existing = list.find((c) => c.name === v.color);
-      if (existing) existing.available += v.available;
-      else list.push({ name: v.color, hex: v.color_hex, available: v.available });
-    }
-    return list;
-  }, [product.variants]);
-  const sizes = useMemo(() => sizeOrder(product.variants), [product.variants]);
+  const colors = useMemo(() => colorsOf(product.variants), [product.variants]);
+  const sizes = useMemo(() => sizesOf(product.variants), [product.variants]);
   // The second option as colour swatches when it has swatch colours, else as words (flavours, formats).
   const swatched = colors.some((c) => c.hex);
 
   const initialColor = (() => {
     const wanted = search.get("color");
     if (wanted && colors.some((c) => c.name === wanted)) return wanted;
-    return colors.find((c) => c.available > 0)?.name ?? colors[0]?.name ?? null;
+    return firstColor(colors);
   })();
   const [color, setColor] = useState<string | null>(initialColor);
   const [size, setSize] = useState<string | null>(() => {
@@ -86,8 +72,7 @@ export default function ProductView({ product, currency, preview, stockAlerts, g
     rememberViewed(product.id);
   }, [product.id]);
 
-  const variantFor = (c: string | null, s: string | null) =>
-    product.variants.find((v) => (v.color || null) === (colors.length ? c : null) && (v.size || null) === (sizes.length ? s : null));
+  const variantFor = (c: string | null, s: string | null) => findVariant(product.variants, c, s);
 
   const selected = variantFor(color, size);
   const needsSize = sizes.length > 0 && !size;

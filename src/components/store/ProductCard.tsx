@@ -4,6 +4,7 @@ import type { ProductCard as Card } from "@/lib/types";
 import CatalogImage from "../ui/CatalogImage";
 import { cx } from "../ui/controls";
 import Price from "./Price";
+import QuickAdd from "./QuickAdd";
 import WishButton from "./WishButton";
 
 const NEW_DAYS = 30;
@@ -72,6 +73,7 @@ export default function ProductCard({
           )}
         </div>
         <WishButton productId={product.id} title={product.title} className="pc-wish absolute top-1.5 right-1.5" />
+        {!soldOut && <QuickAdd slug={product.slug} title={product.title} className="absolute right-1.5 bottom-1.5" />}
       </div>
       <div className="pc-info mt-3 grid gap-1">
         {product.brand_name && <p className="pc-brand label-caps text-stone">{product.brand_name}</p>}
