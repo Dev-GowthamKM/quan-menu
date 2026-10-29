@@ -102,7 +102,7 @@ export default function Reel({ products, eyebrow, title }: { products: ProductCa
                 key={p.id}
                 href={`/products/${p.slug}`}
                 data-frame
-                className="reel-frame group relative w-[72vw] shrink-0 snap-center pt-[clamp(2.5rem,6vw,5.5rem)] sm:w-[46vw] md:w-[min(30vw,26rem,calc((100svh-27rem)*0.75))]"
+                className="reel-frame group relative w-[72vw] shrink-0 snap-center pt-[clamp(2.5rem,6vw,5.5rem)] sm:w-[46vw] md:w-[clamp(14rem,calc((100svh-27rem)*0.75),min(30vw,26rem))]"
               >
                 <span aria-hidden className="absolute top-0 left-[-0.06em] font-serif text-[clamp(4.5rem,11vw,10rem)] leading-none text-transparent tabular-nums [-webkit-text-stroke:1px_var(--color-taupe)]">
                   {String(i + 1).padStart(2, "0")}

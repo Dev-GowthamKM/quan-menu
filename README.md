@@ -99,7 +99,11 @@ payment account and web address, and the platform's administrators create them f
 - Home page sections in the manner of today's most talked-about shop sites: pieces hanging on a
   clothes rail (standing on a shelf, for goods that don't hang), each brought forward with a tap
   and turned to see its back; an aisle the shopper walks down by scrolling, past products on both
-  sides; the store's promises in big type on moving bands; and its figures counting up.
+  sides; the store's promises in big type on moving bands; and its figures counting up. Each
+  design has one of its own: a lookbook laid out like a magazine (Atelier), an index of what's
+  new in big type (Nordic), a bento grid with price stickers (Bazaar), a moodboard of pinned
+  photographs (Boutique), collections behind carved doors that open (Heritage), a reel of numbered
+  frames sliding past (Noir), the aisle (Cinema) and the showcase (Neon).
 - An announcement bar whose messages take turns (or scroll past), an add-to-bag bar that stays in
   reach on phones, free-delivery progress in the bag, an optional WhatsApp "Chat with us" button,
   and each store's own icon in browser tabs.
@@ -366,11 +370,14 @@ multi-store update ran; add others on the same page.
    other store has (a design, palette and fonts), with **Shuffle** for another or a design of your
    choice. It starts with a delivery zone for all of India, Standard and Express rates, the usual
    couriers, sample policies, FAQ and email templates in the words of what it sells, to edit;
-   departments for what it sells (Dogs, Cats… for a pet shop), unless you untick them; and, if you
-   tick **Start with the sample catalog**, a copy of the sample clothing products, brands,
-   collections and discount codes (also on the store's page later, while it has no products),
-   filed under the departments it already has. Until something is on sale, its homepage says it
-   is opening soon.
+   departments for what it sells (Dogs, Cats… for a pet shop), unless you untick them; and, for a
+   clothing store, if you tick **Start with the sample catalog**, a copy of the sample clothing
+   products, brands, collections and discount codes (also on the store's page later, while it has
+   no products), filed under the departments it already has. Other kinds of store aren't offered
+   the clothing samples. Until something is on sale, its homepage says it is opening soon.
+   A store without a web address yet can't be visited by customers; **Preview store** (on its
+   page and in its admin's sidebar) shows it to you at the site's main address for a day, under a
+   bar saying so, until **End preview** (a shop closed for maintenance shows only to its staff).
 2. **Vercel › your project › Settings › Domains:** add the same address. With `VERCEL_API_TOKEN`
    and `VERCEL_PROJECT_ID` set, the app adds it for you. A `.vercel.app` name works straight away;
    your own domain also needs its DNS pointed at Vercel.
@@ -705,12 +712,12 @@ can be read at `http://localhost:4014/__test/messages`.
 
   | Design | Manner |
   |---|---|
-  | Atelier | Editorial and calm: a centred name, a large menu with pictures, big photographs and serif headlines (Taana's look) |
-  | Nordic | Minimal: a slim header that tucks away on scroll, full-width photographs, numbered departments, filters behind a button |
-  | Bazaar | Bold: a scrolling announcement, a search bar and category chips, chunky capitals, outlined cards with stickers |
-  | Boutique | Soft: rounded shapes, round category bubbles, pastel colours, a rounded banner with a card |
-  | Heritage | Traditional: arched frames, ornaments, jewel tones and classical capitals, the store's story on the home page |
-  | Noir | Dark: a see-through header over a full-screen photograph, a full-screen menu, cards with words on the photo |
+  | Atelier | Editorial and calm: a centred name, a large menu with pictures, an editorial banner, a lookbook laid out like a magazine spread, serif headlines |
+  | Nordic | Minimal: a slim header that tucks away on scroll, full-width photographs, an index of what's new in big type, numbered departments, filters behind a button |
+  | Bazaar | Bold: a scrolling announcement, a search bar and category chips, chunky capitals, a bento grid with price stickers, promises on moving bands, outlined cards with stickers |
+  | Boutique | Soft: rounded shapes, round category bubbles, pastel colours, a rounded banner with colour blooming around it, a moodboard of pinned photographs |
+  | Heritage | Traditional: arched frames, a turning mandala, ornaments and a jaali lattice, collections behind carved doors that open, jewel tones and classical capitals, the store's story on the home page |
+  | Noir | Dark: a see-through header over a full-screen photograph, a full-screen menu, a reel of numbered frames that slides past as you scroll, cards with words on the photo |
   | Cinema | Cinematic and calm: a floating header over a full-screen film or photograph, big serif lines, a pinned Spotlight, an aisle to walk down, departments as full-width scenes, tall gallery cards, the store in numbers |
   | Neon | Electric: a glass header with its own shop button, a glowing product in front of giant words, a showcase of featured pieces each lit in its own colour, promises on moving bands, pieces on a rail, colours that change as you scroll, glowing cards on dark backgrounds |
 
@@ -729,9 +736,9 @@ can be read at `http://localhost:4014/__test/messages`.
   full-screen opening banner moving at half speed under the page while its picture zooms in and
   its words float away, pictures drifting slower than the page, giant words sliding sideways and
   a mouse wheel that glides to a stop instead of jumping (keys, the scroll bar, touch and
-  anything that scrolls by itself work as always) (`src/components/store/Motion.tsx`). Atelier
-  is still; Noir, Cinema and Neon are cinematic; the others ease in. Nothing moves for shoppers
-  whose device asks for less motion, and the page is complete without it.
+  anything that scrolls by itself work as always) (`src/components/store/Motion.tsx`). Noir,
+  Cinema and Neon are cinematic; the others ease in (a store can keep its pages still). Nothing
+  moves for shoppers whose device asks for less motion, and the page is complete without it.
 - **Opening:** Noir, Cinema and Neon open a shopper's first visit to the home page with a
   curtain in the store's colour, its name rising letter by letter (word by word in scripts whose
   letters join), lifting after two seconds or at the first tap or key, with the banner's own
@@ -769,8 +776,28 @@ bring the next one forward; the stage's colours always keep words readable, from
 - **Numbers** (`Numbers.tsx`): up to four figures that count up when the shopper reaches them.
   **Settings › Homepage › Numbers** sets them ("12,000+" "happy customers"); without them the
   store's own: products on sale, brands, days to return and the free-delivery threshold.
+- **Lookbook** (`Lookbook.tsx`, Atelier's): five of the store's chosen pieces laid out as a
+  magazine spread, numbered looks with their names and prices, each photograph uncovered from
+  below as it comes into view and showing the piece's second photo on hover.
+- **Index** (`IndexList.tsx`, Nordic's): what's new as a numbered list in big type; on wide
+  screens the piece pointed at (or reached with the keyboard) shows beside the list, on phones
+  each line has its own picture.
+- **Bento** (`Bento.tsx`, Bazaar's): a bold grid of a big piece with its price on a starburst
+  sticker, a figure, a department, a collection and a promise, lifting off the page when pointed
+  at; it fills its places from whatever the store has.
+- **Moodboard** (`Moodboard.tsx`, Boutique's): collections and pieces as photographs pinned to a
+  board under tape, each tilted a little and swaying gently.
+- **Doorways** (`Doors.tsx`, Heritage's): the featured collections (or departments) behind
+  arched, carved doors in the brand's colour that swing open as the shopper reaches them, on a
+  jaali lattice.
+- **Reel** (`Reel.tsx`, Noir's): what's new in big frames with giant outlined numbers. On wide
+  screens the section holds still while the page scrolls and the frames slide past sideways, with
+  a bar for how far along it is (reaching a frame with the keyboard scrolls to it); on phones it
+  is swiped.
 
-Any design can show them. The first banner can play a
+Any design can show them, and all of them stay still for shoppers who ask for less motion. The
+footer holds the store's newsletter sign-up, in the words of what it sells; the home page's own
+sign-up section is there for stores that want a second one. The first banner can play a
 **video**: upload an
 MP4 or WebM (up to 50 MB; 10 to 20 seconds at 1080p is plenty) or paste a link. It plays muted
 on a loop, with a pause button; the banner's picture shows until it can play, and instead of it
