@@ -95,7 +95,7 @@ export default function Gallery({
         >
           {ordered.map((img, i) => (
             <button key={img.id} type="button" onClick={() => { setActive(i); setViewer(true); }} className="relative aspect-[4/5] w-full shrink-0 snap-center overflow-hidden bg-bone" aria-label={`Open image ${i + 1} of ${ordered.length}`}>
-              <CatalogImage src={img.url} alt={img.alt || title} fill sizes="(min-width: 1024px) 1vw, 100vw" priority={i === 0} fetchPriority={i === 0 ? "high" : undefined} className="object-cover" />
+              <CatalogImage src={img.url} alt={img.alt || title} fill sizes="(min-width: 1024px) 1vw, 100vw" priority={i === 0 && !spinning} fetchPriority={i === 0 && !spinning ? "high" : undefined} className="object-cover" />
             </button>
           ))}
         </div>
@@ -159,8 +159,8 @@ export default function Gallery({
               src={current.url}
               alt={current.alt || title}
               fill
-              priority
-              fetchPriority="high"
+              priority={layout === "thumbs" && !spinning}
+              fetchPriority={layout === "thumbs" && !spinning ? "high" : undefined}
               sizes={DESKTOP_SIZES}
               className="object-cover transition-transform duration-200 ease-out"
               style={zoom ? { transform: "scale(2)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}

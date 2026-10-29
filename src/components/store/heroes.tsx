@@ -273,7 +273,9 @@ export default function Hero({ variant, slide, storeName, tagline, extras = [], 
             </p>
             {/* The heading, the glowing picture and the buttons: stacked on phones, side by side on wide screens. */}
             <div className="container-page relative grid min-h-[100svh] content-center items-center gap-8 pt-28 pb-14 text-center lg:grid-cols-[1fr_auto_1fr] lg:gap-12 lg:text-left">
-              <div className="zoom-copy">
+              {/* Stacked, the words keep room for two lines of the heading, so the picture under them
+                  stays put when the store's font arrives and the heading wraps onto another line. */}
+              <div className="zoom-copy flex min-h-[calc(3.25rem+1.9*clamp(2.4rem,5vw,5.5rem))] flex-col items-center justify-end lg:block lg:min-h-0">
                 <p className="inline-block rounded-btn border border-line px-3 py-1 text-[11px] tracking-[0.2em] uppercase">{slide?.eyebrow || "New drop"}</p>
                 <h1 data-rise="load" className="mt-5 font-serif text-[clamp(2.4rem,5vw,5.5rem)] leading-[0.95]"><Rise text={heading} /></h1>
               </div>
